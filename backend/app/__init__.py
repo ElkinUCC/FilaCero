@@ -31,12 +31,14 @@ def create_app(test_config=None):
     from app.dominios.sedes.controladores import puntos_bp
     from app.dominios.tramites.controladores import tramites_bp
     from app.dominios.franjas.controladores import franjas_bp
+    from app.dominios.franjas.admin_controladores import admin_franjas_bp
     from app.dominios.turnos.controladores import turnos_bp
 
     app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
     app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
     app.register_blueprint(tramites_bp, url_prefix="/api/v1/tramites")
     app.register_blueprint(franjas_bp, url_prefix="/api/v1/franjas")
+    app.register_blueprint(admin_franjas_bp, url_prefix="/api/v1/admin/franjas")
     app.register_blueprint(turnos_bp, url_prefix="/api/v1/turnos")
 
     @app.get("/")
@@ -52,3 +54,4 @@ def create_app(test_config=None):
         }
 
     return app
+
