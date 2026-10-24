@@ -1,4 +1,4 @@
-from app import db
+﻿from app import db
 
 
 class Tramite(db.Model):
@@ -11,3 +11,4 @@ class Tramite(db.Model):
     activo = db.Column(db.Boolean, default=True)
 
     turnos = db.relationship("Turno", back_populates="tramite")
+    franjas = db.relationship("Franja", back_populates="tramite")

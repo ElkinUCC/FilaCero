@@ -1,4 +1,4 @@
-from app import db
+﻿from app import db
 
 
 class Punto(db.Model):
@@ -10,3 +10,4 @@ class Punto(db.Model):
     activo = db.Column(db.Boolean, default=True)
 
     turnos = db.relationship("Turno", back_populates="punto")
+    franjas = db.relationship("Franja", back_populates="punto")

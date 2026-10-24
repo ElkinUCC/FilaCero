@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from app import db
 
@@ -44,3 +44,8 @@ class Usuario(db.Model):
 
     def __repr__(self):
         return f"<Usuario {self.correo}>"
+
+    turnos = db.relationship(
+        "Turno",
+        back_populates="usuario"
+    )
