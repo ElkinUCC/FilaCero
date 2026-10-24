@@ -36,6 +36,18 @@ class Usuario(db.Model):
         default=True
     )
 
+    punto_asignado_id = db.Column(
+        db.Integer,
+        db.ForeignKey("puntos.id"),
+        nullable=True,
+        index=True
+    )
+
+    punto_asignado = db.relationship(
+        "Punto",
+        foreign_keys=[punto_asignado_id]
+    )
+
     fecha_creacion = db.Column(
         db.DateTime,
         nullable=False,
@@ -47,5 +59,12 @@ class Usuario(db.Model):
 
     turnos = db.relationship(
         "Turno",
-        back_populates="usuario"
+        back_populates="usuario",
+        foreign_keys="Turno.usuario_id"
+    )
+
+    turnos_atendidos = db.relationship(
+        "Turno",
+        back_populates="agente",
+        foreign_keys="Turno.agente_id"
     )

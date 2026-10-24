@@ -11,42 +11,38 @@ class Turno(db.Model):
     hora_solicitud = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
-    estado = db.Column(
-        db.String(30),
-        nullable=False,
-        default="ESPERANDO"
-    )
+    estado = db.Column(db.String(30), nullable=False, default="ESPERANDO")
 
     usuario_id = db.Column(
-        db.Integer,
-        db.ForeignKey("usuarios.id"),
-        nullable=False,
-        index=True
+        db.Integer, db.ForeignKey("usuarios.id"), nullable=False, index=True
     )
 
-    tramite_id = db.Column(
-        db.Integer,
-        db.ForeignKey("tramites.id"),
-        nullable=False
-    )
+    tramite_id = db.Column(db.Integer, db.ForeignKey("tramites.id"), nullable=False)
 
-    punto_id = db.Column(
-        db.Integer,
-        db.ForeignKey("puntos.id"),
-        nullable=False
-    )
+    punto_id = db.Column(db.Integer, db.ForeignKey("puntos.id"), nullable=False)
 
     franja_id = db.Column(
-        db.Integer,
-        db.ForeignKey("franjas.id"),
-        nullable=False,
-        index=True
+        db.Integer, db.ForeignKey("franjas.id"), nullable=False, index=True
     )
 
-    usuario = db.relationship("Usuario", back_populates="turnos")
+    agente_id = db.Column(
+        db.Integer, db.ForeignKey("usuarios.id"), nullable=True, index=True
+    )
+
+    fecha_inicio = db.Column(db.DateTime, nullable=True)
+
+    fecha_fin = db.Column(db.DateTime, nullable=True)
+
+    usuario = db.relationship(
+        "Usuario", back_populates="turnos", foreign_keys=[usuario_id]
+    )
     tramite = db.relationship("Tramite", back_populates="turnos")
     punto = db.relationship("Punto", back_populates="turnos")
     franja = db.relationship("Franja", back_populates="turnos")
+
+    agente = db.relationship(
+        "Usuario", back_populates="turnos_atendidos", foreign_keys=[agente_id]
+    )

@@ -21,12 +21,14 @@ def create_app(test_config=None):
     jwt.init_app(app)
     CORS(app)
 
+    # Modelos: registrar todos antes de usar migraciones.
     from app.dominios.usuarios.modelos import Usuario
     from app.dominios.sedes.modelos import Punto
     from app.dominios.tramites.modelos import Tramite
     from app.dominios.franjas.modelos import Franja
     from app.dominios.turnos.modelos import Turno
 
+    # Controladores existentes.
     from app.dominios.usuarios.controladores import usuarios_bp
     from app.dominios.sedes.controladores import puntos_bp
     from app.dominios.tramites.controladores import tramites_bp
@@ -34,16 +36,43 @@ def create_app(test_config=None):
     from app.dominios.franjas.admin_controladores import admin_franjas_bp
     from app.dominios.turnos.controladores import turnos_bp
 
-    app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
-    app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
-    app.register_blueprint(tramites_bp, url_prefix="/api/v1/tramites")
-    app.register_blueprint(franjas_bp, url_prefix="/api/v1/franjas")
-    app.register_blueprint(admin_franjas_bp, url_prefix="/api/v1/admin/franjas")
-    app.register_blueprint(turnos_bp, url_prefix="/api/v1/turnos")
+    # Nuevo dominio de agentes.
+    from app.dominios.agentes.controladores import (
+        agentes_bp,
+        admin_agentes_bp,
+    )
+
+    app.register_blueprint(
+        usuarios_bp, url_prefix="/api/v1/usuarios"
+    )
+    app.register_blueprint(
+        puntos_bp, url_prefix="/api/v1/sedes"
+    )
+    app.register_blueprint(
+        tramites_bp, url_prefix="/api/v1/tramites"
+    )
+    app.register_blueprint(
+        franjas_bp, url_prefix="/api/v1/franjas"
+    )
+    app.register_blueprint(
+        admin_franjas_bp, url_prefix="/api/v1/admin/franjas"
+    )
+    app.register_blueprint(
+        turnos_bp, url_prefix="/api/v1/turnos"
+    )
+    app.register_blueprint(
+        agentes_bp, url_prefix="/api/v1/agente"
+    )
+    app.register_blueprint(
+        admin_agentes_bp, url_prefix="/api/v1/admin/agentes"
+    )
 
     @app.get("/")
     def inicio():
-        return {"proyecto": "FilaCero", "mensaje": "API funcionando"}
+        return {
+            "proyecto": "FilaCero",
+            "mensaje": "API funcionando"
+        }
 
     @app.get("/health")
     def health():
@@ -54,4 +83,3 @@ def create_app(test_config=None):
         }
 
     return app
-

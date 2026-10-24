@@ -335,3 +335,122 @@ def test_cancelar_turno_por_api(app_prueba, datos):
     )
     assert respuesta.status_code == 200
     assert respuesta.get_json()["turno"]["estado"] == "CANCELADO"
+
+def crear_agente(datos):
+    agente = Usuario(
+        nombre="Agente de prueba",
+        correo="agente@prueba.local",
+        password_hash="hash-de-prueba",
+        rol="AGENTE",
+        activo=True,
+        punto_asignado_id=datos["punto"].id,
+    )
+    db.session.add(agente)
+    db.session.commit()
+    return agente
+
+
+def test_agente_completa_ciclo_de_atencion(app_prueba, datos):
+    agente = crear_agente(datos)
+    turno = reservar(datos)
+    cliente = app_prueba.test_client()
+    token = token_usuario(
+        app_prueba, agente.id, rol="AGENTE"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    respuesta = cliente.get(
+        "/api/v1/agente/cola", headers=headers
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["total_en_espera"] == 1
+
+    respuesta = cliente.post(
+        "/api/v1/agente/llamar-siguiente",
+        headers=headers
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turno"]["estado"] == "LLAMADO"
+
+    respuesta = cliente.post(
+        f"/api/v1/agente/turnos/{turno.id}/iniciar",
+        headers=headers
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turno"]["estado"] == "EN_ATENCION"
+
+    respuesta = cliente.post(
+        f"/api/v1/agente/turnos/{turno.id}/finalizar",
+        headers=headers
+    )
+    assert respuesta.status_code == 200
+
+    resultado = respuesta.get_json()["turno"]
+    assert resultado["estado"] == "ATENDIDO"
+    assert resultado["agente_id"] == agente.id
+    assert resultado["fecha_inicio"] is not None
+    assert resultado["fecha_fin"] is not None
+
+
+def test_cliente_no_puede_usar_consola_agente(app_prueba, datos):
+    token = token_usuario(
+        app_prueba, datos["usuario"].id, rol="CLIENTE"
+    )
+
+    respuesta = app_prueba.test_client().get(
+        "/api/v1/agente/cola",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert respuesta.status_code == 403
+
+
+def test_agente_no_puede_atender_turno_de_otra_sede(
+    app_prueba, datos
+):
+    agente = crear_agente(datos)
+    otra_sede = Punto(
+        nombre="Sede diferente",
+        direccion="Otra dirección",
+        activo=True,
+    )
+    db.session.add(otra_sede)
+    db.session.flush()
+
+    otro_tramite = Tramite(
+        nombre="Trámite alternativo",
+        descripcion="Prueba de aislamiento",
+        tiempo_estimado=20,
+        activo=True,
+    )
+    db.session.add(otro_tramite)
+    db.session.flush()
+
+    franja = Franja(
+        punto_id=otra_sede.id,
+        tramite_id=otro_tramite.id,
+        fecha=date.today() + timedelta(days=3),
+        hora_inicio=time(10, 0),
+        hora_fin=time(11, 0),
+        capacidad=2,
+        activa=True,
+    )
+    db.session.add(franja)
+    db.session.commit()
+
+    turno = crear_turno(
+        datos["usuario"].id,
+        otro_tramite.id,
+        otra_sede.id,
+        franja.id,
+    )
+
+    token = token_usuario(
+        app_prueba, agente.id, rol="AGENTE"
+    )
+    respuesta = app_prueba.test_client().post(
+        f"/api/v1/agente/turnos/{turno.id}/iniciar",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert respuesta.status_code == 400

@@ -13,5 +13,14 @@
         "usuario_id": turno.usuario_id,
         "tramite_id": turno.tramite_id,
         "punto_id": turno.punto_id,
-        "franja_id": turno.franja_id
+        "franja_id": turno.franja_id,
+        "agente_id": turno.agente_id,
+        "fecha_inicio": (
+            turno.fecha_inicio.isoformat()
+            if turno.fecha_inicio else None
+        ),
+        "fecha_fin": (
+            turno.fecha_fin.isoformat()
+            if turno.fecha_fin else None
+        ),
     }
