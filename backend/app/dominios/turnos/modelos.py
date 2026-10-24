@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime, timezone
 from app import db
 
 
@@ -11,7 +11,7 @@ class Turno(db.Model):
     hora_solicitud = db.Column(
         db.DateTime,
         nullable=False,
-        default=datetime.utcnow
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     estado = db.Column(

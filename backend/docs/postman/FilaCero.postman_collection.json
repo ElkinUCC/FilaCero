@@ -1,0 +1,155 @@
+﻿{
+  "info": {
+    "name": "FilaCero API",
+    "description": "Colección de pruebas de la API REST de FilaCero.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Salud",
+      "item": [
+        {
+          "name": "Verificar API",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Usuarios",
+      "item": [
+        {
+          "name": "Registrar cliente",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cliente Postman\",\n  \"correo\": \"cliente.postman@example.com\",\n  \"password\": \"Prueba123!\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{base_url}}/api/v1/usuarios/registro"
+          }
+        },
+        {
+          "name": "Iniciar sesión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login responde 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.access_token) pm.environment.set('access_token', data.access_token);",
+                  "  if (data.usuario && data.usuario.id) pm.environment.set('usuario_id', data.usuario.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{base_url}}/api/v1/usuarios/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Consultas públicas",
+      "item": [
+        {
+          "name": "Listar sedes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/sedes/"
+          }
+        },
+        {
+          "name": "Listar trámites",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/tramites/"
+          }
+        },
+        {
+          "name": "Consultar franjas",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/franjas/",
+            "description": "Opcionalmente agrega punto_id, tramite_id y fecha (AAAA-MM-DD) en Params."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Turnos del cliente",
+      "item": [
+        {
+          "name": "Reservar turno",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tramite_id\": {{tramite_id}},\n  \"punto_id\": {{punto_id}},\n  \"franja_id\": {{franja_id}}\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{base_url}}/api/v1/turnos/"
+          }
+        },
+        {
+          "name": "Mis turnos",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/turnos/mis-turnos"
+          }
+        },
+        {
+          "name": "Cancelar turno",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/turnos/{{turno_id}}/cancelar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Administración",
+      "item": [
+        {
+          "name": "Crear franja (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"punto_id\": {{punto_id}},\n  \"tramite_id\": {{tramite_id}},\n  \"fecha\": \"{{fecha}}\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"09:30\",\n  \"capacidad\": 10\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{base_url}}/api/v1/admin/franjas/"
+          }
+        }
+      ]
+    }
+  ]
+}

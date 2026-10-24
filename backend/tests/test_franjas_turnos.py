@@ -17,7 +17,7 @@ def app_prueba():
     app = create_app({
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "clave-solo-para-pruebas",
+        "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
     })
 
     with app.app_context():
@@ -196,3 +196,142 @@ def test_rechaza_tramite_que_no_corresponde(app_prueba, datos):
 
     with pytest.raises(ValueError, match="no corresponde"):
         reservar(datos, tramite_id=otro_tramite.id)
+from flask_jwt_extended import create_access_token
+
+def test_cliente_no_puede_crear_franjas(app_prueba):
+    with app_prueba.app_context():
+        token = create_access_token(
+            identity="1",
+            additional_claims={"rol": "CLIENTE"}
+        )
+
+    cliente = app_prueba.test_client()
+    respuesta = cliente.post(
+        "/api/v1/admin/franjas/",
+        json={},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert respuesta.status_code == 403
+
+
+def test_sin_token_no_puede_crear_franjas(app_prueba):
+    respuesta = app_prueba.test_client().post(
+        "/api/v1/admin/franjas/",
+        json={}
+    )
+    assert respuesta.status_code == 401
+
+
+def test_cliente_no_puede_crear_sedes(app_prueba):
+    with app_prueba.app_context():
+        token = create_access_token(
+            identity="1",
+            additional_claims={"rol": "CLIENTE"}
+        )
+
+    respuesta = app_prueba.test_client().post(
+        "/api/v1/sedes/",
+        json={"nombre": "Sede no autorizada"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert respuesta.status_code == 403
+
+
+def test_cliente_no_puede_crear_tramites(app_prueba):
+    with app_prueba.app_context():
+        token = create_access_token(
+            identity="1",
+            additional_claims={"rol": "CLIENTE"}
+        )
+
+    respuesta = app_prueba.test_client().post(
+        "/api/v1/tramites/",
+        json={
+            "nombre": "Trámite no autorizado",
+            "tiempo_estimado": 15
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert respuesta.status_code == 403
+from datetime import date, timedelta
+from flask_jwt_extended import create_access_token
+
+
+def token_usuario(app, usuario_id, rol="CLIENTE"):
+    with app.app_context():
+        return create_access_token(
+            identity=str(usuario_id),
+            additional_claims={"rol": rol}
+        )
+
+
+def test_consultar_franjas_disponibles(app_prueba, datos):
+    respuesta = app_prueba.test_client().get(
+        "/api/v1/franjas/",
+        query_string={
+            "punto_id": datos["punto"].id,
+            "tramite_id": datos["tramite"].id,
+            "fecha": datos["franja"].fecha.isoformat()
+        }
+    )
+    assert respuesta.status_code == 200
+    franjas = respuesta.get_json()["franjas"]
+    assert len(franjas) == 1
+    assert franjas[0]["disponibles"] == 2
+
+
+def test_reservar_turno_por_api(app_prueba, datos):
+    cliente = app_prueba.test_client()
+    token = token_usuario(app_prueba, datos["usuario"].id)
+
+    respuesta = cliente.post(
+        "/api/v1/turnos/",
+        json={
+            "tramite_id": datos["tramite"].id,
+            "punto_id": datos["punto"].id,
+            "franja_id": datos["franja"].id
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert respuesta.status_code == 201
+    assert respuesta.get_json()["estado"] == "ESPERANDO"
+
+
+def test_consultar_solo_mis_turnos_por_api(app_prueba, datos):
+    from app.dominios.turnos.servicios import crear_turno
+
+    crear_turno(
+        datos["usuario"].id,
+        datos["tramite"].id,
+        datos["punto"].id,
+        datos["franja"].id
+    )
+
+    cliente = app_prueba.test_client()
+    token = token_usuario(app_prueba, datos["usuario2"].id)
+    respuesta = cliente.get(
+        "/api/v1/turnos/mis-turnos",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turnos"] == []
+
+
+def test_cancelar_turno_por_api(app_prueba, datos):
+    from app.dominios.turnos.servicios import crear_turno
+
+    turno = crear_turno(
+        datos["usuario"].id,
+        datos["tramite"].id,
+        datos["punto"].id,
+        datos["franja"].id
+    )
+
+    cliente = app_prueba.test_client()
+    token = token_usuario(app_prueba, datos["usuario"].id)
+    respuesta = cliente.post(
+        f"/api/v1/turnos/{turno.id}/cancelar",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turno"]["estado"] == "CANCELADO"

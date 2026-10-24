@@ -7,7 +7,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "fila-cero-secret")
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fila-cero-jwt-secret")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "DEV-ONLY-CHANGE-ME-FilaCero-JWT-Key-2026")
 
     JWT_ACCESS_TOKEN_EXPIRES = int(
         os.getenv("JWT_EXP_MINUTES", "60")
