@@ -1,0 +1,394 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FilaCero | Servicios Tecnológicos E</title>
+<style>
+:root {
+  --bg:#f3f6fb; --surface:#fff; --ink:#172033;
+  --muted:#68758b; --primary:#2155d6; --line:#e2e8f0;
+  --green:#12805c; --red:#c43e4d;
+}
+* { box-sizing:border-box }
+body {
+  margin:0; font-family:Inter,"Segoe UI",Arial,sans-serif;
+  background:var(--bg); color:var(--ink);
+}
+button,input,select { font:inherit }
+button {
+  border:0; border-radius:10px; padding:11px 16px;
+  cursor:pointer; font-weight:650;
+}
+.primary { background:var(--primary); color:white }
+.secondary { background:#e9efff; color:var(--primary) }
+.danger { background:#ffeaed; color:var(--red) }
+header {
+  background:#13254a; color:white; padding:18px 5%;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap;
+}
+.brand { display:flex; align-items:center; gap:12px }
+.logo {
+  background:#3868e8; border-radius:12px; padding:10px;
+  font-size:22px;
+}
+.brand h1 { margin:0; font-size:20px }
+.brand p { margin:4px 0 0; color:#c6d4f6; font-size:12px }
+main { max-width:1150px; margin:32px auto; padding:0 20px }
+h2 { margin:0 0 8px; font-size:25px }
+.muted { color:var(--muted) }
+.card {
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:16px; padding:22px; margin-bottom:18px;
+  box-shadow:0 5px 18px #13254a08;
+}
+.grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px }
+.metric { font-size:30px; font-weight:750; margin-top:12px }
+label { display:block; margin:13px 0 6px; font-size:13px; font-weight:650 }
+input,select {
+  width:100%; border:1px solid #d5ddeb; border-radius:9px;
+  padding:12px; background:white; color:var(--ink);
+}
+form { max-width:460px }
+.actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px }
+.nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px }
+.nav button { background:white; border:1px solid var(--line); color:var(--ink) }
+.nav button.active { background:var(--primary); color:white }
+table { width:100%; border-collapse:collapse; margin-top:14px }
+th,td { padding:12px 9px; border-bottom:1px solid var(--line); text-align:left; font-size:14px }
+th { color:var(--muted); font-weight:650 }
+.pill { display:inline-block; padding:5px 9px; background:#eaf7f1; color:var(--green); border-radius:20px; font-size:12px }
+.hidden { display:none !important }
+#message { margin:12px 0; font-size:14px; white-space:pre-wrap }
+footer { text-align:center; color:var(--muted); padding:25px; font-size:12px }
+@media(max-width:700px) {
+  .grid { grid-template-columns:1fr }
+  main { margin-top:20px; padding:0 12px }
+  .card { padding:17px }
+  header { padding:15px }
+  table { display:block; overflow-x:auto }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">↗</div>
+    <div>
+      <h1>FilaCero</h1>
+      <p>SERVICIOS TECNOLÓGICOS "E" · Gestión de turnos</p>
+    </div>
+  </div>
+  <div id="session" class="hidden">
+    <span id="userLabel"></span>
+    <button class="secondary" onclick="logout()">Cerrar sesión</button>
+  </div>
+</header>
+
+<main>
+  <div id="message" role="status"></div>
+
+  <section id="loginView" class="card">
+    <h2>Bienvenido</h2>
+    <p class="muted">Inicia sesión para gestionar tus turnos.</p>
+    <form id="loginForm">
+      <label for="correo">Correo electrónico</label>
+      <input id="correo" type="email" required autocomplete="username"
+             placeholder="usuario@ejemplo.com">
+      <label for="password">Contraseña</label>
+      <input id="password" type="password" required
+             autocomplete="current-password">
+      <div class="actions">
+        <button class="primary" type="submit">Iniciar sesión</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="appView" class="hidden">
+    <div class="card">
+      <h2 id="welcome">Panel de control</h2>
+      <p class="muted">Centro especializado en diagnóstico y reparación de televisores.</p>
+      <div class="nav" id="navigation"></div>
+    </div>
+    <div id="panel"></div>
+  </section>
+</main>
+<footer>FilaCero · Prototipo funcional · Servicios Tecnológicos "E"</footer>
+
+<script>
+const API = "http://127.0.0.1:5000/api/v1";
+let token = "";
+let user = null;
+let currentTab = "";
+
+const $ = id => document.getElementById(id);
+const panel = $("panel");
+
+function message(text, error=false) {
+  $("message").textContent = text || "";
+  $("message").style.color = error ? "#c43e4d" : "#12805c";
+}
+
+async function request(path, options={}) {
+  const headers = { ...(options.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (options.body) headers["Content-Type"] = "application/json";
+
+  const response = await fetch(API + path, {...options, headers});
+  const raw = await response.text();
+  let data;
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch { data = {mensaje:raw}; }
+
+  if (!response.ok) {
+    throw new Error(data.error || data.msg || data.mensaje ||
+      `Error HTTP ${response.status}`);
+  }
+  return data;
+}
+
+$("loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  message("Validando credenciales...");
+  try {
+    const data = await request("/usuarios/login", {
+      method:"POST",
+      body:JSON.stringify({
+        correo:$("correo").value.trim(),
+        password:$("password").value
+      })
+    });
+    token = data.access_token;
+    user = data.usuario;
+    $("loginView").classList.add("hidden");
+    $("appView").classList.remove("hidden");
+    $("session").classList.remove("hidden");
+    $("userLabel").textContent = `${user.nombre} · ${user.rol}`;
+    $("welcome").textContent = `Hola, ${user.nombre}`;
+    message("");
+    buildNavigation();
+  } catch (error) {
+    message(error.message, true);
+  }
+});
+
+function logout() {
+  token = "";
+  user = null;
+  currentTab = "";
+  $("loginView").classList.remove("hidden");
+  $("appView").classList.add("hidden");
+  $("session").classList.add("hidden");
+  $("password").value = "";
+  message("Sesión cerrada.");
+}
+
+function buildNavigation() {
+  const tabs = user.rol === "ADMIN"
+    ? [["dashboard","Resumen"],["catalogo","Sedes y trámites"],["agentes","Agentes"],["historial","Historial"]]
+    : user.rol === "AGENTE"
+    ? [["cola","Cola de atención"],["actual","Turno actual"]]
+    : [["solicitar","Solicitar turno"],["mis-turnos","Mis turnos"]];
+
+  $("navigation").innerHTML = "";
+  for (const [id,label] of tabs) {
+    const button = document.createElement("button");
+    button.textContent = label;
+    button.className = id === currentTab ? "active" : "";
+    button.onclick = () => openTab(id);
+    $("navigation").appendChild(button);
+  }
+  openTab(tabs[0][0]);
+}
+
+function setPanel(html) { panel.innerHTML = html; }
+
+async function openTab(tab) {
+  currentTab = tab;
+  [...$("navigation").children].forEach(b => {
+    b.classList.toggle("active",
+      b.textContent === [...$("navigation").children]
+        .find(x => x.onclick && x.classList.contains("active"))?.textContent);
+  });
+  buildActiveTab();
+  try {
+    if (tab === "dashboard") await dashboard();
+    if (tab === "catalogo") await catalogo();
+    if (tab === "agentes") await agentes();
+    if (tab === "historial") await historial();
+    if (tab === "cola") await cola();
+    if (tab === "actual") await actual();
+    if (tab === "solicitar") await solicitar();
+    if (tab === "mis-turnos") await misTurnos();
+  } catch (error) {
+    setPanel(`<div class="card"><h2>No se pudo cargar</h2><p class="muted"></p></div>`);
+    panel.querySelector("p").textContent = error.message;
+  }
+}
+
+function buildActiveTab() {
+  [...$("navigation").children].forEach(b => b.classList.remove("active"));
+  const tabs = [...$("navigation").children];
+  const index = user.rol === "ADMIN"
+    ? ["dashboard","catalogo","agentes","historial"].indexOf(currentTab)
+    : user.rol === "AGENTE"
+    ? ["cola","actual"].indexOf(currentTab)
+    : ["solicitar","mis-turnos"].indexOf(currentTab);
+  if (tabs[index]) tabs[index].classList.add("active");
+}
+
+async function dashboard() {
+  const data = await request("/admin/agentes/metricas");
+  const states = data.totales_por_estado || data.por_estado || {};
+  setPanel(`<div class="grid">
+    <div class="card"><span class="muted">En espera</span><div class="metric">${states.ESPERANDO || 0}</div></div>
+    <div class="card"><span class="muted">En atención</span><div class="metric">${states.EN_ATENCION || 0}</div></div>
+    <div class="card"><span class="muted">Atendidos</span><div class="metric">${states.ATENDIDO || 0}</div></div>
+    </div><div class="card"><h2>Operación del negocio</h2>
+    <p class="muted">Las cifras se consultan directamente desde el backend.</p>
+    <button class="primary" onclick="openTab('dashboard')">Actualizar métricas</button></div>`);
+}
+
+async function catalogo() {
+  const [sedes, tramites] = await Promise.all([
+    request("/sedes/"), request("/tramites/")
+  ]);
+  setPanel(`<div class="grid">
+    <div class="card"><h2>Sedes</h2><div id="sedesList"></div></div>
+    <div class="card"><h2>Trámites</h2><div id="tramitesList"></div></div>
+    </div>`);
+  $("sedesList").textContent = JSON.stringify(sedes);
+  $("tramitesList").textContent = JSON.stringify(tramites);
+}
+
+async function agentes() {
+  const data = await request("/admin/agentes/");
+  setPanel(`<div class="card"><h2>Agentes registrados</h2><pre id="agentData"></pre></div>`);
+  $("agentData").textContent = JSON.stringify(data, null, 2);
+}
+
+async function historial() {
+  const data = await request("/admin/agentes/historial");
+  setPanel(`<div class="card"><h2>Historial de turnos</h2><pre id="historyData"></pre></div>`);
+  $("historyData").textContent = JSON.stringify(data, null, 2);
+}
+
+async function cola() {
+  const data = await request("/agente/cola");
+  setPanel(`<div class="card"><h2>Cola de atención</h2>
+    <pre id="queueData"></pre>
+    <div class="actions">
+    <button class="primary" onclick="callNext()">Llamar siguiente</button>
+    <button class="secondary" onclick="openTab('cola')">Actualizar cola</button>
+    </div></div>`);
+  $("queueData").textContent = JSON.stringify(data, null, 2);
+}
+
+async function callNext() {
+  try {
+    const data = await request("/agente/llamar-siguiente", {method:"POST"});
+    message(JSON.stringify(data));
+    await cola();
+  } catch (e) { message(e.message, true); }
+}
+
+async function actual() {
+  const data = await request("/agente/actual");
+  setPanel(`<div class="card"><h2>Turno actual</h2><pre id="currentData"></pre>
+    <div class="actions">
+    <button class="primary" onclick="startTurn()">Iniciar atención</button>
+    <button class="secondary" onclick="finishTurn()">Finalizar atención</button>
+    <button class="secondary" onclick="openTab('actual')">Actualizar</button>
+    </div><p class="muted">Si no hay turno actual, revisa primero la cola.</p></div>`);
+  $("currentData").textContent = JSON.stringify(data, null, 2);
+}
+
+async function turnAction(action) {
+  try {
+    const data = JSON.parse($("currentData").textContent);
+    const id = data.id || data.turno?.id || data.turno_actual?.id;
+    if (!id) throw new Error("No se encontró el ID del turno actual.");
+    const result = await request(`/agente/turnos/${id}/${action}`, {method:"POST"});
+    message(JSON.stringify(result));
+    await actual();
+  } catch (e) { message(e.message, true); }
+}
+function startTurn() { return turnAction("iniciar"); }
+function finishTurn() { return turnAction("finalizar"); }
+
+async function solicitar() {
+  const [sedes, tramites] = await Promise.all([
+    request("/sedes/"), request("/tramites/")
+  ]);
+  const list = value => Array.isArray(value) ? value : value.items || value.sedes || value.tramites || [];
+  const sedeList = list(sedes);
+  const tramiteList = list(tramites);
+  setPanel(`<div class="card"><h2>Solicitar turno</h2>
+    <p class="muted">Selecciona dónde y para qué necesitas atención.</p>
+    <form id="requestForm">
+      <label>Sede</label><select id="punto" required></select>
+      <label>Trámite</label><select id="tramite" required></select>
+      <label>Franja disponible</label><select id="franja" required></select>
+      <div class="actions"><button class="primary">Confirmar turno</button></div>
+    </form></div>`);
+  const options = (id, values, label) => {
+    const select = $(id);
+    values.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v.id;
+      o.textContent = v.nombre || `${label} ${v.id}`;
+      select.appendChild(o);
+    });
+  };
+  options("punto", sedeList, "Sede");
+  options("tramite", tramiteList, "Trámite");
+  async function loadFranjas() {
+    const data = await request(`/franjas/?punto_id=${$("punto").value}&tramite_id=${$("tramite").value}`);
+    const values = list(data);
+    $("franja").innerHTML = "";
+    values.forEach(f => {
+      const o = document.createElement("option");
+      o.value = f.id;
+      o.textContent = `${f.fecha} · ${f.hora_inicio}–${f.hora_fin}`;
+      $("franja").appendChild(o);
+    });
+  }
+  $("punto").onchange = loadFranjas;
+  $("tramite").onchange = loadFranjas;
+  await loadFranjas();
+  $("requestForm").onsubmit = async e => {
+    e.preventDefault();
+    try {
+      const result = await request("/turnos/", {
+        method:"POST",
+        body:JSON.stringify({
+          punto_id:Number($("punto").value),
+          tramite_id:Number($("tramite").value),
+          franja_id:Number($("franja").value)
+        })
+      });
+      message(JSON.stringify(result));
+    } catch (error) { message(error.message, true); }
+  };
+}
+
+async function misTurnos() {
+  const data = await request("/turnos/mis-turnos");
+  setPanel(`<div class="card"><h2>Mis turnos</h2><pre id="myTurns"></pre>
+    <button class="secondary" onclick="openTab('mis-turnos')">Actualizar</button></div>`);
+  $("myTurns").textContent = JSON.stringify(data, null, 2);
+}
+
+function buildActiveTab() {
+  [...$("navigation").children].forEach((b, i) => {
+    const ids = user.rol === "ADMIN"
+      ? ["dashboard","catalogo","agentes","historial"]
+      : user.rol === "AGENTE" ? ["cola","actual"] : ["solicitar","mis-turnos"];
+    b.classList.toggle("active", ids[i] === currentTab);
+  });
+}
+</script>
+</body>
+</html>

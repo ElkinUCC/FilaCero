@@ -57,7 +57,7 @@ def registrar_cliente_publico(nombre, celular):
 
     usuario = Usuario(
         nombre=nombre,
-        correo=None,
+        correo=f"cliente_{celular}@publico.filacero.local",
         password_hash="",
         rol="CLIENTE",
         celular=celular,
