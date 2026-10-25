@@ -1,81 +1,87 @@
-﻿{
+﻿
+{
   "info": {
     "name": "FilaCero API",
-    "description": "Colección de pruebas de la API REST de FilaCero.",
+    "description": "Colección de pruebas para el backend Flask de FilaCero. Configurar base_url y los tokens después de iniciar sesión. Los cuerpos de ejemplo deben contrastarse con los controladores reales.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{access_token}}",
-        "type": "string"
-      }
-    ]
-  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:5000" },
+    { "key": "token_admin", "value": "" },
+    { "key": "token_agente", "value": "" },
+    { "key": "token_cliente", "value": "" },
+    { "key": "usuario_id", "value": "1" },
+    { "key": "punto_id", "value": "1" },
+    { "key": "tramite_id", "value": "1" },
+    { "key": "franja_id", "value": "1" },
+    { "key": "turno_id", "value": "1" }
+  ],
   "item": [
     {
-      "name": "01 - Salud",
+      "name": "00 - Salud",
       "item": [
         {
-          "name": "Verificar API",
+          "name": "Inicio",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/health"
-          }
-        }
-      ]
-    },
-    {
-      "name": "02 - Usuarios",
-      "item": [
-        {
-          "name": "Registrar cliente",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Cliente Postman\",\n  \"correo\": \"cliente.postman@example.com\",\n  \"password\": \"Prueba123!\"\n}",
-              "options": {"raw": {"language": "json"}}
-            },
-            "url": "{{base_url}}/api/v1/usuarios/registro"
+            "url": "{{base_url}}/"
           }
         },
         {
-          "name": "Iniciar sesión",
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          },
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Login responde 200', function () { pm.response.to.have.status(200); });",
-                  "if (pm.response.code === 200) {",
-                  "  const data = pm.response.json();",
-                  "  if (data.access_token) pm.environment.set('access_token', data.access_token);",
-                  "  if (data.usuario && data.usuario.id) pm.environment.set('usuario_id', data.usuario.id);",
-                  "}"
+                  "pm.test('Health responde correctamente', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
                 ]
               }
             }
-          ],
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Usuarios",
+      "item": [
+        {
+          "name": "Registro de usuario - revisar campos requeridos",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": {"raw": {"language": "json"}}
+              "raw": "{\n  \"nombre\": \"Cliente de prueba\",\n  \"correo\": \"cliente.postman@example.com\",\n  \"password\": \"CambiarEstaClave123!\"\n}"
             },
-            "url": "{{base_url}}/api/v1/usuarios/login"
+            "url": "{{base_url}}/api/v1/usuarios/registro",
+            "description": "Ejemplo de referencia. Ajustar los campos al contrato real del controlador de registro."
+          }
+        },
+        {
+          "name": "Iniciar sesión - revisar campos requeridos",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"cliente.postman@example.com\",\n  \"password\": \"CambiarEstaClave123!\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/usuarios/login",
+            "description": "Después de verificar la respuesta, copia el JWT al token correspondiente de Postman."
           }
         }
       ]
     },
     {
-      "name": "03 - Consultas públicas",
+      "name": "02 - Sedes",
       "item": [
         {
           "name": "Listar sedes",
@@ -85,6 +91,43 @@
           }
         },
         {
+          "name": "Crear sede",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sede de prueba\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/sedes/",
+            "description": "Completar los campos obligatorios según el controlador real."
+          }
+        },
+        {
+          "name": "Actualizar sede",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sede actualizada\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/sedes/{{punto_id}}"
+          }
+        },
+        {
+          "name": "Eliminar sede",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/sedes/{{punto_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Trámites",
+      "item": [
+        {
           "name": "Listar trámites",
           "request": {
             "method": "GET",
@@ -92,61 +135,255 @@
           }
         },
         {
-          "name": "Consultar franjas",
+          "name": "Crear trámite",
           "request": {
-            "method": "GET",
-            "url": "{{base_url}}/api/v1/franjas/",
-            "description": "Opcionalmente agrega punto_id, tramite_id y fecha (AAAA-MM-DD) en Params."
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Trámite de prueba\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/tramites/",
+            "description": "Completar los campos obligatorios según el controlador real."
+          }
+        },
+        {
+          "name": "Actualizar trámite",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Trámite actualizado\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/tramites/{{tramite_id}}"
+          }
+        },
+        {
+          "name": "Eliminar trámite",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/tramites/{{tramite_id}}"
           }
         }
       ]
     },
     {
-      "name": "04 - Turnos del cliente",
+      "name": "04 - Franjas",
       "item": [
         {
-          "name": "Reservar turno",
+          "name": "Listar franjas",
           "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tramite_id\": {{tramite_id}},\n  \"punto_id\": {{punto_id}},\n  \"franja_id\": {{franja_id}}\n}",
-              "options": {"raw": {"language": "json"}}
-            },
-            "url": "{{base_url}}/api/v1/turnos/"
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/franjas/"
           }
         },
         {
-          "name": "Mis turnos",
+          "name": "Crear franja administrativa",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"punto_id\": 1,\n  \"tramite_id\": 1,\n  \"fecha\": \"2026-12-01\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"09:30\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/admin/franjas/",
+            "description": "Ejemplo de referencia. Verificar campos requeridos y formato del controlador de franjas."
+          }
+        },
+        {
+          "name": "Cambiar estado de franja",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}"
+            },
+            "url": "{{base_url}}/api/v1/admin/franjas/{{franja_id}}",
+            "description": "Verificar el nombre del campo de estado aceptado por el controlador."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Turnos de cliente",
+      "item": [
+        {
+          "name": "Solicitar turno",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_cliente}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"punto_id\": 1,\n  \"tramite_id\": 1,\n  \"franja_id\": 1\n}"
+            },
+            "url": "{{base_url}}/api/v1/turnos/",
+            "description": "Ejemplo de referencia. Ajustar al contrato real de solicitud de turnos."
+          }
+        },
+        {
+          "name": "Consultar mis turnos",
           "request": {
             "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_cliente}}" }
+            ],
             "url": "{{base_url}}/api/v1/turnos/mis-turnos"
           }
         },
         {
-          "name": "Cancelar turno",
+          "name": "Cancelar turno propio",
           "request": {
             "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_cliente}}" }
+            ],
             "url": "{{base_url}}/api/v1/turnos/{{turno_id}}/cancelar"
           }
         }
       ]
     },
     {
-      "name": "05 - Administración",
+      "name": "06 - Operación de agentes",
       "item": [
         {
-          "name": "Crear franja (ADMIN)",
+          "name": "Consultar cola",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+            ],
+            "url": "{{base_url}}/api/v1/agente/cola"
+          }
+        },
+        {
+          "name": "Consultar turno actual",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+            ],
+            "url": "{{base_url}}/api/v1/agente/actual"
+          }
+        },
+        {
+          "name": "Llamar siguiente turno",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+            ],
+            "url": "{{base_url}}/api/v1/agente/llamar-siguiente"
+          }
+        },
+        {
+          "name": "Iniciar atención",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+            ],
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/iniciar"
+          }
+        },
+        {
+          "name": "Finalizar atención",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+            ],
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/finalizar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Administración de agentes",
+      "item": [
+        {
+          "name": "Listar agentes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/agentes/"
+          }
+        },
+        {
+          "name": "Asignar sede a agente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"punto_id\": {{punto_id}},\n  \"tramite_id\": {{tramite_id}},\n  \"fecha\": \"{{fecha}}\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"09:30\",\n  \"capacidad\": 10\n}",
-              "options": {"raw": {"language": "json"}}
+              "raw": "{\n  \"punto_id\": 1\n}"
             },
-            "url": "{{base_url}}/api/v1/admin/franjas/"
+            "url": "{{base_url}}/api/v1/admin/agentes/{{usuario_id}}/sede"
+          }
+        },
+        {
+          "name": "Desasignar sede",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/agentes/{{usuario_id}}/sede"
+          }
+        },
+        {
+          "name": "Métricas generales",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/agentes/metricas?pagina=1"
+          }
+        },
+        {
+          "name": "Historial paginado",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/agentes/historial?pagina=1&por_pagina=20"
+          }
+        },
+        {
+          "name": "Métricas por sede",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/agentes/metricas/sedes"
+          }
+        },
+        {
+          "name": "Métricas por trámite",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/agentes/metricas/tramites"
           }
         }
       ]

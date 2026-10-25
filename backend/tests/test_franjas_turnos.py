@@ -454,3 +454,223 @@ def test_agente_no_puede_atender_turno_de_otra_sede(
     )
 
     assert respuesta.status_code == 400
+
+def test_agente_no_puede_iniciar_turno_sin_llamarlo(
+    app_prueba, datos
+):
+    agente = crear_agente(datos)
+    turno = reservar(datos)
+
+    token = token_usuario(app_prueba, agente.id, rol="AGENTE")
+
+    respuesta = app_prueba.test_client().post(
+        f"/api/v1/agente/turnos/{turno.id}/iniciar",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert respuesta.status_code == 400
+
+    db.session.refresh(turno)
+    assert turno.estado == "ESPERANDO"
+
+
+def test_agente_no_puede_finalizar_turno_sin_iniciarlo(
+    app_prueba, datos
+):
+    agente = crear_agente(datos)
+    turno = reservar(datos)
+
+    token = token_usuario(app_prueba, agente.id, rol="AGENTE")
+    cliente = app_prueba.test_client()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    llamada = cliente.post(
+        "/api/v1/agente/llamar-siguiente",
+        headers=headers
+    )
+    assert llamada.status_code == 200
+
+    respuesta = cliente.post(
+        f"/api/v1/agente/turnos/{turno.id}/finalizar",
+        headers=headers
+    )
+
+    assert respuesta.status_code == 400
+
+    db.session.refresh(turno)
+    assert turno.estado == "LLAMADO"
+
+
+def test_agente_no_puede_llamar_si_no_hay_turnos(
+    app_prueba, datos
+):
+    agente = crear_agente(datos)
+    token = token_usuario(app_prueba, agente.id, rol="AGENTE")
+
+    respuesta = app_prueba.test_client().post(
+        "/api/v1/agente/llamar-siguiente",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert respuesta.status_code == 400
+    assert "No hay turnos pendientes" in respuesta.get_json()["error"]
+
+
+def test_agente_no_puede_llamar_dos_veces_el_mismo_turno(
+    app_prueba, datos
+):
+    agente = crear_agente(datos)
+    turno = reservar(datos)
+
+    token = token_usuario(app_prueba, agente.id, rol="AGENTE")
+    cliente = app_prueba.test_client()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    primera = cliente.post(
+        "/api/v1/agente/llamar-siguiente",
+        headers=headers
+    )
+    assert primera.status_code == 200
+
+    segunda = cliente.post(
+        "/api/v1/agente/llamar-siguiente",
+        headers=headers
+    )
+
+    assert segunda.status_code == 400
+
+    db.session.refresh(turno)
+    assert turno.estado == "LLAMADO"
+    assert turno.agente_id == agente.id
+
+def test_admin_consulta_metricas_y_estadisticas(
+    app_prueba, datos
+):
+    reservar(datos)
+    token = token_usuario(
+        app_prueba, datos["usuario"].id, rol="ADMIN"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    cliente = app_prueba.test_client()
+
+    metricas = cliente.get(
+        "/api/v1/admin/agentes/metricas",
+        headers=headers,
+    )
+    assert metricas.status_code == 200
+    assert metricas.get_json()["total_turnos"] == 1
+
+    sedes = cliente.get(
+        "/api/v1/admin/agentes/metricas/sedes",
+        headers=headers,
+    )
+    assert sedes.status_code == 200
+    assert sedes.get_json()["sedes"][0]["total_turnos"] == 1
+
+    tramites = cliente.get(
+        "/api/v1/admin/agentes/metricas/tramites",
+        headers=headers,
+    )
+    assert tramites.status_code == 200
+    assert tramites.get_json()["tramites"][0]["total_turnos"] == 1
+
+
+def test_cliente_no_puede_consultar_metricas(
+    app_prueba, datos
+):
+    token = token_usuario(
+        app_prueba, datos["usuario"].id, rol="CLIENTE"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    cliente = app_prueba.test_client()
+
+    for ruta in (
+        "/api/v1/admin/agentes/metricas",
+        "/api/v1/admin/agentes/metricas/sedes",
+        "/api/v1/admin/agentes/metricas/tramites",
+        "/api/v1/admin/agentes/historial",
+    ):
+        respuesta = cliente.get(ruta, headers=headers)
+        assert respuesta.status_code == 403, ruta
+
+def test_admin_historial_paginado(
+    app_prueba, datos
+):
+    reservar(datos)
+    token = token_usuario(
+        app_prueba, datos["usuario"].id, rol="ADMIN"
+    )
+
+    respuesta = app_prueba.test_client().get(
+        "/api/v1/admin/agentes/historial?pagina=1&por_pagina=10",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert respuesta.status_code == 200
+    resultado = respuesta.get_json()
+    assert resultado["total"] == 1
+    assert resultado["pagina"] == 1
+    assert len(resultado["turnos"]) == 1
+
+
+def test_historial_rechaza_paginacion_invalida(
+    app_prueba, datos
+):
+    token = token_usuario(
+        app_prueba, datos["usuario"].id, rol="ADMIN"
+    )
+
+    respuesta = app_prueba.test_client().get(
+        "/api/v1/admin/agentes/historial?pagina=0",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert respuesta.status_code == 400
+
+
+def test_agente_consulta_su_turno_actual(
+    app_prueba, datos
+):
+    agente = crear_agente(datos)
+    reservar(datos)
+
+    token = token_usuario(
+        app_prueba, agente.id, rol="AGENTE"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    cliente = app_prueba.test_client()
+
+    respuesta = cliente.get(
+        "/api/v1/agente/actual",
+        headers=headers,
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turno"] is None
+
+    llamada = cliente.post(
+        "/api/v1/agente/llamar-siguiente",
+        headers=headers,
+    )
+    assert llamada.status_code == 200
+
+    respuesta = cliente.get(
+        "/api/v1/agente/actual",
+        headers=headers,
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turno"]["estado"] == "LLAMADO"
+
+
+def test_listar_agentes_exige_rol_admin(
+    app_prueba, datos
+):
+    token = token_usuario(
+        app_prueba, datos["usuario"].id, rol="CLIENTE"
+    )
+
+    respuesta = app_prueba.test_client().get(
+        "/api/v1/admin/agentes/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert respuesta.status_code == 403

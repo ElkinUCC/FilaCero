@@ -1,46 +1,23 @@
-# Sprint 06 — Agentes y atención de turnos
+## Resultado de validación — Sprint 06
 
-## Objetivo
-Implementar el ciclo de atención de turnos mediante una consola operativa protegida por roles y asociada a una sede.
+**Estado:** VALIDADO EN EL ENTORNO LOCAL, según las evidencias compartidas.
 
-## Cambios del modelo
-- Usuario: campo opcional `punto_asignado_id`.
-- Turno: campos opcionales `agente_id`, `fecha_inicio` y `fecha_fin`.
-- Estados operativos: `ESPERANDO`, `LLAMADO`, `EN_ATENCION`, `ATENDIDO`.
-- La cancelación existente conserva el estado `CANCELADO`.
+### Evidencias
 
-## Endpoints
+- La migración `a91c6d8e42f0` se aplicó correctamente.
+- `flask db current` reportó `a91c6d8e42f0 (head)`.
+- `flask db check` indicó que no se detectaron nuevas operaciones de migración.
+- Las rutas de la consola de agentes aparecen registradas en Flask.
+- La suite automatizada reportó 30 pruebas aprobadas en la validación posterior al Sprint 07.
 
-| Método | Endpoint | Rol |
-|---|---|---|
-| GET | `/api/v1/agente/cola` | AGENTE |
-| POST | `/api/v1/agente/llamar-siguiente` | AGENTE |
-| POST | `/api/v1/agente/turnos/{id}/iniciar` | AGENTE |
-| POST | `/api/v1/agente/turnos/{id}/finalizar` | AGENTE |
-| POST | `/api/v1/admin/agentes/{id}/sede` | ADMIN |
+### Alcance comprobado
 
-Todos requieren un JWT válido.
+Se implementó el ciclo de atención de turnos, la asociación de agentes con sedes y las validaciones de autorización y operación. La suite de pruebas incluye también las funcionalidades administrativas agregadas posteriormente.
 
-### Asignar una sede
+### Observaciones pendientes
 
-Cuerpo JSON:
+- Conservar las evidencias de ejecución y los resultados de las pruebas.
+- Completar la colección Postman y comprobar los endpoints mediante solicitudes HTTP.
+- Revisar los avisos de obsolescencia relacionados con `datetime.utcnow()`.
 
-    {
-      "punto_id": 1
-    }
-
-### Reglas de negocio
-- El agente debe estar activo y tener una sede activa asignada.
-- Solo puede atender turnos de su sede.
-- Solo se llama un turno que esté en espera.
-- La atención debe comenzar antes de finalizarse.
-- Cada operación debe comprobar el estado actual y la asignación del agente.
-
-## Validación
-- Pruebas automatizadas del ciclo de atención.
-- Pruebas de autorización por rol.
-- Pruebas de aislamiento entre sedes.
-- Validación de migraciones y rutas registradas.
-
-## Pendiente de confirmar
-Este documento describe los cambios propuestos. El sprint solo se considera validado cuando las pruebas se ejecuten satisfactoriamente en el entorno local y la migración se aplique correctamente.
+**Nota:** Las 30 pruebas aprobadas corresponden al estado del proyecto tras completar el Sprint 07; no deben presentarse como si fueran exclusivamente pruebas del Sprint 06.

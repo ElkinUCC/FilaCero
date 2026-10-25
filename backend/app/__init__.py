@@ -42,6 +42,9 @@ def create_app(test_config=None):
         admin_agentes_bp,
     )
 
+    from app.dominios.turnos.prediccion import prediccion_bp
+    from app.dominios.franjas.disponibilidad import disponibilidad_bp
+
     app.register_blueprint(
         usuarios_bp, url_prefix="/api/v1/usuarios"
     )
@@ -66,6 +69,19 @@ def create_app(test_config=None):
     app.register_blueprint(
         admin_agentes_bp, url_prefix="/api/v1/admin/agentes"
     )
+
+    app.register_blueprint(
+    prediccion_bp,
+    url_prefix="/api/v1/turnos"
+    )
+
+    app.register_blueprint(
+    disponibilidad_bp,
+    url_prefix="/api/v1/franjas",
+    )
+
+    
+
 
     @app.get("/")
     def inicio():

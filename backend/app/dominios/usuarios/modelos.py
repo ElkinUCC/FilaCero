@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime, timezone
 
 from app import db
 
@@ -7,6 +7,8 @@ class Usuario(db.Model):
     __tablename__ = "usuarios"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    celular = db.Column(db.String(20), nullable=True, index=True)
 
     nombre = db.Column(
         db.String(100),
@@ -49,9 +51,9 @@ class Usuario(db.Model):
     )
 
     fecha_creacion = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow
+    db.DateTime,
+    nullable=False,
+    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
     def __repr__(self):
