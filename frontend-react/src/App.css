@@ -1399,3 +1399,48 @@ textarea:focus-visible {
     padding: 5px 11px;
   }
 }
+
+
+/* =========================================
+   FILACERO · PULIDO DE EXPERIENCIA POR ROL
+   ========================================= */
+.app-role-admin .dashboard { max-width: 1760px; margin: 0 auto; }
+.app-role-cliente .dashboard,
+.app-role-agente .dashboard { max-width: 1440px; margin: 0 auto; }
+.app-role-cliente .dashboard-header,
+.app-role-agente .dashboard-header { border-bottom: 0; margin-bottom: 18px; padding-bottom: 8px; }
+.app-role-cliente .dashboard-header h1,
+.app-role-agente .dashboard-header h1 { font-size: clamp(28px, 3vw, 38px); }
+.app-role-cliente .sidebar { background: radial-gradient(circle at top left, #176c5e 0, transparent 35%), #103c39; }
+.app-role-agente .sidebar { background: radial-gradient(circle at top left, #245b83 0, transparent 38%), #16384f; }
+.app-role-agente .nav-item.selected { background: linear-gradient(110deg, #2875a6, #205b83); }
+.app-role-agente .brand-mark { background: linear-gradient(145deg, #55a6d8, #24658f); }
+.app-role-cliente .data-panel,
+.app-role-agente .data-panel { border-radius: 20px; padding: clamp(22px, 3vw, 32px); box-shadow: 0 12px 34px rgb(24 54 45 / 5%); }
+.section-intro { margin-bottom: 22px; }
+.section-intro .eyebrow { margin: 0 0 8px; }
+.section-intro h2 { margin: 0 0 7px; font-size: clamp(21px, 2vw, 27px); letter-spacing: -.55px; }
+.section-intro .muted { margin: 0; max-width: 680px; font-size: 13px; }
+.section-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 18px 0 22px; }
+.status-pill { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: #edf2ef; color: #53655e; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.status-esperando { color: #965d06; background: #fff3d9; }
+.status-llamado { color: #225db2; background: #eaf1ff; }
+.status-en_atencion { color: #087653; background: #e4f7ed; }
+.status-atendido { color: #166746; background: #e3f5e9; }
+.status-cancelado { color: #a52d2d; background: #fff0ef; }
+.client-turns-panel .table-wrap,
+.agent-queue-panel .table-wrap { margin-top: 18px; }
+.agent-queue-panel .section-actions .primary + .primary { background: linear-gradient(120deg, #2875a6, #205b83); border-color: #205b83; }
+.agent-current-panel .current-turn { margin-top: 24px; padding: clamp(24px, 4vw, 42px); border-radius: 18px; text-align: center; background: linear-gradient(145deg, #f0f8ff, #fff); border-color: #d8e8f5; }
+.agent-current-panel .current-turn h2 { font-size: clamp(44px, 7vw, 68px); letter-spacing: -2px; }
+.agent-current-panel .current-turn .primary { min-width: 210px; }
+.data-management-panel .result { margin-top: 18px; }
+.app-shell .sidebar .nav-item { gap: 10px; }
+.app-shell .nav-item:focus-visible { outline-color: #8de0bd; }
+.app-shell .dashboard-header .muted { margin-top: 5px; }
+@media (max-width: 700px) {
+  .section-actions { align-items: stretch; flex-direction: column; }
+  .section-actions .primary, .section-actions .secondary { width: 100%; }
+  .app-role-cliente .data-panel, .app-role-agente .data-panel { padding: 20px 15px; }
+  .agent-current-panel .current-turn { padding: 24px 14px; }
+}

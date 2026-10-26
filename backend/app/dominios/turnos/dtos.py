@@ -11,6 +11,12 @@
         ),
         "estado": turno.estado,
         "usuario_id": turno.usuario_id,
+        "usuario_nombre": (
+            turno.usuario.nombre if turno.usuario else None
+        ),
+        "usuario_celular": (
+            turno.usuario.celular if turno.usuario else None
+        ),
         "tramite_id": turno.tramite_id,
         "punto_id": turno.punto_id,
         "franja_id": turno.franja_id,

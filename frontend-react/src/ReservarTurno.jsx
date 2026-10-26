@@ -47,6 +47,10 @@ export default function ReservarTurno() {
 
   const [nombre, setNombre] = useState("");
   const [celular, setCelular] = useState("");
+  const [codigoCelular, setCodigoCelular] = useState("");
+  const [tokenVerificacion, setTokenVerificacion] = useState("");
+  const [codigoSolicitado, setCodigoSolicitado] = useState(false);
+  const [verificandoCelular, setVerificandoCelular] = useState(false);
   const [sede, setSede] = useState("");
   const [tramite, setTramite] = useState("");
   const [fecha, setFecha] = useState("");
@@ -63,7 +67,7 @@ export default function ReservarTurno() {
   const [paso, setPaso] = useState(1);
   const [fechaMinima] = useState(obtenerFechaMinima);
 
-  const ocupado = consultando || reservando;
+  const ocupado = consultando || reservando || verificandoCelular;
 
   useEffect(() => {
     let vigente = true;
@@ -175,6 +179,62 @@ export default function ReservarTurno() {
     }
   }
 
+  async function solicitarCodigoCelular() {
+    if (!celular.trim()) {
+      setError("Ingresa tu número de celular primero.");
+      return;
+    }
+
+    setError("");
+    setMensaje("");
+    setVerificandoCelular(true);
+    try {
+      const resultado = await apiRequest("/turnos/publico/solicitar-codigo", {
+        method: "POST",
+        body: JSON.stringify({ celular: celular.trim() }),
+      });
+      setCodigoSolicitado(true);
+      setTokenVerificacion("");
+      setCodigoCelular("");
+      setMensaje(resultado.mensaje || "Código solicitado.");
+      if (resultado.codigo_prueba) {
+        setCodigoCelular(resultado.codigo_prueba);
+      }
+    } catch (e) {
+      setError(`No se pudo solicitar el código: ${e.message}`);
+    } finally {
+      setVerificandoCelular(false);
+    }
+  }
+
+  async function verificarCodigoCelular() {
+    if (!celular.trim() || !codigoCelular.trim()) {
+      setError("Ingresa tu celular y el código recibido.");
+      return;
+    }
+
+    setError("");
+    setMensaje("");
+    setVerificandoCelular(true);
+    try {
+      const resultado = await apiRequest("/turnos/publico/verificar-codigo", {
+        method: "POST",
+        body: JSON.stringify({
+          celular: celular.trim(),
+          codigo: codigoCelular.trim(),
+        }),
+      });
+      setTokenVerificacion(resultado.token_verificacion || "");
+      setMensaje(resultado.mensaje || "Celular verificado.");
+      setCodigoSolicitado(false);
+    } catch (e) {
+      setTokenVerificacion("");
+      setError(`No se pudo verificar el celular: ${e.message}`);
+    } finally {
+      setVerificandoCelular(false);
+    }
+  }
+
   async function reservar(e) {
     e.preventDefault();
 
@@ -188,6 +248,11 @@ export default function ReservarTurno() {
       return;
     }
 
+    if (!tokenVerificacion) {
+      setError("Verifica tu celular antes de confirmar la reserva.");
+      return;
+    }
+
     setError("");
     setMensaje("");
     setReservando(true);
@@ -198,6 +263,7 @@ export default function ReservarTurno() {
         body: JSON.stringify({
           nombre: nombre.trim(),
           celular: celular.trim(),
+          token_verificacion: tokenVerificacion,
           punto_id: Number(sede),
           tramite_id: Number(tramite),
           franja_id: Number(franja),
@@ -223,6 +289,9 @@ export default function ReservarTurno() {
   function nuevaReserva() {
     setNombre("");
     setCelular("");
+    setCodigoCelular("");
+    setTokenVerificacion("");
+    setCodigoSolicitado(false);
     setSede("");
     setTramite("");
     setFecha("");
@@ -567,17 +636,64 @@ export default function ReservarTurno() {
                 id="celular-cliente"
                 type="tel"
                 value={celular}
-                onChange={(e) => setCelular(e.target.value)}
+                onChange={(e) => {
+                  setCelular(e.target.value);
+                  setTokenVerificacion("");
+                  setCodigoSolicitado(false);
+                  setCodigoCelular("");
+                }}
                 placeholder="Ej. 3001234567"
                 maxLength={20}
                 autoComplete="tel"
                 required
               />
 
+              {!tokenVerificacion && (
+                <>
+                  <button
+                    type="button"
+                    className="secondary reserva-boton-completo"
+                    onClick={solicitarCodigoCelular}
+                    disabled={ocupado || !celular.trim()}
+                  >
+                    {verificandoCelular ? "Procesando..." : "Enviar código de verificación"}
+                  </button>
+
+                  {codigoSolicitado && (
+                    <>
+                      <label htmlFor="codigo-celular">Código de verificación</label>
+                      <input
+                        id="codigo-celular"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        value={codigoCelular}
+                        onChange={(e) => setCodigoCelular(e.target.value)}
+                        placeholder="Ingresa el código de 4 dígitos"
+                        maxLength={6}
+                      />
+                      <button
+                        type="button"
+                        className="secondary reserva-boton-completo"
+                        onClick={verificarCodigoCelular}
+                        disabled={ocupado || !codigoCelular.trim()}
+                      >
+                        Verificar celular
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+
+              {tokenVerificacion && (
+                <p className="success reserva-mensaje" role="status">
+                  ✓ Celular verificado. Ya puedes confirmar tu turno.
+                </p>
+              )}
+
               <button
                 type="submit"
                 className="primary reserva-boton-completo"
-                disabled={ocupado || !nombre.trim() || !celular.trim()}
+                disabled={ocupado || !nombre.trim() || !celular.trim() || !tokenVerificacion}
               >
                 {reservando ? "Confirmando reserva..." : "Confirmar mi turno →"}
               </button>

@@ -50,6 +50,20 @@ const RUTAS = {
 
 };
 
+
+function obtenerFilas(datos) {
+  if (Array.isArray(datos)) return datos;
+  if (!datos || typeof datos !== "object") return [];
+  const lista = Object.values(datos).find(
+    (valor) => Array.isArray(valor) && valor.every((fila) => fila && typeof fila === "object")
+  );
+  return lista || [];
+}
+
+function etiquetaCampo(campo) {
+  return String(campo).replaceAll("_", " ").replace(/\b\w/g, (letra) => letra.toUpperCase());
+}
+
 export default function App() {
 
   const [usuario, setUsuario] = useState(obtenerUsuario);
@@ -430,7 +444,7 @@ export default function App() {
 
   return (
 
-    <div className="app-shell">
+    <div className={`app-shell app-role-${String(usuario.rol || "usuario").toLowerCase()}`}>
 
       <aside className="sidebar">
 
@@ -490,7 +504,7 @@ export default function App() {
 
           <div>
 
-            <p className="eyebrow">PANEL DE CONTROL</p>
+            <p className="eyebrow">{usuario.rol === "ADMIN" ? "CENTRO DE OPERACIONES" : usuario.rol === "AGENTE" ? "ESPACIO DE ATENCIÓN" : "PORTAL DEL CLIENTE"}</p>
 
             <h1>{seccion}</h1>
 
@@ -526,7 +540,7 @@ export default function App() {
 
         {mensaje && <p className="success">{mensaje}</p>}
 
-        <section className="welcome-card">
+        {usuario.rol === "ADMIN" && seccion === "Resumen" && <section className="welcome-card">
 
           <div>
 
@@ -542,7 +556,7 @@ export default function App() {
 
           </div>
 
-        </section>
+        </section>}
 
         {usuario.rol === "ADMIN" && seccion === "Resumen" && (
 
@@ -566,13 +580,13 @@ export default function App() {
 
         {seccion === "Mis turnos" && usuario.rol === "CLIENTE" && (
 
-          <section className="data-panel">
+          <section className="data-panel client-turns-panel">
 
-            <h2>Mis reservas</h2>
+            <div className="section-intro"><p className="eyebrow">PORTAL DEL CLIENTE</p><h2>Mis reservas</h2>
 
-            <p className="muted">Consulta tus turnos registrados.</p>
+            <p className="muted">Consulta el estado de tus turnos y administra tus reservas pendientes.</p></div>
 
-            <button
+            <div className="section-actions"><button
 
               className="primary"
 
@@ -582,9 +596,9 @@ export default function App() {
 
             >
 
-              Consultar mis turnos
+              {cargando ? "Consultando..." : "Consultar mis turnos"}
 
-            </button>
+            </button></div>
 
             {datos?.turnos?.length > 0 && (
 
@@ -622,7 +636,7 @@ export default function App() {
 
                         <td>{turno.hora_inicio} - {turno.hora_fin}</td>
 
-                        <td>{turno.estado}</td>
+                        <td><span className={`status-pill status-${String(turno.estado || "").toLowerCase()}`}>{String(turno.estado || "Sin estado").replaceAll("_", " ")}</span></td>
 
                         <td>
 
@@ -670,9 +684,10 @@ export default function App() {
 
         {usuario.rol === "AGENTE" && seccion === "Mi cola" && (
 
-          <section className="data-panel">
+          <section className="data-panel agent-queue-panel">
 
-            <h2>Cola de atención</h2>
+            <div className="section-intro"><p className="eyebrow">OPERACIÓN EN TIEMPO REAL</p><h2>Cola de atención</h2><p className="muted">Consulta los turnos pendientes y llama al siguiente ciudadano.</p></div>
+            <div className="section-actions">
 
             <button
 
@@ -684,7 +699,7 @@ export default function App() {
 
             >
 
-              Consultar cola
+              {cargando ? "Consultando..." : "Actualizar cola"}
 
             </button>
 
@@ -700,7 +715,7 @@ export default function App() {
 
               Llamar siguiente turno
 
-            </button>
+            </button></div>
 
             {datos?.turnos && (
 
@@ -754,9 +769,9 @@ export default function App() {
 
         {usuario.rol === "AGENTE" && seccion === "Turno actual" && (
 
-          <section className="data-panel">
+          <section className="data-panel agent-current-panel">
 
-            <h2>Turno actual</h2>
+            <div className="section-intro"><p className="eyebrow">ESTACIÓN DE ATENCIÓN</p><h2>Turno actual</h2><p className="muted">Gestiona el turno asignado a tu estación.</p></div>
 
             <button
 
@@ -847,9 +862,9 @@ export default function App() {
 
           RUTAS[seccion] && (
 
-            <section className="data-panel">
+            <section className="data-panel data-management-panel">
 
-              <h2>{seccion}</h2>
+              <div className="section-intro"><p className="eyebrow">GESTIÓN DEL SISTEMA</p><h2>{seccion}</h2></div>
 
               <p className="muted">
 
@@ -858,42 +873,29 @@ export default function App() {
               </p>
 
               {datos !== null && (
-
-                <pre className="result">{JSON.stringify(datos, null, 2)}</pre>
-
+                obtenerFilas(datos).length > 0 ? (
+                  <div className="table-wrap">
+                    <table>
+                      <thead><tr>{Object.keys(obtenerFilas(datos)[0]).map((campo) => <th key={campo}>{etiquetaCampo(campo)}</th>)}</tr></thead>
+                      <tbody>{obtenerFilas(datos).map((fila, indice) => (
+                        <tr key={fila.id ?? fila.codigo ?? indice}>
+                          {Object.keys(obtenerFilas(datos)[0]).map((campo) => (
+                            <td key={campo}>{fila[campo] == null ? "—" : typeof fila[campo] === "object" ? JSON.stringify(fila[campo]) : String(fila[campo])}</td>
+                          ))}
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <pre className="result">{JSON.stringify(datos, null, 2)}</pre>
+                )
               )}
 
             </section>
 
           )}
 
-        <section className="role-grid">
 
-          {menu.map((item, i) => (
-
-            <button
-
-              className="feature-card"
-
-              key={item}
-
-              onClick={() => cambiarSeccion(item)}
-
-            >
-
-              <span>0{i + 1}</span>
-
-              <h2>{item}</h2>
-
-              <p>Accede a {item.toLowerCase()} del sistema.</p>
-
-              <strong>Abrir sección →</strong>
-
-            </button>
-
-          ))}
-
-        </section>
 
       </main>
 
