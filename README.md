@@ -1,5 +1,32 @@
 # FilaCero
 
+> **Proyecto final de arquitectura:** ver [`docs/arquitectura/`](docs/arquitectura/README.md) (C4, ADR, despliegue, riesgos, evolución) y [`SECURITY.md`](SECURITY.md).
+
+## Inicio rápido
+
+```bash
+# Backend (carpeta backend, con el entorno virtual activo)
+pip install -r requirements-dev.txt
+flask db upgrade
+python simulacion.py --cargar      # borra y carga una semana simulada (escribe BORRAR)
+python run.py                      # API en http://127.0.0.1:5000
+
+# Frontend (carpeta frontend-react)
+npm install
+npm run dev                        # http://localhost:5173  ·  pantalla de sala: /sala
+
+# Verificación
+python -m pytest                   # pruebas automáticas
+python simulacion.py               # verificación de punta a punta
+python simulacion.py --carga --url http://127.0.0.1:5000   # carga y sobrecupo
+
+# Producción (un servidor)
+docker compose --env-file deploy/.env.produccion up -d --build
+```
+
+---
+
+
 **Proyecto final — Arquitectura de Software y Computacional**
 
 Sistema de gestión inteligente de turnos y tiempos de atención presencial.

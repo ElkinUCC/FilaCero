@@ -1,0 +1,83 @@
+/* Pantalla de sala de espera: pensada para verse a 4 metros. */
+.sala {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  background: var(--tinta);
+  color: #e6efec;
+}
+.sala--elegir { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center; }
+.sala--elegir h1 { color: #fff; font-size: 34px; }
+.sala__sedes { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+.sala__barra { display: flex; align-items: center; gap: 18px; padding: 18px 32px; border-bottom: 1px solid #23464a; }
+.sala__sede { margin-left: 12px; color: #fff; font-size: 24px; font-weight: 650; }
+.sala__sonido {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  margin-left: auto;
+  padding: 0 14px;
+  border: 1px solid #3d6064;
+  border-radius: 9px;
+  background: transparent;
+  color: #e3eeec;
+  font-weight: 650;
+}
+.sala__sonido.activo { border-color: var(--ambar); color: var(--ambar); }
+.sala__hora { color: #fff; font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sala__error { padding: 10px 32px; background: #5c1a1f; color: #ffd6d6; }
+
+.sala__cuerpo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); gap: 28px; padding: 32px; }
+.sala__actual {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  border-radius: 24px;
+  background: #17383c;
+}
+.sala__actual--llamando { background: #1d4549; box-shadow: inset 0 0 0 4px var(--ambar); }
+.sala__etiqueta { color: #a9c1bd; font-size: 24px; font-weight: 600; }
+.sala__codigo {
+  align-self: flex-start;
+  padding: 10px 26px;
+  border-radius: 18px;
+  background: var(--ambar);
+  color: var(--tinta);
+  font-size: clamp(64px, 9vw, 140px);
+  font-weight: 800;
+  letter-spacing: 6px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  animation: sala-llamado 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sala-llamado { from { transform: scale(0.85); opacity: 0; } }
+.sala__nombre { color: #fff; font-size: clamp(30px, 3.6vw, 52px); font-weight: 700; }
+.sala__destino { color: #c3d5d2; font-size: clamp(22px, 2.4vw, 34px); }
+.sala__destino b { color: #fff; }
+
+.sala__lado { display: flex; flex-direction: column; gap: 22px; }
+.sala__lado h2 { margin-bottom: 10px; color: #a9c1bd; font-size: 20px; font-weight: 650; }
+.sala__lado ul { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.sala__lado li {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 12px;
+  padding: 12px 4px;
+  border-top: 1px solid #23464a;
+  font-size: 22px;
+}
+.sala__lado li b { color: #fff; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.sala__lado li span:last-child { color: #a9c1bd; }
+.sala__vacio { color: #8fa9a5; }
+.sala__pie { padding: 14px 32px; border-top: 1px solid #23464a; color: #a9c1bd; font-size: 18px; text-align: center; }
+.sala :focus-visible { outline-color: var(--ambar); }
+
+@media (max-width: 900px) {
+  .sala__cuerpo { grid-template-columns: 1fr; padding: 16px; }
+  .sala__barra { flex-wrap: wrap; padding: 14px 16px; }
+  .sala__actual { padding: 24px; }
+}

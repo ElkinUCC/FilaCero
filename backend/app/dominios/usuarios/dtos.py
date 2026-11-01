@@ -1,28 +1,29 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, pre_load, validate
+
+from app.horario import a_iso_utc
 
 
-class RegistroUsuarioSchema(Schema):
-    nombre = fields.Str(
-        required=True,
-        validate=validate.Length(min=2, max=100)
-    )
+class _Base(Schema):
+    @pre_load
+    def limpiar(self, datos, **_kwargs):
+        if isinstance(datos, dict):
+            datos = dict(datos)
+            if isinstance(datos.get("correo"), str):
+                datos["correo"] = datos["correo"].strip().lower()
+            if isinstance(datos.get("nombre"), str):
+                datos["nombre"] = datos["nombre"].strip()
+        return datos
 
+
+class RegistroUsuarioSchema(_Base):
+    nombre = fields.Str(required=True, validate=validate.Length(min=2, max=100))
+    correo = fields.Email(required=True, validate=validate.Length(max=120))
+    password = fields.Str(required=True, load_only=True, validate=validate.Length(min=8, max=128))
+
+
+class LoginSchema(_Base):
     correo = fields.Email(required=True)
-
-    password = fields.Str(
-        required=True,
-        load_only=True,
-        validate=validate.Length(min=6)
-    )
-
-
-class LoginSchema(Schema):
-    correo = fields.Email(required=True)
-
-    password = fields.Str(
-        required=True,
-        load_only=True
-    )
+    password = fields.Str(required=True, load_only=True, validate=validate.Length(max=128))
 
 
 def usuario_response(usuario):
@@ -32,5 +33,9 @@ def usuario_response(usuario):
         "correo": usuario.correo,
         "rol": usuario.rol,
         "activo": usuario.activo,
-        "fecha_creacion": usuario.fecha_creacion.isoformat()
+        "punto_asignado_id": usuario.punto_asignado_id,
+        "sede": usuario.punto_asignado.nombre if usuario.punto_asignado else None,
+        "debe_cambiar_clave": bool(usuario.debe_cambiar_clave),
+        "ultimo_acceso": a_iso_utc(usuario.ultimo_acceso),
+        "fecha_creacion": a_iso_utc(usuario.fecha_creacion),
     }

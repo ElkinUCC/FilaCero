@@ -1,8 +1,12 @@
-﻿from datetime import date, time
+from datetime import date, time
+
+from sqlalchemy.exc import IntegrityError
+
 from app import db
-from .modelos import Franja
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
+from app.horario import dentro_de_horario, hoy_local
+from .modelos import Franja
 
 
 def crear_franja(datos):
@@ -26,12 +30,14 @@ def crear_franja(datos):
         raise ValueError("La sede no existe o está inactiva.")
     if not tramite or not tramite.activo:
         raise ValueError("El trámite no existe o está inactivo.")
-    if fecha < date.today():
+    if fecha < hoy_local():
         raise ValueError("La fecha no puede estar en el pasado.")
     if fin <= inicio:
         raise ValueError("La hora final debe ser posterior a la inicial.")
-    if capacidad <= 0:
-        raise ValueError("La capacidad debe ser positiva.")
+    if not dentro_de_horario(inicio, fin):
+        raise ValueError("La franja debe estar dentro del horario de atención.")
+    if capacidad <= 0 or capacidad > 500:
+        raise ValueError("La capacidad debe estar entre 1 y 500.")
 
     franja = Franja(
         punto_id=punto_id,
@@ -40,14 +46,14 @@ def crear_franja(datos):
         hora_inicio=inicio,
         hora_fin=fin,
         capacidad=capacidad,
-        activa=True
+        activa=True,
     )
     db.session.add(franja)
     try:
         db.session.commit()
-    except Exception:
+    except IntegrityError:
         db.session.rollback()
-        raise ValueError("No se pudo crear la franja. Verifica si ya existe.")
+        raise ValueError("Ya existe una franja con esa sede, trámite, fecha y hora.")
     return franja
 
 

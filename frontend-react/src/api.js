@@ -1,123 +1,94 @@
+import { guardarLocal, leerLocal } from "./util";
 
-const API_URL = (
-  import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:5000/api/v1"
-).replace(/\/+$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api/v1").replace(/\/+$/, "");
 
-function normalizarRuta(path) {
-  return path.startsWith("/") ? path : `/${path}`;
-}
+const CLAVE_TOKEN = "filacero_token";
+const CLAVE_USUARIO = "filacero_usuario";
+
+export const EVENTO_SESION_EXPIRADA = "filacero:sesion-expirada";
 
 async function leerRespuesta(response) {
-  if (response.status === 204) {
-    return null;
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
+  if (response.status === 204) return null;
+  const tipo = response.headers.get("content-type") || "";
+  if (tipo.includes("application/json")) {
     try {
       return await response.json();
     } catch {
-      throw new Error("El servidor devolvió una respuesta JSON inválida.");
+      throw new Error("El servidor devolvió una respuesta inválida.");
     }
   }
-
   const texto = await response.text();
-
   return texto || null;
 }
 
 function extraerMensaje(data, status) {
-  if (typeof data === "string" && data.trim()) {
-    return data;
-  }
-
   if (data && typeof data === "object") {
-    return (
-      data.error ||
-      data.mensaje ||
-      data.message ||
-      data.detail ||
-      `La solicitud falló (HTTP ${status}).`
-    );
+    return data.error || data.mensaje || data.message || `La solicitud falló (HTTP ${status}).`;
   }
-
+  if (status === 429) return "Demasiados intentos. Espera un momento e intenta de nuevo.";
   return `La solicitud falló (HTTP ${status}).`;
 }
 
 export async function apiRequest(path, options = {}) {
-  const ruta = normalizarRuta(path);
-  const token = localStorage.getItem("filacero_token");
-
+  const ruta = path.startsWith("/") ? path : `/${path}`;
+  const token = leerLocal(CLAVE_TOKEN);
   const headers = new Headers(options.headers || {});
-
   headers.set("Accept", "application/json");
 
-  const esFormData =
-    typeof FormData !== "undefined" &&
-    options.body instanceof FormData;
-
-  if (options.body != null && !esFormData) {
+  if (options.body != null && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-
-  if (token) {
+  if (token && !options.sinToken) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
   let response;
-
   try {
-    response = await fetch(`${API_URL}${ruta}`, {
-      ...options,
-      headers,
-    });
+    response = await fetch(`${API_URL}${ruta}`, { ...options, headers });
   } catch {
-    throw new Error(
-      "No se pudo conectar con el servidor. Comprueba que Flask esté ejecutándose y que la URL de la API sea correcta."
-    );
+    throw new Error("No hay conexión con el servidor. Revisa que el backend esté encendido.");
   }
 
   const data = await leerRespuesta(response);
 
   if (!response.ok) {
-    throw new Error(extraerMensaje(data, response.status));
+    // Token vencido o inválido: se cierra la sesión en toda la app.
+    if (response.status === 401 && token && !options.sinToken && !ruta.includes("/usuarios/login")) {
+      cerrarSesion();
+      window.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA));
+    }
+    const error = new Error(extraerMensaje(data, response.status));
+    error.status = response.status;
+    throw error;
   }
-
   return data;
 }
 
-export function guardarSesion(token, usuario) {
-  if (!token || !usuario) {
-    throw new Error(
-      "No se puede guardar la sesión: faltan el token o los datos del usuario."
-    );
-  }
+export const api = {
+  get: (ruta, opciones) => apiRequest(ruta, opciones),
+  post: (ruta, cuerpo, opciones) =>
+    apiRequest(ruta, { ...opciones, method: "POST", body: JSON.stringify(cuerpo ?? {}) }),
+  put: (ruta, cuerpo) => apiRequest(ruta, { method: "PUT", body: JSON.stringify(cuerpo ?? {}) }),
+  del: (ruta) => apiRequest(ruta, { method: "DELETE" }),
+};
 
-  localStorage.setItem("filacero_token", token);
-  localStorage.setItem("filacero_usuario", JSON.stringify(usuario));
+export function guardarSesion(token, usuario) {
+  if (!token || !usuario) throw new Error("Faltan el token o los datos del usuario.");
+  guardarLocal(CLAVE_TOKEN, token);
+  guardarLocal(CLAVE_USUARIO, JSON.stringify(usuario));
 }
 
 export function cerrarSesion() {
-  localStorage.removeItem("filacero_token");
-  localStorage.removeItem("filacero_usuario");
+  guardarLocal(CLAVE_TOKEN, null);
+  guardarLocal(CLAVE_USUARIO, null);
 }
 
 export function obtenerUsuario() {
   try {
-    const valor = localStorage.getItem("filacero_usuario");
-
-    if (!valor) return null;
-
+    const valor = leerLocal(CLAVE_USUARIO);
+    if (!valor || !leerLocal(CLAVE_TOKEN)) return null;
     const usuario = JSON.parse(valor);
-
-    if (!usuario || typeof usuario !== "object") {
-      cerrarSesion();
-      return null;
-    }
-
-    return usuario;
+    return usuario && typeof usuario === "object" ? usuario : null;
   } catch {
     cerrarSesion();
     return null;

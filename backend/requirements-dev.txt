@@ -1,0 +1,4 @@
+# Herramientas de desarrollo y verificación
+-r requirements.txt
+pytest==9.1.1
+pip-audit

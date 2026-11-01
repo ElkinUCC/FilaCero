@@ -32,6 +32,8 @@ class Turno(db.Model):
         db.Integer, db.ForeignKey("usuarios.id"), nullable=True, index=True
     )
 
+    fecha_llamado = db.Column(db.DateTime, nullable=True)
+
     fecha_inicio = db.Column(db.DateTime, nullable=True)
 
     fecha_fin = db.Column(db.DateTime, nullable=True)

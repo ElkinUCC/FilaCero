@@ -1,0 +1,56 @@
+# FilaCero: despliegue de referencia en un solo servidor (ver ADR-0006).
+#   1. Copia deploy/.env.produccion.ejemplo a deploy/.env.produccion y llena las claves.
+#   2. docker compose --env-file deploy/.env.produccion up -d --build
+#   3. Abre http://<servidor>  (poner HTTPS delante antes de publicar)
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: America/Bogota
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - datos_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${DB_USER}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      retries: 10
+    # Sin "ports": la base de datos NO queda expuesta fuera de la red interna.
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_EXP_MINUTES: ${JWT_EXP_MINUTES:-60}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      CORS_ALLOWED_ORIGINS: ${DOMINIO}
+      PROXIES_CONFIABLES: 1
+      FILACERO_OTP_TEST_MODE: "false"
+      REGISTRO_PUBLICO: "false"
+      RESTRINGIR_ATENCION_HORARIO: "true"
+      COLA_SOLO_HOY: "true"
+
+  web:
+    build: ./frontend-react
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "80:80"
+
+volumes:
+  datos_mysql:

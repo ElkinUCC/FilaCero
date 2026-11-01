@@ -1,3 +1,4 @@
+from app import db
 from .modelos import Tramite
 
 
@@ -6,4 +7,4 @@ def obtener_activos():
 
 
 def obtener_por_id(tramite_id):
-    return Tramite.query.get(tramite_id)
+    return db.session.get(Tramite, tramite_id)

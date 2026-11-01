@@ -3,7 +3,7 @@ from .modelos import Usuario
 
 
 def buscar_por_correo(correo):
-    return Usuario.query.filter_by(correo=correo).first()
+    return Usuario.query.filter_by(correo=(correo or "").strip().lower()).first()
 
 
 def buscar_por_celular(celular):

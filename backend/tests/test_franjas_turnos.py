@@ -18,6 +18,7 @@ def app_prueba():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
+        "RESTRINGIR_ATENCION_HORARIO": False,
     })
 
     with app.app_context():
@@ -198,7 +199,7 @@ def test_rechaza_tramite_que_no_corresponde(app_prueba, datos):
         reservar(datos, tramite_id=otro_tramite.id)
 from flask_jwt_extended import create_access_token
 
-def test_cliente_no_puede_crear_franjas(app_prueba):
+def test_cliente_no_puede_crear_franjas(app_prueba, datos):
     with app_prueba.app_context():
         token = create_access_token(
             identity="1",
@@ -222,7 +223,7 @@ def test_sin_token_no_puede_crear_franjas(app_prueba):
     assert respuesta.status_code == 401
 
 
-def test_cliente_no_puede_crear_sedes(app_prueba):
+def test_cliente_no_puede_crear_sedes(app_prueba, datos):
     with app_prueba.app_context():
         token = create_access_token(
             identity="1",
@@ -237,7 +238,7 @@ def test_cliente_no_puede_crear_sedes(app_prueba):
     assert respuesta.status_code == 403
 
 
-def test_cliente_no_puede_crear_tramites(app_prueba):
+def test_cliente_no_puede_crear_tramites(app_prueba, datos):
     with app_prueba.app_context():
         token = create_access_token(
             identity="1",
@@ -335,6 +336,19 @@ def test_cancelar_turno_por_api(app_prueba, datos):
     )
     assert respuesta.status_code == 200
     assert respuesta.get_json()["turno"]["estado"] == "CANCELADO"
+
+def crear_admin():
+    admin = Usuario(
+        nombre="Admin de prueba",
+        correo="admin@prueba.local",
+        password_hash="hash-de-prueba",
+        rol="ADMIN",
+        activo=True,
+    )
+    db.session.add(admin)
+    db.session.commit()
+    return admin
+
 
 def crear_agente(datos):
     agente = Usuario(
@@ -548,7 +562,7 @@ def test_admin_consulta_metricas_y_estadisticas(
 ):
     reservar(datos)
     token = token_usuario(
-        app_prueba, datos["usuario"].id, rol="ADMIN"
+        app_prueba, crear_admin().id, rol="ADMIN"
     )
     headers = {"Authorization": f"Bearer {token}"}
     cliente = app_prueba.test_client()
@@ -598,7 +612,7 @@ def test_admin_historial_paginado(
 ):
     reservar(datos)
     token = token_usuario(
-        app_prueba, datos["usuario"].id, rol="ADMIN"
+        app_prueba, crear_admin().id, rol="ADMIN"
     )
 
     respuesta = app_prueba.test_client().get(
@@ -617,7 +631,7 @@ def test_historial_rechaza_paginacion_invalida(
     app_prueba, datos
 ):
     token = token_usuario(
-        app_prueba, datos["usuario"].id, rol="ADMIN"
+        app_prueba, crear_admin().id, rol="ADMIN"
     )
 
     respuesta = app_prueba.test_client().get(

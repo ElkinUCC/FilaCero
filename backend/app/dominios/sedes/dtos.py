@@ -3,5 +3,5 @@ def punto_response(punto):
         "id": punto.id,
         "nombre": punto.nombre,
         "direccion": punto.direccion,
-        "activo": punto.activo
+        "activo": bool(punto.activo),
     }

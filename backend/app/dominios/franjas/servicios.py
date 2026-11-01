@@ -1,24 +1,17 @@
-﻿from app import db
+from app import db
 from app.dominios.turnos.modelos import Turno
 from .repositorios import listar_activas
 
 
 def consultar_disponibilidad(punto_id=None, tramite_id=None, fecha=None):
-    franjas = listar_activas(punto_id, tramite_id, fecha)
     resultado = []
-
-    for franja in franjas:
+    for franja in listar_activas(punto_id, tramite_id, fecha):
         reservados = (
             db.session.query(Turno)
-            .filter(
-                Turno.franja_id == franja.id,
-                Turno.estado != "CANCELADO"
-            )
+            .filter(Turno.franja_id == franja.id, Turno.estado != "CANCELADO")
             .count()
         )
-
         disponibles = max(0, franja.capacidad - reservados)
-
         resultado.append({
             "id": franja.id,
             "punto_id": franja.punto_id,
@@ -31,7 +24,6 @@ def consultar_disponibilidad(punto_id=None, tramite_id=None, fecha=None):
             "capacidad": franja.capacidad,
             "reservados": reservados,
             "disponibles": disponibles,
-            "disponible": disponibles > 0
+            "disponible": disponibles > 0,
         })
-
     return resultado

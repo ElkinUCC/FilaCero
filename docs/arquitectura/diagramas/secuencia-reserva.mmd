@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    actor C as Ciudadano
+    participant W as Aplicación web
+    participant A as API (Reservas)
+    participant D as Disponibilidad
+    participant B as MySQL
+    C->>W: Elige sede, servicio y día
+    W->>A: GET /franjas/disponibles
+    A->>D: asegurar franjas 8–18 h y calcular cupo de la sede
+    D->>B: franjas + ocupación por hora (todos los servicios)
+    D-->>W: horarios con cupos libres
+    C->>W: Celular → código de 6 dígitos (OTP)
+    W->>A: POST /turnos/publico (token de verificación)
+    Note over A: candado de la sede (hilos)<br/>+ SELECT … FOR UPDATE (procesos)
+    A->>B: ¿ocupación < 3 × asesores? ¿sin duplicado? ¿≤ 3 activos?
+    alt hay cupo
+        A->>B: INSERT turno ESPERANDO (COMMIT)
+        A-->>W: 201 · código FC-AAAAMMDD-XXXXXX
+    else sin cupo
+        A-->>W: 400 · "La franja ya no tiene cupos"
+    end

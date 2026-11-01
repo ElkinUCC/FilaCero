@@ -1,12 +1,19 @@
-﻿from flask import Flask
+﻿import logging
+import os
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from marshmallow import ValidationError
+from werkzeug.exceptions import HTTPException
 
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
+
+log = logging.getLogger("filacero")
 
 
 def create_app(test_config=None):
@@ -16,86 +23,184 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
+    from app.config import validar_configuracion
+    validar_configuracion(app)
+
+    # Detrás de nginx: confiar en X-Forwarded-For solo del número de proxies
+    # configurado, para que el límite por IP use la IP real del cliente.
+    proxies = int(app.config.get("PROXIES_CONFIABLES", 0) or 0)
+    if proxies:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
+
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    CORS(app)
+
+    # CORS restringido a los orígenes configurados y solo a la API.
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": app.config["CORS_ALLOWED_ORIGINS"]}},
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        max_age=600,
+    )
 
     # Modelos: registrar todos antes de usar migraciones.
-    from app.dominios.usuarios.modelos import Usuario
-    from app.dominios.sedes.modelos import Punto
-    from app.dominios.tramites.modelos import Tramite
-    from app.dominios.franjas.modelos import Franja
-    from app.dominios.turnos.modelos import Turno
+    from app.dominios.usuarios.modelos import Usuario  # noqa: F401
+    from app.dominios.sedes.modelos import Punto  # noqa: F401
+    from app.dominios.tramites.modelos import Tramite  # noqa: F401
+    from app.dominios.franjas.modelos import Franja  # noqa: F401
+    from app.dominios.turnos.modelos import Turno  # noqa: F401
+    from app.dominios.auditoria.modelos import Auditoria  # noqa: F401
 
-    # Controladores existentes.
     from app.dominios.usuarios.controladores import usuarios_bp
     from app.dominios.sedes.controladores import puntos_bp
     from app.dominios.tramites.controladores import tramites_bp
     from app.dominios.franjas.controladores import franjas_bp
     from app.dominios.franjas.admin_controladores import admin_franjas_bp
     from app.dominios.turnos.controladores import turnos_bp
-
-    # Nuevo dominio de agentes.
-    from app.dominios.agentes.controladores import (
-        agentes_bp,
-        admin_agentes_bp,
-    )
-
+    from app.dominios.agentes.controladores import agentes_bp, admin_agentes_bp
     from app.dominios.turnos.prediccion import prediccion_bp
     from app.dominios.franjas.disponibilidad import disponibilidad_bp
+    from app.dominios.usuarios.admin_controladores import admin_usuarios_bp
 
-    app.register_blueprint(
-        usuarios_bp, url_prefix="/api/v1/usuarios"
-    )
-    app.register_blueprint(
-        puntos_bp, url_prefix="/api/v1/sedes"
-    )
-    app.register_blueprint(
-        tramites_bp, url_prefix="/api/v1/tramites"
-    )
-    app.register_blueprint(
-        franjas_bp, url_prefix="/api/v1/franjas"
-    )
-    app.register_blueprint(
-        admin_franjas_bp, url_prefix="/api/v1/admin/franjas"
-    )
-    app.register_blueprint(
-        turnos_bp, url_prefix="/api/v1/turnos"
-    )
-    app.register_blueprint(
-        agentes_bp, url_prefix="/api/v1/agente"
-    )
-    app.register_blueprint(
-        admin_agentes_bp, url_prefix="/api/v1/admin/agentes"
-    )
+    app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
+    app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
+    app.register_blueprint(tramites_bp, url_prefix="/api/v1/tramites")
+    app.register_blueprint(franjas_bp, url_prefix="/api/v1/franjas")
+    app.register_blueprint(admin_franjas_bp, url_prefix="/api/v1/admin/franjas")
+    app.register_blueprint(turnos_bp, url_prefix="/api/v1/turnos")
+    app.register_blueprint(agentes_bp, url_prefix="/api/v1/agente")
+    app.register_blueprint(admin_agentes_bp, url_prefix="/api/v1/admin/agentes")
+    app.register_blueprint(prediccion_bp, url_prefix="/api/v1/turnos")
+    app.register_blueprint(disponibilidad_bp, url_prefix="/api/v1/franjas")
+    app.register_blueprint(admin_usuarios_bp, url_prefix="/api/v1/admin/usuarios")
 
-    app.register_blueprint(
-    prediccion_bp,
-    url_prefix="/api/v1/turnos"
-    )
+    _registrar_manejadores(app)
 
-    app.register_blueprint(
-    disponibilidad_bp,
-    url_prefix="/api/v1/franjas",
-    )
-
-    
-
+    @app.after_request
+    def cabeceras_seguridad(respuesta):
+        respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
+        respuesta.headers.setdefault("X-Frame-Options", "DENY")
+        respuesta.headers.setdefault("Referrer-Policy", "no-referrer")
+        respuesta.headers.setdefault("Cache-Control", "no-store")
+        respuesta.headers.setdefault(
+            "Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"
+        )
+        if request.is_secure:
+            respuesta.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
+        return respuesta
 
     @app.get("/")
     def inicio():
-        return {
-            "proyecto": "FilaCero",
-            "mensaje": "API funcionando"
-        }
+        return {"proyecto": "FilaCero", "mensaje": "API funcionando"}
 
     @app.get("/health")
     def health():
-        return {
-            "status": "ok",
-            "service": "filacero-api",
-            "version": "v1"
-        }
+        """Vivo: el proceso responde (para el orquestador)."""
+        return {"status": "ok", "service": "filacero-api", "version": "v1"}
+
+    @app.get("/health/listo")
+    def health_listo():
+        """Listo: además la base de datos responde."""
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SELECT 1"))
+            return {"status": "ok", "base_de_datos": "ok"}
+        except Exception:
+            db.session.rollback()
+            log.exception("La base de datos no responde")
+            return jsonify({"status": "degradado", "base_de_datos": "sin conexión"}), 503
+
+    @app.get("/api/v1/horario")
+    def horario():
+        from app.horario import info_horario
+        return info_horario()
 
     return app
+
+
+def _registrar_manejadores(app):
+    @app.errorhandler(ValidationError)
+    def error_validacion(error):
+        return jsonify({"error": "Datos inválidos.", "detalles": error.messages}), 400
+
+    @app.errorhandler(HTTPException)
+    def error_http(error):
+        mensajes = {
+            400: "Solicitud inválida.",
+            401: "Debes iniciar sesión.",
+            403: "No tienes permisos para esta acción.",
+            404: "Recurso no encontrado.",
+            405: "Método no permitido.",
+            413: "La solicitud es demasiado grande.",
+            429: "Demasiadas solicitudes.",
+        }
+        return jsonify({"error": mensajes.get(error.code, error.name)}), error.code
+
+    @app.errorhandler(Exception)
+    def error_interno(error):
+        db.session.rollback()
+        log.exception("Error no controlado: %s", error)
+        if app.config.get("TESTING"):
+            raise error
+        return jsonify({"error": "Ocurrió un error interno. Intenta de nuevo."}), 500
+
+    # Respuestas JWT uniformes y en español.
+    @jwt.unauthorized_loader
+    def sin_token(_motivo):
+        return jsonify({"error": "Debes iniciar sesión."}), 401
+
+    @jwt.invalid_token_loader
+    def token_invalido(_motivo):
+        return jsonify({"error": "Sesión inválida. Inicia sesión de nuevo."}), 401
+
+    @jwt.expired_token_loader
+    def token_expirado(_header, _payload):
+        return jsonify({"error": "Tu sesión expiró. Inicia sesión de nuevo."}), 401
+
+    @jwt.user_lookup_loader
+    def cargar_usuario(_header, payload):
+        from app.dominios.usuarios.modelos import Usuario
+        try:
+            usuario = db.session.get(Usuario, int(payload["sub"]))
+        except (KeyError, TypeError, ValueError):
+            return None
+        # Token emitido antes de un cambio de credenciales / rol / logout.
+        if usuario and usuario.sesiones_desde:
+            from datetime import timezone as tz
+            limite = int(usuario.sesiones_desde.replace(tzinfo=tz.utc).timestamp())
+            if int(payload.get("iat", 0)) < limite:
+                return None
+        return usuario
+
+    @jwt.token_verification_loader
+    def token_vigente(_header, payload):
+        from app.dominios.usuarios.modelos import Usuario
+        try:
+            usuario = db.session.get(Usuario, int(payload["sub"]))
+        except (KeyError, TypeError, ValueError):
+            return False
+        if usuario is None or not usuario.activo:
+            return False
+        if usuario.sesiones_desde:
+            from datetime import timezone as tz
+            limite = int(usuario.sesiones_desde.replace(tzinfo=tz.utc).timestamp())
+            return int(payload.get("iat", 0)) >= limite
+        return True
+
+    @jwt.token_verification_failed_loader
+    def token_revocado(_header, _payload):
+        return jsonify({"error": "Tu sesión ya no es válida. Inicia sesión de nuevo."}), 401
+
+    @jwt.user_lookup_error_loader
+    def usuario_no_encontrado(_header, _payload):
+        return jsonify({"error": "Sesión inválida. Inicia sesión de nuevo."}), 401

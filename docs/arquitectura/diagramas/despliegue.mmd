@@ -1,0 +1,38 @@
+flowchart LR
+    subgraph clientes ["Dispositivos de los usuarios"]
+        nav["<b>Navegador</b><br/>celular / PC del ciudadano"]:::nodo
+        pcsede["<b>PC del asesor</b><br/>por puesto de atención"]:::nodo
+        tvsede["<b>TV de la sala</b><br/>1 por sede · navegador"]:::nodo
+    end
+
+    subgraph servidor ["Servidor de aplicación · VM Linux 2 vCPU / 4 GB RAM / 40 GB SSD (estimado)"]
+        subgraph docker ["Docker Engine · docker compose"]
+            web["<b>web</b><br/>nginx 1.27<br/>:80 / :443<br/>SPA compilada + proxy"]:::contenedor
+            api["<b>api</b><br/>Python 3.13 · waitress<br/>8 hilos · :5000 (interno)"]:::contenedor
+            db[("<b>db</b><br/>MySQL 8.4 · :3306 (interno)")]:::datos
+            vol[("volumen<br/>datos_mysql")]:::datos
+        end
+    end
+
+    respaldo[("<b>Copias de seguridad</b><br/>almacenamiento externo<br/>(pendiente)")]:::pendiente
+    sms["<b>Proveedor SMS</b><br/>(pendiente)"]:::pendiente
+
+    nav -- "HTTPS 443" --> web
+    pcsede -- "HTTPS 443" --> web
+    tvsede -- "HTTPS 443" --> web
+    web -- "HTTP /api → api:5000<br/>red interna de Docker" --> api
+    api -- "TCP 3306<br/>red interna" --> db
+    db --- vol
+    vol -. "volcado diario" .-> respaldo
+    api -. "HTTPS saliente" .-> sms
+    classDef persona fill:#0f2a2e,stroke:#0f2a2e,color:#ffffff
+    classDef sistema fill:#135e63,stroke:#0d4a4f,color:#ffffff
+    classDef externo fill:#8a9b9e,stroke:#5b6b6e,color:#ffffff
+    classDef contenedor fill:#1d7a80,stroke:#0d4a4f,color:#ffffff
+    classDef datos fill:#2458a6,stroke:#173d78,color:#ffffff
+    classDef componente fill:#d5e8e5,stroke:#135e63,color:#0f2a2e
+    classDef nodo fill:#f7f9f8,stroke:#51676b,color:#0f2a2e,stroke-dasharray: 4 3
+    classDef pendiente fill:#fbecd2,stroke:#a65d00,color:#4a2a00,stroke-dasharray: 5 4
+    style clientes fill:#f3f8f6,stroke:#135e63,color:#0f2a2e
+    style servidor fill:#f3f8f6,stroke:#135e63,color:#0f2a2e
+    style docker fill:#f3f8f6,stroke:#135e63,color:#0f2a2e

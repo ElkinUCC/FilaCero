@@ -1,75 +1,90 @@
 from flask import Blueprint, request
 
-from .dtos import (
-    LoginSchema,
-    RegistroUsuarioSchema,
-    usuario_response
-)
+from flask_jwt_extended import current_user, jwt_required
 
-from .servicios import (
-    iniciar_sesion,
-    registrar_usuario
-)
+from app.seguridad import limitar
+from .dtos import LoginSchema, RegistroUsuarioSchema, usuario_response
+from .servicios import CuentaBloqueada, cambiar_clave_propia, emitir_token, iniciar_sesion, registrar_usuario
 
-
-usuarios_bp = Blueprint(
-    "usuarios",
-    __name__
-)
+usuarios_bp = Blueprint("usuarios", __name__)
 
 registro_schema = RegistroUsuarioSchema()
 login_schema = LoginSchema()
 
 
 @usuarios_bp.post("/registro")
+@limitar("LIMITE_OTP_POR_MINUTO")
 def registro():
-
-    datos = registro_schema.load(
-        request.get_json()
-    )
-
+    from flask import current_app
+    datos = registro_schema.load(request.get_json(silent=True) or {})
+    if not current_app.config.get("REGISTRO_PUBLICO", False):
+        return {"error": "El registro público de cuentas está deshabilitado."}, 403
     try:
-
-        usuario = registrar_usuario(
-            datos["nombre"],
-            datos["correo"],
-            datos["password"]
-        )
-
+        usuario = registrar_usuario(datos["nombre"], datos["correo"], datos["password"])
         return {
             "mensaje": "Usuario registrado correctamente",
-            "usuario": usuario_response(usuario)
+            "usuario": usuario_response(usuario),
         }, 201
-
     except ValueError as error:
-
-        return {
-            "error": str(error)
-        }, 400
+        return {"error": str(error)}, 400
 
 
 @usuarios_bp.post("/login")
+@limitar("LIMITE_LOGIN_POR_MINUTO")
 def login():
-
-    datos = login_schema.load(
-        request.get_json()
-    )
-
+    datos = login_schema.load(request.get_json(silent=True) or {})
     try:
-
-        usuario, token = iniciar_sesion(
-            datos["correo"],
-            datos["password"]
-        )
-
+        usuario, token = iniciar_sesion(datos["correo"], datos["password"])
         return {
             "mensaje": "Inicio de sesión exitoso",
             "usuario": usuario_response(usuario),
-            "access_token": token
+            "access_token": token,
         }
-
+    except CuentaBloqueada as error:
+        return {"error": str(error)}, 429
     except ValueError as error:
+        return {"error": str(error)}, 401
 
-        return {
-            "error": str(error)
-        }, 401
+
+
+@usuarios_bp.get("/me")
+@jwt_required()
+def mi_cuenta():
+    if not current_user or not current_user.activo:
+        return {"error": "Sesión inválida. Inicia sesión de nuevo."}, 401
+    return {"usuario": usuario_response(current_user)}, 200
+
+
+@usuarios_bp.post("/me/clave")
+@jwt_required()
+@limitar("LIMITE_LOGIN_POR_MINUTO")
+def cambiar_mi_clave():
+    from app.dominios.auditoria.servicios import registrar
+
+    if not current_user or not current_user.activo:
+        return {"error": "Sesión inválida. Inicia sesión de nuevo."}, 401
+    datos = request.get_json(silent=True) or {}
+    try:
+        cambiar_clave_propia(current_user, datos.get("actual"), datos.get("nueva"))
+    except ValueError as error:
+        return {"error": str(error)}, 400
+    registrar("clave_cambiada", usuario_id=current_user.id)
+    # Las sesiones anteriores quedaron revocadas: se entrega un token nuevo.
+    return {
+        "mensaje": "Contraseña actualizada.",
+        "usuario": usuario_response(current_user),
+        "access_token": emitir_token(current_user),
+    }, 200
+
+
+@usuarios_bp.post("/logout")
+@jwt_required()
+def cerrar_sesion():
+    """Revoca TODOS los tokens del usuario (cierra sesión en todos sus equipos)."""
+    from app import db
+    from app.dominios.auditoria.servicios import registrar
+    if current_user:
+        current_user.revocar_sesiones()
+        db.session.commit()
+        registrar("logout", usuario_id=current_user.id)
+    return {"mensaje": "Sesión cerrada."}, 200

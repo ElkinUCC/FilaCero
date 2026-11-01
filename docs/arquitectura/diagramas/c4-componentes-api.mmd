@@ -1,0 +1,40 @@
+flowchart TB
+    spa["<b>Aplicación web</b><br/>[Contenedor]"]:::contenedor
+    bd[("<b>MySQL</b><br/>[Contenedor]")]:::datos
+    sms["<b>Proveedor SMS</b><br/>[Externo · pendiente]"]:::pendiente
+
+    subgraph api ["API FilaCero [Contenedor: Flask]"]
+        direction TB
+        seg["<b>Seguridad</b><br/>[Componente]<br/>JWT, rol vigente en BD, revocación,<br/>límite por IP, bloqueo de cuenta"]:::componente
+        reservas["<b>Reservas públicas</b><br/>[Componente: turnos]<br/>Verificación OTP, reserva, consulta,<br/>cancelación, pantalla de sala"]:::componente
+        disp["<b>Disponibilidad</b><br/>[Componente: franjas + horario]<br/>Genera franjas 8–18 h y calcula cupo<br/>por sede = 3 × asesores"]:::componente
+        despacho["<b>Asistente de despacho</b><br/>[Componente: agentes/despacho]<br/>Predicción de duración + EDF;<br/>recomienda llamar, pausar o adelantar"]:::componente
+        atencion["<b>Atención</b><br/>[Componente: agentes]<br/>Llamar, iniciar, finalizar,<br/>no asistió, devolver a la cola"]:::componente
+        catalogo["<b>Catálogo</b><br/>[Componente: sedes, trámites]"]:::componente
+        personal["<b>Personal y permisos</b><br/>[Componente: usuarios]<br/>ADMIN · SUPERVISOR · AGENTE"]:::componente
+        metricas["<b>Métricas y supervisión</b><br/>[Componente: admin]<br/>Puntualidad, en vivo, historial"]:::componente
+        auditoria["<b>Auditoría</b><br/>[Componente]<br/>Bitácora de acciones sensibles"]:::componente
+        otp["<b>Adaptador SMS / OTP</b><br/>[Componente]<br/>Único punto de contacto con el proveedor"]:::componente
+    end
+
+    spa -- "REST /api/v1" --> seg
+    seg --> reservas & atencion & catalogo & personal & metricas
+    reservas --> disp
+    reservas --> otp
+    otp -. "HTTPS" .-> sms
+    atencion --> despacho
+    metricas --> despacho
+    disp -- "cupo de la sede" --> reservas
+    personal --> auditoria
+    catalogo --> auditoria
+    seg --> auditoria
+    api -- "SQLAlchemy · transacciones" --> bd
+    classDef persona fill:#0f2a2e,stroke:#0f2a2e,color:#ffffff
+    classDef sistema fill:#135e63,stroke:#0d4a4f,color:#ffffff
+    classDef externo fill:#8a9b9e,stroke:#5b6b6e,color:#ffffff
+    classDef contenedor fill:#1d7a80,stroke:#0d4a4f,color:#ffffff
+    classDef datos fill:#2458a6,stroke:#173d78,color:#ffffff
+    classDef componente fill:#d5e8e5,stroke:#135e63,color:#0f2a2e
+    classDef nodo fill:#f7f9f8,stroke:#51676b,color:#0f2a2e,stroke-dasharray: 4 3
+    classDef pendiente fill:#fbecd2,stroke:#a65d00,color:#4a2a00,stroke-dasharray: 5 4
+    style api fill:#f3f8f6,stroke:#135e63,color:#0f2a2e

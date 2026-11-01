@@ -50,6 +50,24 @@ class Usuario(db.Model):
         foreign_keys=[punto_asignado_id]
     )
 
+    # Tras un restablecimiento, la persona debe crear su propia contraseña.
+    debe_cambiar_clave = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.false()
+    )
+
+    ultimo_acceso = db.Column(db.DateTime, nullable=True)
+
+    # Bloqueo temporal tras varios intentos fallidos (anti fuerza bruta).
+    intentos_fallidos = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    bloqueado_hasta = db.Column(db.DateTime, nullable=True)
+
+    # Tokens emitidos antes de esta fecha quedan revocados (cambio de clave,
+    # de rol, desactivación o "cerrar sesión").
+    sesiones_desde = db.Column(db.DateTime, nullable=True)
+
+    def revocar_sesiones(self):
+        self.sesiones_desde = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
+
     fecha_creacion = db.Column(
     db.DateTime,
     nullable=False,

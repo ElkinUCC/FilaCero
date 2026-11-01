@@ -1,0 +1,26 @@
+flowchart TB
+    ciudadano["<b>Ciudadano</b><br/>[Persona]<br/>Reserva, consulta o cancela su turno<br/>sin crear cuenta"]:::persona
+    asesor["<b>Asesor</b><br/>[Persona]<br/>Atiende los turnos de su sede"]:::persona
+    admin["<b>Administrador / Supervisor</b><br/>[Persona]<br/>Gestiona sedes, servicios, personal<br/>y supervisa la puntualidad"]:::persona
+    sala["<b>Sala de espera</b><br/>[Pantalla pública]<br/>Muestra y anuncia el turno llamado"]:::persona
+
+    filacero["<b>FilaCero</b><br/>[Sistema de software]<br/>Reserva por franjas de 30 min y despacho<br/>que garantiza la atención dentro de la franja"]:::sistema
+
+    sms["<b>Proveedor de SMS</b><br/>[Sistema externo · pendiente]<br/>Envía el código de verificación"]:::pendiente
+    correo["<b>Navegador del usuario</b><br/>[Externo]<br/>Síntesis de voz del sistema operativo"]:::externo
+
+    ciudadano -- "Reserva y consulta<br/>[HTTPS]" --> filacero
+    asesor -- "Llama, atiende y cierra turnos<br/>[HTTPS]" --> filacero
+    admin -- "Configura y supervisa<br/>[HTTPS]" --> filacero
+    sala -- "Consulta turnos llamados<br/>[HTTPS, cada 4 s]" --> filacero
+    filacero -. "Solicita envío de código<br/>[HTTPS · por contratar]" .-> sms
+    sms -. "SMS con código" .-> ciudadano
+    filacero -- "Anuncios accesibles<br/>[Web Speech API]" --> correo
+    classDef persona fill:#0f2a2e,stroke:#0f2a2e,color:#ffffff
+    classDef sistema fill:#135e63,stroke:#0d4a4f,color:#ffffff
+    classDef externo fill:#8a9b9e,stroke:#5b6b6e,color:#ffffff
+    classDef contenedor fill:#1d7a80,stroke:#0d4a4f,color:#ffffff
+    classDef datos fill:#2458a6,stroke:#173d78,color:#ffffff
+    classDef componente fill:#d5e8e5,stroke:#135e63,color:#0f2a2e
+    classDef nodo fill:#f7f9f8,stroke:#51676b,color:#0f2a2e,stroke-dasharray: 4 3
+    classDef pendiente fill:#fbecd2,stroke:#a65d00,color:#4a2a00,stroke-dasharray: 5 4

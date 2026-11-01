@@ -1,10 +1,9 @@
-﻿from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime
 
 from app import db
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
-from app.dominios.turnos.modelos import Turno
+from app.horario import ahora_local, zona
 from .modelos import Franja
 
 
@@ -16,7 +15,7 @@ def listar_activas(punto_id=None, tramite_id=None, fecha=None):
         .filter(
             Franja.activa.is_(True),
             Punto.activo.is_(True),
-            Tramite.activo.is_(True)
+            Tramite.activo.is_(True),
         )
     )
     if punto_id is not None:
@@ -26,15 +25,11 @@ def listar_activas(punto_id=None, tramite_id=None, fecha=None):
     if fecha is not None:
         consulta = consulta.filter(Franja.fecha == fecha)
 
-    ahora = datetime.now(ZoneInfo("America/Bogota"))
+    ahora = ahora_local()
     return [
-        franja for franja in consulta.order_by(
-            Franja.fecha, Franja.hora_inicio
-        ).all()
-        if datetime.combine(
-            franja.fecha, franja.hora_inicio,
-            tzinfo=ZoneInfo("America/Bogota")
-        ) > ahora
+        franja
+        for franja in consulta.order_by(Franja.fecha, Franja.hora_inicio).limit(500).all()
+        if datetime.combine(franja.fecha, franja.hora_inicio, tzinfo=zona()) > ahora
     ]
 
 

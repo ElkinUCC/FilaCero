@@ -4,5 +4,5 @@ def tramite_response(tramite):
         "nombre": tramite.nombre,
         "descripcion": tramite.descripcion,
         "tiempo_estimado": tramite.tiempo_estimado,
-        "activo": tramite.activo
+        "activo": bool(tramite.activo),
     }
