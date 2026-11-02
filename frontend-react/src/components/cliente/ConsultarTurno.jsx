@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { cancelarTurno, consultarTurno } from "../../api/publico.api";
-import { hablar } from "../../hooks/useAccesibilidad";
+import { anunciar } from "../../hooks/useAccesibilidad";
 import Icon from "../ui/Icon";
 import { ESTADOS, fechaLarga, soloDigitos } from "../../utils/formatters";
 
@@ -67,6 +67,16 @@ export default function ConsultarTurno({ inicial, onResultado }) {
   }
 
   const turno = resultado?.turno;
+
+  // Cuando el asesor llama el turno se avisa: en pantalla siempre, y en voz
+  // alta solo si la persona activó "Leer avisos en voz alta" en Accesibilidad.
+  const [estadoPrevio, setEstadoPrevio] = useState(null);
+  if (turno && turno.estado !== estadoPrevio) {
+    if (estadoPrevio && turno.estado === "LLAMADO") {
+      anunciar(`Tu turno ${turno.codigo.slice(-6).split("").join(" ")} fue llamado. Acércate al punto de atención.`);
+    }
+    setEstadoPrevio(turno.estado);
+  }
   const espera = resultado?.espera;
   const estado = ESTADOS[turno?.estado] || {};
 
@@ -131,22 +141,6 @@ export default function ConsultarTurno({ inicial, onResultado }) {
 
           <div className="ct__fila-mensaje">
             <p className="ct__mensaje">{MENSAJES[turno.estado]}</p>
-            {"speechSynthesis" in window && (
-              <button
-                type="button"
-                className="btn btn--suave btn--chico"
-                onClick={() => hablar(
-                  `Tu turno ${turno.codigo.slice(-6).split("").join(" ")} está ${estado.texto}. ` +
-                  (turno.estado === "ESPERANDO" && espera
-                    ? `Hay ${espera.turnos_antes} personas antes que tú, con una espera estimada de ${espera.tiempo_estimado_minutos} minutos. `
-                    : "") +
-                  `${MENSAJES[turno.estado]} Sede ${turno.sede}, ${fechaLarga(turno.fecha)} a las ${turno.hora_inicio}.`,
-                  { forzar: true },
-                )}
-              >
-                <Icon name="volumen" size={16} /> Escuchar
-              </button>
-            )}
           </div>
 
           <dl className="ct__datos">

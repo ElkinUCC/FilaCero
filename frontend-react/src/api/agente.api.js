@@ -13,3 +13,6 @@ export const iniciar = accion("iniciar");
 export const finalizar = accion("finalizar");
 export const noAsistio = accion("no-asistio");
 export const devolver = accion("devolver");
+
+/** Rotación: el asesor elige la sede donde atiende (se registra en la bitácora). */
+export const cambiarSede = (puntoId) => http.put("/agente/sede", { punto_id: puntoId });

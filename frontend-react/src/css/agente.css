@@ -142,7 +142,7 @@
 }
 .ag__dia div { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
 .ag__dia div + div { border-left: 1px solid var(--linea); }
-.ag__dia span { color: var(--tinta-3); font-size: 12.5px; }
+.ag__dia > div > span { color: var(--tinta-3); font-size: 12.5px; }
 .ag__dia strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 
 .ag__recientes { padding: 14px 16px; border: 1px solid var(--linea); border-radius: var(--radio-l); background: var(--papel); }
@@ -256,3 +256,119 @@
 .cola__desplegar small { margin-left: auto; color: var(--tinta-3); font-weight: 500; }
 .cola__desplegar .fc-icon { transition: transform 0.18s; }
 .cola__desplegar .girado { transform: rotate(180deg); }
+
+/* Selector de sede en la barra oscura (rotación del asesor) */
+.ag__sede .dd--barra { min-width: 210px; }
+.ag__sede .dd--barra .dd__boton {
+  min-height: 38px;
+  padding: 4px 10px;
+  border-color: #2f4d51;
+  background: #17383c;
+  color: #fff;
+}
+.ag__sede .dd--barra .dd__boton:hover:not(:disabled) { border-color: #5d8a86; }
+.ag__sede .dd--barra .dd__valor { color: #fff; font-size: 15px; font-weight: 650; }
+.ag__sede .dd--barra .dd__valor small { display: none; }
+.ag__sede .dd--barra .dd__icono,
+.ag__sede .dd--barra .dd__flecha { color: #a9c1bd; }
+.ag__sede .dd--barra .dd__panel { min-width: 380px; z-index: 30; color: var(--tinta); }
+.ag__sede small { margin-top: 3px; }
+
+/* =========================================
+   CICLO DE ATENCIÓN: etapas, transiciones y cierre
+   ========================================= */
+
+.puesto { transition: border-color 0.35s ease, box-shadow 0.35s ease; }
+.puesto--cierre { border-color: #9fcdb3; box-shadow: inset 4px 0 0 var(--verde); }
+.puesto__contenido { display: grid; gap: 14px; animation: entrar 0.32s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+/* Etapas: Llamado → En atención → Finalizado */
+.etapas { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
+.etapas__paso { display: flex; align-items: center; gap: 7px; color: var(--tinta-3); font-size: 13px; font-weight: 600; }
+.etapas__paso + .etapas__paso::before {
+  content: "";
+  width: 34px;
+  height: 2px;
+  margin: 0 10px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--petroleo) 50%, var(--linea) 50%) right / 200% 100%;
+  transition: background-position 0.5s ease;
+}
+.etapas__paso--hecho + .etapas__paso::before,
+.etapas__paso--actual::before { background-position: left; }
+.etapas__icono {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1.5px solid var(--linea);
+  border-radius: 50%;
+  background: var(--papel);
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+.etapas__paso--hecho { color: var(--verde); }
+.etapas__paso--hecho .etapas__icono { border-color: var(--verde); background: var(--verde-claro); }
+.etapas__paso--actual { color: var(--tinta); }
+.etapas__paso--actual .etapas__icono {
+  position: relative;
+  border-color: var(--petroleo);
+  background: var(--petroleo);
+  color: #fff;
+}
+.puesto--llamado .etapas__paso--actual .etapas__icono { border-color: var(--azul); background: var(--azul); }
+.etapas__paso--actual .etapas__icono::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  color: var(--petroleo);
+  opacity: 0;
+  animation: onda 1.8s ease-out infinite;
+}
+.puesto--llamado .etapas__paso--actual .etapas__icono::after { color: var(--azul); }
+
+/* Botón de finalizar (verde, distinto de llamar/iniciar) */
+.btn--exito { background: var(--verde); color: #fff; }
+.btn--exito:hover:not(:disabled) { background: #14583a; }
+
+/* Cierre breve de la atención */
+.puesto__cierre { display: flex; align-items: center; gap: 16px; animation: entrar 0.3s ease; }
+.puesto__cierre h2 { color: var(--verde); font-size: 20px; }
+.puesto__cierre p { color: var(--tinta-2); }
+.sello { width: 56px; height: 56px; flex: none; }
+.sello__circulo { fill: var(--verde-claro); stroke: var(--verde); stroke-width: 2.5; stroke-dasharray: 145; stroke-dashoffset: 145; animation: trazo 0.5s ease forwards; }
+.sello__check { fill: none; stroke: var(--verde); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: trazo 0.35s 0.4s ease forwards; }
+
+/* Cronómetro: late suave al acercarse al límite */
+.crono--ambar .crono__cifras strong { color: var(--naranja); }
+.crono--rojo .crono__cifras strong { color: var(--rojo); animation: latido 1s ease-in-out infinite; }
+
+/* Turno recién llegado a la cola */
+.cola__item--nuevo { animation: llegada 4s ease; }
+
+/* Cifras de la jornada */
+.cifra { display: inline-block; font-variant-numeric: tabular-nums; }
+
+@keyframes entrar { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes onda { 0% { opacity: 0.55; transform: scale(0.85); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes trazo { to { stroke-dashoffset: 0; } }
+@keyframes latido { 50% { opacity: 0.55; } }
+@keyframes llegada {
+  0% { background: #dff2e7; box-shadow: inset 3px 0 0 var(--verde); transform: translateX(-4px); }
+  12% { transform: none; }
+  70% { background: #eef8f2; box-shadow: inset 3px 0 0 var(--verde); }
+  100% { background: transparent; box-shadow: none; }
+}
+
+@media (max-width: 760px) {
+  .etapas__texto { display: none; }
+  .etapas__paso--actual .etapas__texto { display: inline; }
+  .etapas__paso + .etapas__paso::before { width: 18px; margin: 0 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puesto__contenido, .puesto__cierre, .cola__item--nuevo,
+  .etapas__paso--actual .etapas__icono::after, .crono--rojo .crono__cifras strong { animation: none; }
+  .sello__circulo, .sello__check { animation: none; stroke-dashoffset: 0; }
+}

@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { pantallaSala } from "../api/publico.api";
 import Marca from "../components/layout/Marca";
 import { MenuAccesibilidad } from "../components/ui/Accesibilidad";
-import { hablar } from "../hooks/useAccesibilidad";
-import Icon from "../components/ui/Icon";
+import { hablar, usePreferencias } from "../hooks/useAccesibilidad";
 import usePolling from "../hooks/usePolling";
 import { ZONA } from "../utils/formatters";
 import "../css/sala.css";
@@ -20,13 +19,14 @@ function reloj() {
 
 /**
  * Pantalla para el televisor de la sala de espera: /sala?sede=ID
- * Muestra el turno llamado y lo anuncia en voz alta.
+ * Muestra el turno llamado. Si en Accesibilidad está activo "Leer avisos en
+ * voz alta", además lo anuncia (una sola opción de voz para toda la app).
  */
 /** Pantalla de la sala de espera (TV de cada sede), pública. Ruta: /sala?sede=<id> */
 export default function SalaPage() {
   const params = new URLSearchParams(window.location.search);
   const [sedeId, setSedeId] = useState(params.get("sede") || "");
-  const [sonido, setSonido] = useState(false);
+  const { voz: sonido } = usePreferencias();
   const [hora, setHora] = useState(reloj);
   const anunciados = useRef(null);
 
@@ -51,7 +51,7 @@ export default function SalaPage() {
     llamados.filter((t) => !anunciados.current.has(t.id)).reverse().forEach((t) => {
       anunciados.current.add(t.id);
       if (sonido) {
-        hablar(`Turno ${deletrear(t.codigo)}. ${t.nombre}, por favor acérquese con ${t.asesor}.`, { forzar: true });
+        hablar(`Turno ${deletrear(t.codigo)}. ${t.nombre}, por favor acérquese con ${t.asesor}.`);
       }
     });
   }, [datos?.llamados, sonido]);
@@ -88,16 +88,6 @@ export default function SalaPage() {
       <header className="sala__barra">
         <Marca />
         <h1 className="sala__sede">{datos?.sede?.nombre || "Cargando…"}</h1>
-        <button
-          className={`sala__sonido ${sonido ? "activo" : ""}`}
-          aria-pressed={sonido}
-          onClick={() => {
-            setSonido((s) => !s);
-            if (!sonido) hablar("Anuncios por voz activados.", { forzar: true });
-          }}
-        >
-          <Icon name="volumen" size={18} /> {sonido ? "Voz activada" : "Activar voz"}
-        </button>
         <MenuAccesibilidad />
         <time className="sala__hora">{hora}</time>
       </header>

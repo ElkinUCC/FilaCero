@@ -11,21 +11,7 @@
 .sala__sedes { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 
 .sala__barra { display: flex; align-items: center; gap: 18px; padding: 18px 32px; border-bottom: 1px solid #23464a; }
-.sala__sede { margin-left: 12px; color: #fff; font-size: 24px; font-weight: 650; }
-.sala__sonido {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  margin-left: auto;
-  padding: 0 14px;
-  border: 1px solid #3d6064;
-  border-radius: 9px;
-  background: transparent;
-  color: #e3eeec;
-  font-weight: 650;
-}
-.sala__sonido.activo { border-color: var(--ambar); color: var(--ambar); }
+.sala__sede { flex: 1; margin-left: 12px; color: #fff; font-size: 24px; font-weight: 650; }
 .sala__hora { color: #fff; font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sala__error { padding: 10px 32px; background: #5c1a1f; color: #ffd6d6; }
 

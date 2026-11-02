@@ -37,6 +37,10 @@ const PATHS = {
   volumen: <><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></>,
   externo: <><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
+  // Ciclo de atención (mismo trazo y estilo en consola, asistente y cola)
+  megafono: <><path d="M4 10.2v3.6a1 1 0 0 0 1 1h2.2L15 19V5L7.2 9.2H5a1 1 0 0 0-1 1Z" /><path d="m7.8 14.8 1.4 4.7h2.4l-1.1-3.9M18.5 9.5a3.5 3.5 0 0 1 0 5" /></>,
+  atender: <><path d="M4.8 13.5V12a7.2 7.2 0 0 1 14.4 0v1.5" /><rect x="3.5" y="13" width="3.8" height="5.8" rx="1.4" /><rect x="16.7" y="13" width="3.8" height="5.8" rx="1.4" /><path d="M18.6 18.8c0 1.5-1.8 2.2-4.6 2.2h-1.5" /></>,
+  finalizado: <><circle cx="12" cy="12" r="8.5" /><path d="m8.3 12.2 2.6 2.6 4.9-5.1" /></>,
 };
 
 export default function Icon({ name, size = 18, className = "", title, strokeWidth = 1.8 }) {

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as agenteApi from "../api/agente.api";
+import { listarSedes } from "../api/publico.api";
 import Marca from "../components/layout/Marca";
 import { MenuAccesibilidad, SaltarAlContenido } from "../components/ui/Accesibilidad";
 import { anunciar } from "../hooks/useAccesibilidad";
 import { CambiarMiClave } from "../components/ui/CambiarClave";
+import Dropdown from "../components/ui/Dropdown";
 import Icon from "../components/ui/Icon";
+import { Confirmar } from "../components/ui/Modal";
 import { useToast } from "../hooks/useToast";
 import usePolling from "../hooks/usePolling";
 import { duracion, fechaCorta, ZONA } from "../utils/formatters";
@@ -20,9 +23,63 @@ const PUNTUALIDAD = {
 };
 
 const ICONO_ACCION = {
-  llamar: "campana", pausa: "reloj", adelantar: "derecha", iniciar: "play",
-  ausente: "ausente", finalizar: "detener", atendiendo: "usuario", esperar: "check",
+  llamar: "megafono", pausa: "reloj", adelantar: "derecha", iniciar: "atender",
+  ausente: "ausente", finalizar: "finalizado", atendiendo: "atender", esperar: "check",
 };
+
+const ETAPAS = [
+  { estado: "LLAMADO", texto: "Llamado", icono: "megafono" },
+  { estado: "EN_ATENCION", texto: "En atención", icono: "atender" },
+  { estado: "ATENDIDO", texto: "Finalizado", icono: "finalizado" },
+];
+
+/** Progreso del turno en el puesto: Llamado → En atención → Finalizado. */
+function Etapas({ estado }) {
+  const actual = ETAPAS.findIndex((e) => e.estado === estado);
+  return (
+    <ol className="etapas" aria-label="Etapa del turno">
+      {ETAPAS.map((e, i) => (
+        <li
+          key={e.estado}
+          className={`etapas__paso ${i < actual ? "etapas__paso--hecho" : ""} ${i === actual ? "etapas__paso--actual" : ""}`}
+          aria-current={i === actual ? "step" : undefined}
+        >
+          <span className="etapas__icono"><Icon name={i < actual ? "check" : e.icono} size={16} /></span>
+          <span className="etapas__texto">{e.texto}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Número que se anima al cambiar (respeta "reducir movimiento"). */
+function Cifra({ valor, sufijo = "" }) {
+  const [mostrado, setMostrado] = useState(valor);
+  const previo = useRef(valor);
+  useEffect(() => {
+    const desde = Number(previo.current);
+    const hasta = Number(valor);
+    previo.current = valor;
+    const reducido = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!Number.isFinite(desde) || !Number.isFinite(hasta) || desde === hasta || reducido) {
+      setMostrado(valor);
+      return undefined;
+    }
+    const decimales = String(hasta).includes(".") ? 1 : 0;
+    const inicio = performance.now();
+    let marco;
+    const paso = (t) => {
+      const k = Math.min(1, (t - inicio) / 600);
+      const suave = 1 - (1 - k) ** 3;
+      setMostrado((desde + (hasta - desde) * suave).toFixed(decimales));
+      if (k < 1) marco = requestAnimationFrame(paso);
+    };
+    marco = requestAnimationFrame(paso);
+    return () => cancelAnimationFrame(marco);
+  }, [valor]);
+  if (valor == null) return "—";
+  return <span className="cifra">{mostrado}{sufijo}</span>;
+}
 
 function reloj(ms, conSegundos = true) {
   return new Intl.DateTimeFormat("es-CO", {
@@ -72,6 +129,29 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
   const [pausaHasta, setPausaHasta] = useState(null);
   const [cambiarClave, setCambiarClave] = useState(false);
   const { datos: p, error, refrescar } = usePolling(agenteApi.obtenerPanel, 5000);
+
+  // Rotación de sede: el asesor elige dónde atiende hoy.
+  const [sedes, setSedes] = useState([]);
+  const [nuevaSede, setNuevaSede] = useState(null);
+  const [cambio, setCambio] = useState({ ocupado: false, error: "" });
+  useEffect(() => {
+    listarSedes().then((r) => setSedes(r?.puntos || [])).catch(() => {});
+  }, []);
+
+  async function confirmarCambioSede() {
+    setCambio({ ocupado: true, error: "" });
+    try {
+      const r = await agenteApi.cambiarSede(nuevaSede.id);
+      setNuevaSede(null);
+      setCambio({ ocupado: false, error: "" });
+      setPausaHasta(null);
+      avisar(r.mensaje);
+      anunciar(r.mensaje);
+      refrescar();
+    } catch (e) {
+      setCambio({ ocupado: false, error: e.message });
+    }
+  }
   const ahora = useAhora(p?.ahora);
 
   const actual = p?.actual;
@@ -110,12 +190,13 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
   }, [pausaHasta, restantePausa, avisar]);
 
   /** accion: función de agente.api.js que ejecuta el cambio de estado del turno. */
-  async function ejecutar(accion, exito) {
+  async function ejecutar(accion, exito, alTerminar) {
     setOcupado(true);
     try {
       const r = await accion();
       avisar(exito || r.mensaje);
       setPausaHasta(null);
+      alTerminar?.(r);
     } catch (e) {
       avisar(e.message, "error");
     } finally {
@@ -123,6 +204,40 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
       refrescar();
     }
   }
+
+  // Al finalizar se muestra un cierre breve (2,4 s) antes de liberar el puesto.
+  const [cierre, setCierre] = useState(null);
+  useEffect(() => {
+    if (!cierre) return undefined;
+    const t = window.setTimeout(() => setCierre(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [cierre]);
+  const finalizar = (turno) =>
+    ejecutar(() => agenteApi.finalizar(turno.id), "Atención finalizada.", () =>
+      setCierre({
+        nombre: turno.usuario_nombre,
+        codigo: turno.codigo.slice(-6),
+        seg: turno.fecha_inicio ? (ahora - Date.parse(turno.fecha_inicio)) / 1000 : null,
+      }),
+    );
+
+  // Turnos que acaban de llegar a la cola: se resaltan unos segundos.
+  const vistos = useRef(null);
+  const [recienLlegados, setRecienLlegados] = useState(() => new Set());
+  useEffect(() => {
+    if (!p?.cola) return undefined;
+    const ids = p.cola.map((t) => t.id);
+    if (vistos.current === null) {
+      vistos.current = new Set(ids);
+      return undefined;
+    }
+    const nuevos = ids.filter((id) => !vistos.current.has(id));
+    ids.forEach((id) => vistos.current.add(id));
+    if (!nuevos.length) return undefined;
+    setRecienLlegados(new Set(nuevos));
+    const t = window.setTimeout(() => setRecienLlegados(new Set()), 4000);
+    return () => window.clearTimeout(t);
+  }, [p?.cola]);
 
   const llamar = (turnoId) =>
     turnoId && p?.cola?.[0]?.id !== turnoId
@@ -154,7 +269,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           const pu = PUNTUALIDAD[t.puntualidad] || {};
           const recomendado = rec?.turno_id === t.id && !actual;
           return (
-            <div key={t.id} className={`cola__item ${recomendado ? "cola__item--rec" : ""}`}>
+            <div key={t.id} className={`cola__item ${recomendado ? "cola__item--rec" : ""} ${recienLlegados.has(t.id) ? "cola__item--nuevo" : ""}`}>
               <span className="cola__hora" title="Hora proyectada de inicio">{t.es_hoy ? t.inicio_proyectado : t.hora_inicio}</span>
               <div className="cola__info">
                 <strong>{t.usuario_nombre}</strong>
@@ -162,7 +277,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
               </div>
               <span className={`punt punt--${pu.tono}`}>{pu.texto}</span>
               <button className="icono-btn" title="Llamar a esta persona" aria-label={`Llamar a ${t.usuario_nombre}`} disabled={Boolean(actual) || ocupado} onClick={() => llamar(t.id)}>
-                <Icon name="campana" size={17} />
+                <Icon name="megafono" size={17} />
               </button>
             </div>
           );
@@ -178,7 +293,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
     const codigo = rec.turno_codigo?.slice(-6);
     switch (rec.accion) {
       case "llamar":
-        return <button className="btn btn--primario" disabled={ocupado} onClick={() => llamar(turnoId)}><Icon name="campana" size={17} /> Llamar {codigo}</button>;
+        return <button className="btn btn--primario" disabled={ocupado} onClick={() => llamar(turnoId)}><Icon name="megafono" size={17} /> Llamar {codigo}</button>;
       case "pausa":
         return (
           <>
@@ -194,7 +309,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           </>
         );
       case "iniciar":
-        return <button className="btn btn--primario" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.iniciar(turnoId))}><Icon name="play" size={17} /> Iniciar atención</button>;
+        return <button className="btn btn--primario" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.iniciar(turnoId))}><Icon name="atender" size={17} /> Iniciar atención</button>;
       case "ausente":
         return (
           <>
@@ -203,7 +318,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           </>
         );
       case "finalizar":
-        return <button className="btn btn--primario" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.finalizar(turnoId))}><Icon name="detener" size={17} /> Finalizar atención</button>;
+        return <button className="btn btn--primario" disabled={ocupado || !actual} onClick={() => finalizar(actual)}><Icon name="finalizado" size={17} /> Finalizar atención</button>;
       default:
         return null;
     }
@@ -216,7 +331,19 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
       <header className="ag__barra">
         <Marca />
         <div className="ag__sede">
-          <strong>{p?.agente?.sede || "Sin sede asignada"}</strong>
+          <Dropdown
+            className="dd--barra"
+            icon="edificio"
+            ariaLabel="Sede donde atiendes"
+            placeholder="Elige tu sede"
+            value={p?.agente?.sede_id ?? ""}
+            options={sedes.map((s) => ({ value: s.id, label: s.nombre, hint: s.direccion }))}
+            onChange={(id) => {
+              const sede = sedes.find((s) => String(s.id) === String(id));
+              if (sede && sede.id !== p?.agente?.sede_id) setNuevaSede(sede);
+            }}
+            disabled={!sedes.length}
+          />
           <small>{usuario.nombre}</small>
         </div>
         <div className="ag__franja-chip">
@@ -234,7 +361,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
       </header>
 
       {error && <div className="ag__aviso"><Icon name="alerta" size={16} /> {error} Reintentando…</div>}
-      {p?.error && <div className="ag__aviso"><Icon name="alerta" size={16} /> {p.error} Pide al administrador que te asigne una sede.</div>}
+      {p?.error && <div className="ag__aviso"><Icon name="alerta" size={16} /> {p.error} Elige tu sede en la parte de arriba.</div>}
 
       <main className="ag__cuerpo" id="contenido" tabIndex={-1}>
         <h1 className="sr">Consola de atención{p?.agente?.sede ? ` · ${p.agente.sede}` : ""}</h1>
@@ -266,13 +393,11 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
             <section className="asistente"><div className="esqueleto" style={{ height: 60, width: "100%" }} /></section>
           )}
 
-          <section className={`puesto ${actual ? `puesto--${actual.estado.toLowerCase()}` : ""}`}>
+          <section className={`puesto ${actual ? `puesto--${actual.estado.toLowerCase()}` : cierre ? "puesto--cierre" : ""}`}>
             {actual ? (
-              <>
+              <div className="puesto__contenido" key={`${actual.id}-${actual.estado}`}>
                 <div className="puesto__cabeza">
-                  <span className={`estado estado--${actual.estado === "EN_ATENCION" ? "atencion" : "llamado"}`}>
-                    {actual.estado === "EN_ATENCION" ? "En atención" : "Llamado"}
-                  </span>
+                  <Etapas estado={actual.estado} />
                   <span className="puesto__franja">Reservó {actual.hora_inicio}–{actual.hora_fin}</span>
                 </div>
                 <div className="puesto__turno">
@@ -290,35 +415,46 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                 <div className="puesto__acciones">
                   {actual.estado === "LLAMADO" ? (
                     <>
-                      <button className="btn btn--primario btn--grande" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.iniciar(actual.id))}><Icon name="play" size={18} /> Iniciar atención</button>
+                      <button className="btn btn--primario btn--grande" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.iniciar(actual.id))}><Icon name="atender" size={18} /> Iniciar atención</button>
                       <button className="btn btn--borde" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.noAsistio(actual.id))}><Icon name="ausente" size={17} /> No asistió</button>
                       <button className="btn btn--fantasma" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.devolver(actual.id))}><Icon name="deshacer" size={17} /> Devolver a la cola</button>
                     </>
                   ) : (
-                    <button className="btn btn--primario btn--grande" disabled={ocupado} onClick={() => ejecutar(() => agenteApi.finalizar(actual.id))}><Icon name="detener" size={18} /> Finalizar atención</button>
+                    <button className="btn btn--exito btn--grande" disabled={ocupado} onClick={() => finalizar(actual)}><Icon name="finalizado" size={18} /> Finalizar atención</button>
                   )}
                 </div>
-              </>
+              </div>
+            ) : cierre ? (
+              <div className="puesto__cierre" role="status">
+                <svg className="sello" viewBox="0 0 52 52" aria-hidden="true">
+                  <circle className="sello__circulo" cx="26" cy="26" r="23" />
+                  <path className="sello__check" d="m15 27 7.5 7.5L38 19" />
+                </svg>
+                <div>
+                  <h2>Atención finalizada</h2>
+                  <p><span className="mono">{cierre.codigo}</span> · {cierre.nombre}{cierre.seg != null ? ` · ${mmss(cierre.seg)}` : ""}</p>
+                </div>
+              </div>
             ) : (
               <div className="puesto__libre">
-                <span className="puesto__icono"><Icon name="usuario" size={28} /></span>
+                <span className="puesto__icono"><Icon name="atender" size={28} /></span>
                 <div>
                   <h2>Puesto libre</h2>
                   <p>{p?.cola?.length ? `${p.cola.length} persona(s) en la cola.` : "Nadie en la cola por ahora."}</p>
                 </div>
                 <button className="btn btn--primario btn--grande" disabled={ocupado || !p?.cola?.length || Boolean(pausaHasta)} onClick={() => llamar()}>
-                  <Icon name="campana" size={18} /> Llamar siguiente
+                  <Icon name="megafono" size={18} /> Llamar siguiente
                 </button>
               </div>
             )}
           </section>
 
           <section className="ag__dia" aria-label="Mi jornada">
-            <div><span>Atendidos hoy</span><strong>{r.atendidos_hoy ?? "—"}</strong></div>
-            <div><span>No asistieron</span><strong>{r.no_asistio_hoy ?? "—"}</strong></div>
+            <div><span>Atendidos hoy</span><strong><Cifra valor={r.atendidos_hoy} /></strong></div>
+            <div><span>No asistieron</span><strong><Cifra valor={r.no_asistio_hoy} /></strong></div>
             <div><span>Promedio</span><strong>{duracion(r.promedio_hoy_segundos)}</strong></div>
-            <div><span>En su franja</span><strong>{r.puntualidad_pct != null ? `${r.puntualidad_pct}%` : "—"}</strong></div>
-            <div><span>Dentro de {Math.round(maxSeg / 60)} min</span><strong>{r.dentro_tiempo_max_pct != null ? `${r.dentro_tiempo_max_pct}%` : "—"}</strong></div>
+            <div><span>En su franja</span><strong><Cifra valor={r.puntualidad_pct} sufijo="%" /></strong></div>
+            <div><span>Dentro de {Math.round(maxSeg / 60)} min</span><strong><Cifra valor={r.dentro_tiempo_max_pct} sufijo="%" /></strong></div>
           </section>
 
           {p?.recientes?.length > 0 && (
@@ -370,6 +506,18 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           </div>
         </aside>
       </main>
+      {nuevaSede && (
+        <Confirmar
+          titulo="Cambiar de sede"
+          mensaje={`Vas a atender en ${nuevaSede.nombre}. Tu cola cambia a la de esa sede y el cupo de ambas sedes se recalcula (3 personas por asesor cada 30 min).`}
+          textoConfirmar={`Atender en ${nuevaSede.nombre}`}
+          peligro={false}
+          ocupado={cambio.ocupado}
+          error={cambio.error}
+          onConfirmar={confirmarCambioSede}
+          onCerrar={() => { setNuevaSede(null); setCambio({ ocupado: false, error: "" }); }}
+        />
+      )}
       {cambiarClave && <CambiarMiClave onCerrar={() => setCambiarClave(false)} onListo={(u) => { onUsuario?.(u); avisar("Tu contraseña fue actualizada."); }} />}
     </div>
   );

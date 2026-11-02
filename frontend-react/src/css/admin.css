@@ -365,3 +365,18 @@
 .tabla th[scope="row"] { background: transparent; color: var(--tinta); font-size: 14px; border-bottom: 1px solid #e3ebe8; }
 .tabla tbody tr:last-child th[scope="row"] { border-bottom: 0; }
 .tabla tbody tr:hover th[scope="row"] { background: #f4f8f6; }
+
+/* Cuenta protegida (CUENTAS_PROTEGIDAS en el .env) */
+.insignia-protegida {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--petroleo-claro);
+  color: var(--petroleo-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  vertical-align: middle;
+}

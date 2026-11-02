@@ -234,13 +234,13 @@ export default function Usuarios({ titulo }) {
                     <td>
                       <div className="persona">
                         <span className="adm__avatar adm__avatar--chico">{u.nombre[0]}</span>
-                        <div><strong>{u.nombre}{esYo && <span className="tenue"> (tú)</span>}</strong><small>{u.correo}</small></div>
+                        <div><strong>{u.nombre}{esYo && <span className="tenue"> (tú)</span>}{u.protegida && <span className="insignia-protegida" title="Cuenta protegida: no se puede desactivar ni cambiar su rol"><Icon name="escudo" size={12} /> Protegida</span>}</strong><small>{u.correo}</small></div>
                       </div>
                     </td>
                     <td><span className={`rol rol--${r.tono}`}>{r.nombre}</span>{u.debe_cambiar_clave && <small className="bloque">Clave temporal pendiente</small>}</td>
                     <td>{u.rol === "AGENTE" ? (u.sede || <span className="estado estado--espera">Sin sede</span>) : <span className="tenue">—</span>}</td>
                     <td className="tenue" title={u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString("es-CO") : undefined}>{hace(u.ultimo_acceso)}</td>
-                    <td><Switch activo={u.activo} disabled={esYo} onChange={(v) => alternar(u, v)} etiqueta={esYo ? "No puedes desactivar tu cuenta" : u.activo ? "Bloquear acceso" : "Permitir acceso"} /></td>
+                    <td><Switch activo={u.activo} disabled={esYo || u.protegida} onChange={(v) => alternar(u, v)} etiqueta={esYo ? "No puedes desactivar tu cuenta" : u.protegida ? "Cuenta protegida" : u.activo ? "Bloquear acceso" : "Permitir acceso"} /></td>
                     <td className="acciones">
                       <button className="icono-btn" title="Editar datos y rol" aria-label={`Editar ${u.nombre}`} onClick={() => setEditar(u)}><Icon name="editar" size={17} /></button>
                       <button className="icono-btn" title={esYo ? "Usa “Cambiar mi contraseña”" : "Restablecer contraseña"} aria-label={`Restablecer contraseña de ${u.nombre}`} disabled={esYo}
