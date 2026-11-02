@@ -1,13 +1,14 @@
-
 from app import create_app
 
 
 def test_rutas_clave_de_fila_cero_registradas():
-    app = create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "clave-exclusiva-para-pruebas",
-    })
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "JWT_SECRET_KEY": "clave-exclusiva-para-pruebas",
+        }
+    )
 
     rutas = {
         (rule.rule, method)
@@ -34,7 +35,4 @@ def test_rutas_clave_de_fila_cero_registradas():
 
     faltantes = esperadas - rutas
 
-    assert not faltantes, (
-        "Hay rutas esperadas que no están registradas: "
-        f"{sorted(faltantes)}"
-    )
+    assert not faltantes, "Hay rutas esperadas que no están registradas: " f"{sorted(faltantes)}"

@@ -21,9 +21,9 @@ def obtener_turno_bloqueado(turno_id):
 
 def obtener_turno_activo(agente_id):
     return (
-        Turno.query
-        .filter(Turno.agente_id == agente_id, Turno.estado.in_(("LLAMADO", "EN_ATENCION")))
+        Turno.query.filter(
+            Turno.agente_id == agente_id, Turno.estado.in_(("LLAMADO", "EN_ATENCION"))
+        )
         .order_by(Turno.id.desc())
         .first()
     )
-

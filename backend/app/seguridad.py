@@ -8,10 +8,12 @@ from flask import current_app, jsonify, request
 from flask_jwt_extended import get_jwt, verify_jwt_in_request
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from app.errores import DatosInvalidosError
 
 # ----------------------------------------------------------------------
 # Contraseñas
 # ----------------------------------------------------------------------
+
 
 def encriptar_password(password):
     return generate_password_hash(password)
@@ -30,21 +32,22 @@ def verificar_password(password, password_hash):
 def validar_password_segura(password):
     """Mínimo 8 caracteres, con letras y números."""
     if not isinstance(password, str) or len(password) < 8:
-        raise ValueError("La contraseña debe tener al menos 8 caracteres.")
+        raise DatosInvalidosError("La contraseña debe tener al menos 8 caracteres.")
     if not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password):
-        raise ValueError("La contraseña debe combinar letras y números.")
+        raise DatosInvalidosError("La contraseña debe combinar letras y números.")
 
 
 # ----------------------------------------------------------------------
 # Celular (Colombia: 10 dígitos que inician en 3)
 # ----------------------------------------------------------------------
 
+
 def normalizar_celular(valor):
     digitos = re.sub(r"\D", "", str(valor or ""))
     if digitos.startswith("57") and len(digitos) == 12:
         digitos = digitos[2:]
     if not re.fullmatch(r"3\d{9}", digitos):
-        raise ValueError("Ingresa un celular válido de 10 dígitos (ej. 3001234567).")
+        raise DatosInvalidosError("Ingresa un celular válido de 10 dígitos (ej. 3001234567).")
     return digitos
 
 
@@ -58,17 +61,20 @@ def enmascarar_celular(celular):
 # Autorización
 # ----------------------------------------------------------------------
 
+
 def requiere_token(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         verify_jwt_in_request()
         return func(*args, **kwargs)
+
     return wrapper
 
 
 def usuario_autenticado():
     """Usuario del token, validado contra la base de datos (activo y rol vigente)."""
     from flask_jwt_extended import current_user
+
     usuario = current_user
     if usuario is None or not usuario.activo:
         return None
@@ -81,6 +87,7 @@ def requiere_rol(*roles):
     Así un usuario desactivado o al que se le cambió el rol pierde el acceso
     de inmediato, aunque su token aún no haya expirado.
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -93,12 +100,19 @@ def requiere_rol(*roles):
             if usuario.rol not in roles or get_jwt().get("rol") not in roles:
                 return jsonify({"error": "No tienes permisos para realizar esta acción."}), 403
             if getattr(usuario, "debe_cambiar_clave", False):
-                return jsonify({
-                    "error": "Debes cambiar tu contraseña temporal antes de continuar.",
-                    "codigo": "CAMBIAR_CLAVE",
-                }), 403
+                return (
+                    jsonify(
+                        {
+                            "error": "Debes cambiar tu contraseña temporal antes de continuar.",
+                            "codigo": "CAMBIAR_CLAVE",
+                        }
+                    ),
+                    403,
+                )
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -133,16 +147,18 @@ def limitar(clave_config, ventana_seg=60, por="ip"):
                     cola.popleft()
                 if len(cola) >= limite:
                     espera = int(ventana_seg - (ahora - cola[0])) + 1
-                    respuesta = jsonify({
-                        "error": f"Demasiados intentos. Intenta de nuevo en {espera} segundos."
-                    })
+                    respuesta = jsonify(
+                        {"error": f"Demasiados intentos. Intenta de nuevo en {espera} segundos."}
+                    )
                     respuesta.status_code = 429
                     respuesta.headers["Retry-After"] = str(espera)
                     return respuesta
                 cola.append(ahora)
 
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

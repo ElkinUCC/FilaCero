@@ -3,6 +3,7 @@ from flask_jwt_extended import get_jwt, verify_jwt_in_request
 
 from app.dominios.auditoria.servicios import registrar
 from app.seguridad import requiere_rol
+
 from .dtos import tramite_response
 from .servicios import actualizar_tramite, crear_tramite, eliminar_tramite, listar_tramites
 
@@ -27,31 +28,24 @@ def obtener_tramites():
 @tramites_bp.post("/")
 @requiere_rol("ADMIN")
 def crear():
-    try:
-        tramite = crear_tramite(request.get_json(silent=True) or {})
-        registrar("tramite_creado", tramite.nombre)
-        return {"tramite": tramite_response(tramite), "mensaje": "Trámite creado."}, 201
-    except ValueError as error:
-        return {"error": str(error)}, 400
+    tramite = crear_tramite(request.get_json(silent=True) or {})
+    registrar("tramite_creado", tramite.nombre)
+    return {"tramite": tramite_response(tramite), "mensaje": "Trámite creado."}, 201
 
 
 @tramites_bp.put("/<int:tramite_id>")
 @requiere_rol("ADMIN")
 def actualizar(tramite_id):
-    try:
-        tramite = actualizar_tramite(tramite_id, request.get_json(silent=True) or {})
-        registrar("tramite_editado", tramite.nombre + (" (activo)" if tramite.activo else " (inactivo)"))
-        return {"tramite": tramite_response(tramite), "mensaje": "Trámite actualizado."}, 200
-    except ValueError as error:
-        return {"error": str(error)}, 400
+    tramite = actualizar_tramite(tramite_id, request.get_json(silent=True) or {})
+    registrar(
+        "tramite_editado", tramite.nombre + (" (activo)" if tramite.activo else " (inactivo)")
+    )
+    return {"tramite": tramite_response(tramite), "mensaje": "Trámite actualizado."}, 200
 
 
 @tramites_bp.delete("/<int:tramite_id>")
 @requiere_rol("ADMIN")
 def eliminar(tramite_id):
-    try:
-        eliminar_tramite(tramite_id)
-        registrar("tramite_eliminado", f"id {tramite_id}")
-        return {"mensaje": "Trámite eliminado."}, 200
-    except ValueError as error:
-        return {"error": str(error)}, 400
+    eliminar_tramite(tramite_id)
+    registrar("tramite_eliminado", f"id {tramite_id}")
+    return {"mensaje": "Trámite eliminado."}, 200

@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app import db
 
@@ -10,45 +10,19 @@ class Usuario(db.Model):
 
     celular = db.Column(db.String(20), nullable=True, index=True)
 
-    nombre = db.Column(
-        db.String(100),
-        nullable=False
-    )
+    nombre = db.Column(db.String(100), nullable=False)
 
-    correo = db.Column(
-        db.String(120),
-        unique=True,
-        nullable=False
-    )
+    correo = db.Column(db.String(120), unique=True, nullable=False)
 
-    password_hash = db.Column(
-        db.String(255),
-        nullable=False
-    )
+    password_hash = db.Column(db.String(255), nullable=False)
 
-    rol = db.Column(
-        db.String(20),
-        nullable=False,
-        default="CLIENTE"
-    )
+    rol = db.Column(db.String(20), nullable=False, default="CLIENTE")
 
-    activo = db.Column(
-        db.Boolean,
-        nullable=False,
-        default=True
-    )
+    activo = db.Column(db.Boolean, nullable=False, default=True)
 
-    punto_asignado_id = db.Column(
-        db.Integer,
-        db.ForeignKey("puntos.id"),
-        nullable=True,
-        index=True
-    )
+    punto_asignado_id = db.Column(db.Integer, db.ForeignKey("puntos.id"), nullable=True, index=True)
 
-    punto_asignado = db.relationship(
-        "Punto",
-        foreign_keys=[punto_asignado_id]
-    )
+    punto_asignado = db.relationship("Punto", foreign_keys=[punto_asignado_id])
 
     # Tras un restablecimiento, la persona debe crear su propia contraseña.
     debe_cambiar_clave = db.Column(
@@ -61,30 +35,38 @@ class Usuario(db.Model):
     intentos_fallidos = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     bloqueado_hasta = db.Column(db.DateTime, nullable=True)
 
-    # Tokens emitidos antes de esta fecha quedan revocados (cambio de clave,
-    # de rol, desactivación o "cerrar sesión").
-    sesiones_desde = db.Column(db.DateTime, nullable=True)
+    # Revocación de sesiones (cambio de clave, de rol, desactivación o "cerrar
+    # sesión"). Cada token lleva la versión vigente al emitirse (claim "ver");
+    # al revocar, la versión sube y todos los tokens anteriores dejan de servir
+    # en la siguiente petición, aunque se hayan emitido en el mismo segundo.
+    sesiones_desde = db.Column(db.DateTime, nullable=True)  # fecha de la última revocación
+    version_sesion = db.Column(db.Integer, nullable=False, default=0, server_default="0")
 
     def revocar_sesiones(self):
-        self.sesiones_desde = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
+        self.sesiones_desde = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+        self.version_sesion = (self.version_sesion or 0) + 1
+
+    def token_vigente(self, payload):
+        """True si el token (claims JWT) sigue siendo válido para esta cuenta."""
+        if "ver" in payload:
+            return payload["ver"] == (self.version_sesion or 0)
+        # Tokens sin versión (emitidos antes de esta mejora): regla por fecha.
+        if self.sesiones_desde:
+            limite = int(self.sesiones_desde.replace(tzinfo=UTC).timestamp())
+            return int(payload.get("iat", 0)) >= limite
+        return True
 
     fecha_creacion = db.Column(
-    db.DateTime,
-    nullable=False,
-    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
     )
 
     def __repr__(self):
         return f"<Usuario {self.correo}>"
 
-    turnos = db.relationship(
-        "Turno",
-        back_populates="usuario",
-        foreign_keys="Turno.usuario_id"
-    )
+    turnos = db.relationship("Turno", back_populates="usuario", foreign_keys="Turno.usuario_id")
 
     turnos_atendidos = db.relationship(
-        "Turno",
-        back_populates="agente",
-        foreign_keys="Turno.agente_id"
+        "Turno", back_populates="agente", foreign_keys="Turno.agente_id"
     )

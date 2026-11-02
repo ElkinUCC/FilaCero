@@ -9,6 +9,7 @@ from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
 from app.dominios.usuarios.modelos import Usuario
 from app.horario import ahora_local, capacidad_sede, ocupacion_sede, zona
+
 from .modelos import Turno
 from .repositorios import ESTADOS_ACTIVOS, guardar, obtener_por_id, obtener_por_usuario
 

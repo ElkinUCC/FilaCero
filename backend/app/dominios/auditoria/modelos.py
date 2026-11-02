@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app import db
 
@@ -10,8 +10,10 @@ class Auditoria(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(
-        db.DateTime, nullable=False, index=True,
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        db.DateTime,
+        nullable=False,
+        index=True,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
     )
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True, index=True)
     accion = db.Column(db.String(40), nullable=False, index=True)

@@ -1,37 +1,24 @@
-﻿
 {
   "info": {
     "name": "FilaCero API",
-    "description": "Colección de pruebas para el backend Flask de FilaCero. Configurar base_url y los tokens después de iniciar sesión. Los cuerpos de ejemplo deben contrastarse con los controladores reales.",
+    "description": "Colección generada desde las rutas registradas en la app (55). Contrato de respuesta: {success, ...datos} / {success:false, error}. Ver backend/README.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:5000" },
-    { "key": "token_admin", "value": "" },
-    { "key": "token_agente", "value": "" },
-    { "key": "token_cliente", "value": "" },
-    { "key": "usuario_id", "value": "1" },
-    { "key": "punto_id", "value": "1" },
-    { "key": "tramite_id", "value": "1" },
-    { "key": "franja_id", "value": "1" },
-    { "key": "turno_id", "value": "1" }
-  ],
   "item": [
     {
-      "name": "00 - Salud",
+      "name": "01 · Salud",
+      "description": "Comprobaciones sin autenticación.",
       "item": [
         {
-          "name": "Inicio",
+          "name": "Salud del proceso",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/"
-          }
-        },
-        {
-          "name": "Health check",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/health"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/health",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -39,9 +26,408 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Health responde correctamente', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
-                  "});"
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listo (incluye base de datos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/health/listo",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Horario de atención",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/horario",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Portal del ciudadano (público)",
+      "description": "El ciudadano reserva sin cuenta: verifica su celular con un código (en desarrollo el código viene en la respuesta como codigo_prueba).",
+      "item": [
+        {
+          "name": "Listar sedes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/sedes/",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const s = pm.response.json().puntos; if (s && s.length) pm.environment.set('sede_id', s[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar trámites",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/tramites/",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.response.json().tramites; if (t && t.length) pm.environment.set('tramite_id', t[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Franjas disponibles (cupo por sede)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/franjas/disponibles?sede_id={{sede_id}}&tramite_id={{tramite_id}}&fecha={{fecha}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const f = pm.response.json().franjas; if (f && f.length) pm.environment.set('franja_id', f[0].franja_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitar código al celular",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/solicitar-codigo",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"celular\": \"{{celular}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.codigo_prueba) pm.environment.set('codigo_otp', r.codigo_prueba);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar código",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/verificar-codigo",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"celular\": \"{{celular}}\",\n  \"codigo\": \"{{codigo_otp}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Respuesta exitosa', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.token_verificacion) pm.environment.set('token_verificacion', r.token_verificacion);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar turno",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ciudadano de Prueba\",\n  \"celular\": \"{{celular}}\",\n  \"token_verificacion\": \"{{token_verificacion}}\",\n  \"punto_id\": {{sede_id}},\n  \"tramite_id\": {{tramite_id}},\n  \"franja_id\": {{franja_id}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('201 creado', () => pm.response.to.have.status(201));",
+                  "if (r.turno) pm.environment.set('codigo_turno', r.turno.codigo);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar mi turno (código + celular)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/consultar",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigo_turno}}\",\n  \"celular\": \"{{celular}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar mi turno",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/cancelar",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigo_turno}}\",\n  \"celular\": \"{{celular}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Pantalla de sala (sin datos personales)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/sala?sede_id={{sede_id}}",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Autenticación del personal",
+      "description": "Los requests de login guardan el token en el entorno automáticamente.",
+      "item": [
+        {
+          "name": "Login administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correo_admin}}\",\n  \"password\": \"{{clave_admin}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Respuesta exitosa', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.access_token) pm.environment.set('token_admin', r.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login asesor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correo_agente}}\",\n  \"password\": \"{{clave_agente}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Respuesta exitosa', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.access_token) pm.environment.set('token_agente', r.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mi cuenta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/me",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login con contraseña errada → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correo_admin}}\",\n  \"password\": \"incorrecta1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));",
+                  "pm.test('success = false', () => pm.expect(pm.response.json().success).to.eql(false));"
                 ]
               }
             }
@@ -50,341 +436,1405 @@
       ]
     },
     {
-      "name": "01 - Usuarios",
+      "name": "04 · Consola del asesor (AGENTE)",
+      "description": "Requiere token_agente.",
       "item": [
         {
-          "name": "Registro de usuario - revisar campos requeridos",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Cliente de prueba\",\n  \"correo\": \"cliente.postman@example.com\",\n  \"password\": \"CambiarEstaClave123!\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/usuarios/registro",
-            "description": "Ejemplo de referencia. Ajustar los campos al contrato real del controlador de registro."
-          }
-        },
-        {
-          "name": "Iniciar sesión - revisar campos requeridos",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"correo\": \"cliente.postman@example.com\",\n  \"password\": \"CambiarEstaClave123!\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/usuarios/login",
-            "description": "Después de verificar la respuesta, copia el JWT al token correspondiente de Postman."
-          }
-        }
-      ]
-    },
-    {
-      "name": "02 - Sedes",
-      "item": [
-        {
-          "name": "Listar sedes",
+          "name": "Panel completo",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/v1/sedes/"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/panel",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         },
         {
-          "name": "Crear sede",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Sede de prueba\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/sedes/",
-            "description": "Completar los campos obligatorios según el controlador real."
-          }
-        },
-        {
-          "name": "Actualizar sede",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Sede actualizada\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/sedes/{{punto_id}}"
-          }
-        },
-        {
-          "name": "Eliminar sede",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/api/v1/sedes/{{punto_id}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "03 - Trámites",
-      "item": [
-        {
-          "name": "Listar trámites",
+          "name": "Cola",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/v1/tramites/"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/cola",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         },
         {
-          "name": "Crear trámite",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Trámite de prueba\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/tramites/",
-            "description": "Completar los campos obligatorios según el controlador real."
-          }
-        },
-        {
-          "name": "Actualizar trámite",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Trámite actualizado\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/tramites/{{tramite_id}}"
-          }
-        },
-        {
-          "name": "Eliminar trámite",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/api/v1/tramites/{{tramite_id}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "04 - Franjas",
-      "item": [
-        {
-          "name": "Listar franjas",
+          "name": "Turno actual",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/v1/franjas/"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/actual",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         },
         {
-          "name": "Crear franja administrativa",
+          "name": "Llamar siguiente",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/llamar-siguiente",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"punto_id\": 1,\n  \"tramite_id\": 1,\n  \"fecha\": \"2026-12-01\",\n  \"hora_inicio\": \"09:00\",\n  \"hora_fin\": \"09:30\"\n}"
-            },
-            "url": "{{base_url}}/api/v1/admin/franjas/",
-            "description": "Ejemplo de referencia. Verificar campos requeridos y formato del controlador de franjas."
-          }
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.turno) pm.environment.set('turno_id', r.turno.id);"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Cambiar estado de franja",
+          "name": "Devolver a la cola",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/devolver",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"activo\": false\n}"
-            },
-            "url": "{{base_url}}/api/v1/admin/franjas/{{franja_id}}",
-            "description": "Verificar el nombre del campo de estado aceptado por el controlador."
-          }
-        }
-      ]
-    },
-    {
-      "name": "05 - Turnos de cliente",
-      "item": [
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
         {
-          "name": "Solicitar turno",
+          "name": "Llamar un turno específico",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token_cliente}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/llamar",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"punto_id\": 1,\n  \"tramite_id\": 1,\n  \"franja_id\": 1\n}"
-            },
-            "url": "{{base_url}}/api/v1/turnos/",
-            "description": "Ejemplo de referencia. Ajustar al contrato real de solicitud de turnos."
-          }
-        },
-        {
-          "name": "Consultar mis turnos",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_cliente}}" }
-            ],
-            "url": "{{base_url}}/api/v1/turnos/mis-turnos"
-          }
-        },
-        {
-          "name": "Cancelar turno propio",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_cliente}}" }
-            ],
-            "url": "{{base_url}}/api/v1/turnos/{{turno_id}}/cancelar"
-          }
-        }
-      ]
-    },
-    {
-      "name": "06 - Operación de agentes",
-      "item": [
-        {
-          "name": "Consultar cola",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
-            ],
-            "url": "{{base_url}}/api/v1/agente/cola"
-          }
-        },
-        {
-          "name": "Consultar turno actual",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
-            ],
-            "url": "{{base_url}}/api/v1/agente/actual"
-          }
-        },
-        {
-          "name": "Llamar siguiente turno",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
-            ],
-            "url": "{{base_url}}/api/v1/agente/llamar-siguiente"
-          }
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Iniciar atención",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/iniciar"
-          }
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/iniciar",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Finalizar atención",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token_agente}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/finalizar"
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/finalizar",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Llamar siguiente (para marcar ausencia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/llamar-siguiente",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.turno) pm.environment.set('turno_id', r.turno.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marcar no asistió",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/agente/turnos/{{turno_id}}/no-asistio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Asesor intenta entrar a admin → 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/usuarios/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_agente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 · Catálogo (ADMIN)",
+      "description": "Lectura pública; escritura solo ADMIN. ?todos=1 incluye inactivos.",
+      "item": [
+        {
+          "name": "Sedes (incluye inactivas)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/sedes/?todos=1",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear sede",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/sedes/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sede Envigado {{$timestamp}}\",\n  \"direccion\": \"Cra. 43A # 38 Sur-20\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.punto) pm.environment.set('sede_nueva_id', r.punto.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear sede repetida → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/sedes/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sede Centro\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar sede",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/sedes/{{sede_nueva_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar sede",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/sedes/{{sede_nueva_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trámites (incluye inactivos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/tramites/?todos=1",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear trámite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/tramites/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Revisión de control remoto {{$timestamp}}\",\n  \"descripcion\": \"Diagnóstico rápido\",\n  \"tiempo_estimado\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.tramite) pm.environment.set('tramite_nuevo_id', r.tramite.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar trámite",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/tramites/{{tramite_nuevo_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tiempo_estimado\": 6\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar trámite",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/tramites/{{tramite_nuevo_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Franjas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/franjas/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear franja manual (solo con FRANJAS_AUTOMATICAS=false)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Con franjas automáticas (valor por defecto) la franja ya existe y la API responde con un error claro.",
+            "url": "{{base_url}}/api/v1/admin/franjas/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"punto_id\": {{sede_id}},\n  \"tramite_id\": {{tramite_id}},\n  \"fecha\": \"{{fecha}}\",\n  \"hora_inicio\": \"17:30\",\n  \"hora_fin\": \"18:00\",\n  \"capacidad\": 3\n}"
+            }
+          }
+        },
+        {
+          "name": "Activar / desactivar franja",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/franjas/{{franja_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activa\": true\n}"
+            }
           }
         }
       ]
     },
     {
-      "name": "07 - Administración de agentes",
+      "name": "06 · Supervisión y métricas (ADMIN / SUPERVISOR)",
+      "description": "",
       "item": [
-        {
-          "name": "Listar agentes",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "url": "{{base_url}}/api/v1/admin/agentes/"
-          }
-        },
-        {
-          "name": "Asignar sede a agente",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"punto_id\": 1\n}"
-            },
-            "url": "{{base_url}}/api/v1/admin/agentes/{{usuario_id}}/sede"
-          }
-        },
-        {
-          "name": "Desasignar sede",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "url": "{{base_url}}/api/v1/admin/agentes/{{usuario_id}}/sede"
-          }
-        },
         {
           "name": "Métricas generales",
           "request": {
             "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "url": "{{base_url}}/api/v1/admin/agentes/metricas?pagina=1"
-          }
-        },
-        {
-          "name": "Historial paginado",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "url": "{{base_url}}/api/v1/admin/agentes/historial?pagina=1&por_pagina=20"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/metricas?desde={{fecha}}&hasta={{fecha}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         },
         {
           "name": "Métricas por sede",
           "request": {
             "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "url": "{{base_url}}/api/v1/admin/agentes/metricas/sedes"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/metricas/sedes?desde={{fecha}}&hasta={{fecha}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         },
         {
           "name": "Métricas por trámite",
           "request": {
             "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token_admin}}" }
-            ],
-            "url": "{{base_url}}/api/v1/admin/agentes/metricas/tramites"
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/metricas/tramites?desde={{fecha}}&hasta={{fecha}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
+        },
+        {
+          "name": "Sedes en vivo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/en-vivo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Historial de turnos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/historial?pagina=1&por_pagina=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Asesores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear asesor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Asesor Postman\",\n  \"correo\": \"asesor.{{$timestamp}}@filacero.co\",\n  \"password\": \"{{clave_agente}}\",\n  \"punto_id\": {{sede_id}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.agente) pm.environment.set('agente_id', r.agente.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar asesor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/{{agente_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Asignar sede",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/{{agente_id}}/sede",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"punto_id\": {{sede_id}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Quitar sede",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/agentes/{{agente_id}}/sede",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 · Usuarios, permisos y bitácora (ADMIN)",
+      "description": "",
+      "item": [
+        {
+          "name": "Listar usuarios del personal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/usuarios/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear usuario (clave temporal)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/usuarios/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Supervisor Postman\",\n  \"correo\": \"supervisor.{{$timestamp}}@filacero.co\",\n  \"rol\": \"SUPERVISOR\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.usuario) pm.environment.set('usuario_id', r.usuario.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar rol o estado",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/usuarios/{{usuario_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"SUPERVISOR\",\n  \"activo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Restablecer contraseña",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/usuarios/{{usuario_id}}/restablecer-clave",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "Bitácora de actividad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/admin/usuarios/auditoria?pagina=1&por_pagina=20",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 · Cliente con cuenta (compatibilidad)",
+      "description": "Rutas de los primeros sprints; el portal actual usa las rutas públicas.",
+      "item": [
+        {
+          "name": "Registro (si REGISTRO_PUBLICO=true)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/registro",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cliente Demo\",\n  \"correo\": \"cliente.{{$timestamp}}@correo.co\",\n  \"password\": \"Cliente12345\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); if (r.usuario) pm.environment.set('correo_cliente', r.usuario.correo);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correo_cliente}}\",\n  \"password\": \"Cliente12345\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Respuesta exitosa', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.access_token) pm.environment.set('token_cliente', r.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitar turno",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tramite_id\": {{tramite_id}},\n  \"punto_id\": {{sede_id}},\n  \"franja_id\": {{franja_id}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json(); const id = r.id || (r.turno && r.turno.id); if (id) pm.environment.set('turno_id', id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis turnos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/mis-turnos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Tiempo de espera estimado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/{{turno_id}}/tiempo-espera",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancelar turno",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/{{turno_id}}/cancelar",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 · Cuenta propia y cierre de sesión (ejecutar al final)",
+      "description": "Cambia la contraseña y la restaura, luego revoca el token.",
+      "item": [
+        {
+          "name": "Cambiar mi contraseña (revoca sesiones)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/me/clave",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": \"{{clave_admin}}\",\n  \"nueva\": \"Temporal2026x\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Respuesta exitosa', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.access_token) pm.environment.set('token_admin', r.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restaurar mi contraseña",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/me/clave",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": \"Temporal2026x\",\n  \"nueva\": \"{{clave_admin}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Respuesta exitosa', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.access_token) pm.environment.set('token_admin', r.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión (revoca el token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/logout",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token revocado → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "",
+            "url": "{{base_url}}/api/v1/usuarios/me",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

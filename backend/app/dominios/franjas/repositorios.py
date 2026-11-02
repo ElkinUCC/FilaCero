@@ -4,6 +4,7 @@ from app import db
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
 from app.horario import ahora_local, zona
+
 from .modelos import Franja
 
 
@@ -34,9 +35,4 @@ def listar_activas(punto_id=None, tramite_id=None, fecha=None):
 
 
 def obtener_para_reserva(franja_id):
-    return (
-        db.session.query(Franja)
-        .filter_by(id=franja_id)
-        .with_for_update()
-        .first()
-    )
+    return db.session.query(Franja).filter_by(id=franja_id).with_for_update().first()

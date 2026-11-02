@@ -1,0 +1,20 @@
+# Formato y estilo del backend (mismas reglas que el proyecto de referencia).
+#   black .          -> formatea
+#   ruff check .     -> revisa estilo y errores comunes
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+extend-exclude = "migrations|venv"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations", "venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

@@ -1,5 +1,6 @@
 """Regla de puntualidad (cupo por sede y franja) y asistente de despacho."""
-from datetime import datetime, time, timedelta, timezone
+
+from datetime import UTC, datetime, time, timedelta
 
 import pytest
 from flask_jwt_extended import create_access_token
@@ -9,7 +10,6 @@ from app.dominios.agentes.despacho import cumplimiento, proyectar_cola, recomend
 from app.dominios.franjas.modelos import Franja
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
-from app.dominios.turnos.modelos import Turno
 from app.dominios.turnos.servicios import crear_turno
 from app.dominios.usuarios.modelos import Usuario
 from app.dominios.usuarios.servicios import registrar_cliente_publico
@@ -18,12 +18,14 @@ from app.horario import capacidad_sede, hoy_local, zona
 
 @pytest.fixture
 def app():
-    app = create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
-        "RESTRINGIR_ATENCION_HORARIO": False,
-    })
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
+            "RESTRINGIR_ATENCION_HORARIO": False,
+        }
+    )
     with app.app_context():
         db.create_all()
         yield app
@@ -38,8 +40,13 @@ def base(app):
     t2 = Tramite(nombre="Correo", tiempo_estimado=5, activo=True)
     db.session.add_all([sede, t1, t2])
     db.session.commit()
-    agente = Usuario(nombre="Asesor Uno", correo="a1@x.co", password_hash="x",
-                     rol="AGENTE", punto_asignado_id=sede.id)
+    agente = Usuario(
+        nombre="Asesor Uno",
+        correo="a1@x.co",
+        password_hash="x",
+        rol="AGENTE",
+        punto_asignado_id=sede.id,
+    )
     db.session.add(agente)
     db.session.commit()
     return {"sede": sede, "t1": t1, "t2": t2, "agente": agente}
@@ -49,9 +56,14 @@ MANANA = lambda: hoy_local() + timedelta(days=1)  # noqa: E731
 
 
 def franja(base, tramite, hora, fecha=None, capacidad=10):
-    f = Franja(punto_id=base["sede"].id, tramite_id=tramite.id, fecha=fecha or MANANA(),
-               hora_inicio=hora, hora_fin=(datetime.combine(MANANA(), hora) + timedelta(minutes=30)).time(),
-               capacidad=capacidad)
+    f = Franja(
+        punto_id=base["sede"].id,
+        tramite_id=tramite.id,
+        fecha=fecha or MANANA(),
+        hora_inicio=hora,
+        hora_fin=(datetime.combine(MANANA(), hora) + timedelta(minutes=30)).time(),
+        capacidad=capacidad,
+    )
     db.session.add(f)
     db.session.commit()
     return f
@@ -67,10 +79,11 @@ def local(fecha, hh, mm, ss=0):
 
 
 def utc_naive(dt):
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt.astimezone(UTC).replace(tzinfo=None)
 
 
 # ---------------------------------------------------------------- cupos
+
 
 def test_un_asesor_atiende_maximo_3_por_franja_sumando_tramites(app, base):
     assert capacidad_sede(base["sede"].id) == 3
@@ -84,8 +97,15 @@ def test_un_asesor_atiende_maximo_3_por_franja_sumando_tramites(app, base):
 
 
 def test_dos_asesores_duplican_el_cupo(app, base):
-    db.session.add(Usuario(nombre="Asesor Dos", correo="a2@x.co", password_hash="x",
-                           rol="AGENTE", punto_asignado_id=base["sede"].id))
+    db.session.add(
+        Usuario(
+            nombre="Asesor Dos",
+            correo="a2@x.co",
+            password_hash="x",
+            rol="AGENTE",
+            punto_asignado_id=base["sede"].id,
+        )
+    )
     db.session.commit()
     assert capacidad_sede(base["sede"].id) == 6
 
@@ -94,17 +114,22 @@ def test_disponibilidad_refleja_cupo_de_la_sede(app, base):
     cliente = app.test_client()
     fecha = MANANA().isoformat()
     q = {"sede_id": base["sede"].id, "fecha": fecha}
-    franjas = cliente.get("/api/v1/franjas/disponibles", query_string={**q, "tramite_id": base["t1"].id}).get_json()["franjas"]
+    franjas = cliente.get(
+        "/api/v1/franjas/disponibles", query_string={**q, "tramite_id": base["t1"].id}
+    ).get_json()["franjas"]
     assert franjas[0]["disponibles"] == 3
     f1 = db.session.get(Franja, franjas[0]["franja_id"])
     reservar(base, f1, base["t1"], "3000000001")
     reservar(base, f1, base["t1"], "3000000002")
     # El otro trámite ve solo 1 cupo a las 08:00 porque la sede ya tiene 2.
-    otras = cliente.get("/api/v1/franjas/disponibles", query_string={**q, "tramite_id": base["t2"].id}).get_json()["franjas"]
+    otras = cliente.get(
+        "/api/v1/franjas/disponibles", query_string={**q, "tramite_id": base["t2"].id}
+    ).get_json()["franjas"]
     assert otras[0]["hora_inicio"] == "08:00" and otras[0]["disponibles"] == 1
 
 
 # ---------------------------------------------------------------- despacho
+
 
 def test_recomienda_pausa_activa_si_va_adelantado(app, base):
     f = franja(base, base["t1"], time(10, 0))
@@ -182,8 +207,10 @@ def test_panel_y_llamado_especifico_por_api(app, base):
     f = franja(base, base["t1"], time(10, 30))
     reservar(base, f, base["t1"], "3000000001")
     elegido = reservar(base, f, base["t1"], "3000000002")
-    h = {"Authorization": "Bearer " + create_access_token(
-        identity=str(base["agente"].id), additional_claims={"rol": "AGENTE"})}
+    h = {
+        "Authorization": "Bearer "
+        + create_access_token(identity=str(base["agente"].id), additional_claims={"rol": "AGENTE"})
+    }
     cliente = app.test_client()
     panel = cliente.get("/api/v1/agente/panel", headers=h).get_json()
     assert panel["recomendacion"] and len(panel["cola"]) == 2

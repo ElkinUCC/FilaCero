@@ -5,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app import db
 from app.dominios.usuarios.modelos import Usuario
+
 from .modelos import Turno
 from .repositorios import posicion_en_cola
 
@@ -32,7 +33,9 @@ def _predecir_duracion(turno):
         if duraciones:
             duraciones.sort()
             n = len(duraciones)
-            base = duraciones[n // 2] if n % 2 else (duraciones[n // 2 - 1] + duraciones[n // 2]) / 2
+            base = (
+                duraciones[n // 2] if n % 2 else (duraciones[n // 2 - 1] + duraciones[n // 2]) / 2
+            )
         else:
             base = (turno.tramite.tiempo_estimado if turno.tramite else 10) * 60
         return base, len(duraciones), "respaldo_estadistico"
@@ -43,7 +46,8 @@ def _predecir_duracion(turno):
     denominador = sum((i - x_media) ** 2 for i in range(len(valores)))
     pendiente = (
         sum((i - x_media) * (y - y_media) for i, y in enumerate(valores)) / denominador
-        if denominador else 0
+        if denominador
+        else 0
     )
     prediccion = y_media + pendiente * (len(valores) - 1 - x_media)
     return max(60, min(prediccion, 7200)), len(valores), "regresion_lineal"
@@ -55,9 +59,12 @@ def estimar_espera(turno):
 
     duracion, muestras, modelo = _predecir_duracion(turno)
     antes = posicion_en_cola(turno)
-    agentes = max(1, Usuario.query.filter_by(
-        rol="AGENTE", activo=True, punto_asignado_id=turno.punto_id
-    ).count())
+    agentes = max(
+        1,
+        Usuario.query.filter_by(
+            rol="AGENTE", activo=True, punto_asignado_id=turno.punto_id
+        ).count(),
+    )
     en_atencion = Turno.query.filter(
         Turno.punto_id == turno.punto_id,
         Turno.estado.in_(("LLAMADO", "EN_ATENCION")),
@@ -81,27 +88,41 @@ def tiempo_espera(turno_id):
 
     # Solo el dueño, un agente de la misma sede o un administrador.
     usuario = db.session.get(Usuario, int(get_jwt_identity()))
-    permitido = usuario and usuario.activo and (
-        usuario.id == turno.usuario_id
-        or usuario.rol == "ADMIN"
-        or (usuario.rol == "AGENTE" and usuario.punto_asignado_id == turno.punto_id)
+    permitido = (
+        usuario
+        and usuario.activo
+        and (
+            usuario.id == turno.usuario_id
+            or usuario.rol == "ADMIN"
+            or (usuario.rol == "AGENTE" and usuario.punto_asignado_id == turno.punto_id)
+        )
     )
     if not permitido:
         # 404 y no 403: no se revela que el turno existe.
         return jsonify({"error": "Turno no encontrado"}), 404
 
     if turno.estado in ("ATENDIDO", "CANCELADO", "NO_ASISTIO", "EN_ATENCION"):
-        return jsonify({
-            "turno_id": turno.id,
-            "estado": turno.estado,
-            "tiempo_estimado_minutos": 0,
-            "mensaje": "El turno ya no está en espera.",
-        }), 200
+        return (
+            jsonify(
+                {
+                    "turno_id": turno.id,
+                    "estado": turno.estado,
+                    "tiempo_estimado_minutos": 0,
+                    "mensaje": "El turno ya no está en espera.",
+                }
+            ),
+            200,
+        )
 
-    return jsonify({
-        "turno_id": turno.id,
-        "estado": turno.estado,
-        **estimar_espera(turno),
-        "generado_en": datetime.now().isoformat(timespec="seconds"),
-        "nota": "Estimación orientativa basada en atenciones anteriores.",
-    }), 200
+    return (
+        jsonify(
+            {
+                "turno_id": turno.id,
+                "estado": turno.estado,
+                **estimar_espera(turno),
+                "generado_en": datetime.now().isoformat(timespec="seconds"),
+                "nota": "Estimación orientativa basada en atenciones anteriores.",
+            }
+        ),
+        200,
+    )

@@ -1,31 +1,50 @@
 import secrets
 import string
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from flask_jwt_extended import create_access_token
 
 from app import db
-
+from app.errores import (
+    ConflictoError,
+    CredencialesInvalidasError,
+    CuentaBloqueadaError,
+    DatosInvalidosError,
+)
 from app.seguridad import (
     encriptar_password,
     normalizar_celular,
     validar_password_segura,
     verificar_password,
 )
+
 from .modelos import Usuario
 from .repositorios import buscar_por_celular, buscar_por_correo, guardar
 
 ROLES_PERSONAL = ("ADMIN", "SUPERVISOR", "AGENTE")
 
 
-class CuentaBloqueada(Exception):
-    def __init__(self, minutos):
-        super().__init__(f"Cuenta bloqueada temporalmente por intentos fallidos. Intenta en {minutos} min.")
-        self.minutos = minutos
+# --- Excepciones de dominio (el app factory las traduce a HTTP) ---
+
+
+class CorreoYaRegistradoError(ConflictoError):
+    pass
+
+
+class ClaveActualIncorrectaError(DatosInvalidosError):
+    pass
+
+
+# Nombre anterior, se conserva por compatibilidad.
+CuentaBloqueada = CuentaBloqueadaError
 
 
 def emitir_token(usuario):
-    return create_access_token(identity=str(usuario.id), additional_claims={"rol": usuario.rol})
+    return create_access_token(
+        identity=str(usuario.id),
+        additional_claims={"rol": usuario.rol, "ver": usuario.version_sesion or 0},
+    )
+
 
 # Hash ficticio para igualar el tiempo de respuesta cuando el correo no existe
 # (evita descubrir correos registrados midiendo tiempos).
@@ -35,7 +54,7 @@ _HASH_FICTICIO = encriptar_password("filacero-tiempo-constante")
 def registrar_usuario(nombre, correo, password, rol="CLIENTE", punto_id=None):
     correo = (correo or "").strip().lower()
     if buscar_por_correo(correo):
-        raise ValueError("El correo ya está registrado")
+        raise CorreoYaRegistradoError("El correo ya está registrado.")
     validar_password_segura(password)
 
     usuario = Usuario(
@@ -57,15 +76,20 @@ def iniciar_sesion(correo, password):
     if not usuario:
         verificar_password(password, _HASH_FICTICIO)
         registrar("login_fallido", f"Correo no registrado: {correo[:80]}", usuario_id=None)
-        raise ValueError("Correo o contraseña incorrectos.")
+        raise CredencialesInvalidasError("Correo o contraseña incorrectos.")
 
     from flask import current_app
-    ahora = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    ahora = datetime.now(UTC).replace(tzinfo=None)
 
     if usuario.bloqueado_hasta and usuario.bloqueado_hasta > ahora:
         minutos = int((usuario.bloqueado_hasta - ahora).total_seconds() // 60) + 1
-        registrar("login_bloqueado", f"Intento durante bloqueo ({minutos} min restantes)", usuario_id=usuario.id)
-        raise CuentaBloqueada(minutos)
+        registrar(
+            "login_bloqueado",
+            f"Intento durante bloqueo ({minutos} min restantes)",
+            usuario_id=usuario.id,
+        )
+        raise CuentaBloqueadaError(minutos)
 
     valida = verificar_password(password, usuario.password_hash)
 
@@ -81,7 +105,7 @@ def iniciar_sesion(correo, password):
                 motivo += f"; cuenta bloqueada {bloqueo} min"
             db.session.commit()
         registrar("login_fallido", motivo, usuario_id=usuario.id)
-        raise ValueError("Correo o contraseña incorrectos.")
+        raise CredencialesInvalidasError("Correo o contraseña incorrectos.")
 
     usuario.intentos_fallidos = 0
     usuario.bloqueado_hasta = None
@@ -95,9 +119,9 @@ def iniciar_sesion(correo, password):
 def registrar_cliente_publico(nombre, celular):
     nombre = " ".join((nombre or "").split())
     if len(nombre) < 3:
-        raise ValueError("Ingresa tu nombre completo.")
+        raise DatosInvalidosError("Ingresa tu nombre completo.")
     if len(nombre) > 100:
-        raise ValueError("El nombre es demasiado largo.")
+        raise DatosInvalidosError("El nombre es demasiado largo.")
 
     celular = normalizar_celular(celular)
     usuario = buscar_por_celular(celular)
@@ -129,9 +153,9 @@ def generar_clave_temporal(longitud=12):
 
 def cambiar_clave_propia(usuario, actual, nueva):
     if not verificar_password(actual or "", usuario.password_hash):
-        raise ValueError("La contraseña actual no es correcta.")
+        raise ClaveActualIncorrectaError("La contraseña actual no es correcta.")
     if actual == nueva:
-        raise ValueError("La nueva contraseña debe ser distinta a la actual.")
+        raise DatosInvalidosError("La nueva contraseña debe ser distinta a la actual.")
     validar_password_segura(nueva)
     usuario.password_hash = encriptar_password(nueva)
     usuario.debe_cambiar_clave = False

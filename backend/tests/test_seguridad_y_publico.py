@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import pytest
 from flask_jwt_extended import create_access_token
@@ -17,13 +17,15 @@ CELULAR = "3001234567"
 
 @pytest.fixture
 def app():
-    app = create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
-        "OTP_TEST_MODE": True,
-        "RESTRINGIR_ATENCION_HORARIO": False,
-    })
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
+            "OTP_TEST_MODE": True,
+            "RESTRINGIR_ATENCION_HORARIO": False,
+        }
+    )
     with app.app_context():
         db.create_all()
         otp.reiniciar()
@@ -37,21 +39,31 @@ def app():
 def base(app):
     sede = Punto(nombre="Sede Centro", direccion="Calle 1", activo=True)
     tramite = Tramite(nombre="Soporte", tiempo_estimado=10, activo=True)
-    admin = Usuario(nombre="Admin", correo="admin@x.co",
-                    password_hash=encriptar_password("Admin12345"), rol="ADMIN")
+    admin = Usuario(
+        nombre="Admin",
+        correo="admin@x.co",
+        password_hash=encriptar_password("Admin12345"),
+        rol="ADMIN",
+    )
     db.session.add_all([sede, tramite, admin])
     db.session.commit()
-    agente = Usuario(nombre="Agente", correo="agente@x.co",
-                     password_hash=encriptar_password("Agente12345"),
-                     rol="AGENTE", punto_asignado_id=sede.id)
+    agente = Usuario(
+        nombre="Agente",
+        correo="agente@x.co",
+        password_hash=encriptar_password("Agente12345"),
+        rol="AGENTE",
+        punto_asignado_id=sede.id,
+    )
     db.session.add(agente)
     db.session.commit()
     return {"sede": sede, "tramite": tramite, "admin": admin, "agente": agente}
 
 
 def token(usuario):
-    return {"Authorization": "Bearer " + create_access_token(
-        identity=str(usuario.id), additional_claims={"rol": usuario.rol})}
+    return {
+        "Authorization": "Bearer "
+        + create_access_token(identity=str(usuario.id), additional_claims={"rol": usuario.rol})
+    }
 
 
 def verificar_celular(cliente, celular=CELULAR):
@@ -59,21 +71,25 @@ def verificar_celular(cliente, celular=CELULAR):
     assert r.status_code == 200
     codigo = r.get_json()["codigo_prueba"]
     assert len(codigo) == 6 and codigo.isdigit()
-    r = cliente.post("/api/v1/turnos/publico/verificar-codigo",
-                     json={"celular": celular, "codigo": codigo})
+    r = cliente.post(
+        "/api/v1/turnos/publico/verificar-codigo", json={"celular": celular, "codigo": codigo}
+    )
     assert r.status_code == 200
     return r.get_json()["token_verificacion"]
 
 
 def primera_franja(cliente, base, dias=1):
     fecha = (hoy_local() + timedelta(days=dias)).isoformat()
-    r = cliente.get("/api/v1/franjas/disponibles", query_string={
-        "sede_id": base["sede"].id, "tramite_id": base["tramite"].id, "fecha": fecha})
+    r = cliente.get(
+        "/api/v1/franjas/disponibles",
+        query_string={"sede_id": base["sede"].id, "tramite_id": base["tramite"].id, "fecha": fecha},
+    )
     assert r.status_code == 200, r.get_json()
     return r.get_json()["franjas"]
 
 
 # ---------------------------------------------------------------- horario
+
 
 def test_franjas_automaticas_todos_los_dias_8_a_18(app, base):
     cliente = app.test_client()
@@ -88,9 +104,14 @@ def test_franjas_automaticas_todos_los_dias_8_a_18(app, base):
 def test_no_permite_fechas_pasadas_ni_muy_lejanas(app, base):
     cliente = app.test_client()
     for dias in (-1, 400):
-        r = cliente.get("/api/v1/franjas/disponibles", query_string={
-            "sede_id": base["sede"].id, "tramite_id": base["tramite"].id,
-            "fecha": (hoy_local() + timedelta(days=dias)).isoformat()})
+        r = cliente.get(
+            "/api/v1/franjas/disponibles",
+            query_string={
+                "sede_id": base["sede"].id,
+                "tramite_id": base["tramite"].id,
+                "fecha": (hoy_local() + timedelta(days=dias)).isoformat(),
+            },
+        )
         assert r.status_code == 400
 
 
@@ -103,6 +124,7 @@ def test_endpoint_horario_publico(app):
 
 def test_agente_no_atiende_fuera_de_horario_si_esta_restringido(app, base, monkeypatch):
     from app.dominios.agentes import servicios
+
     app.config["RESTRINGIR_ATENCION_HORARIO"] = True
     monkeypatch.setattr(servicios, "en_horario_de_atencion", lambda: False)
     r = app.test_client().post("/api/v1/agente/llamar-siguiente", headers=token(base["agente"]))
@@ -112,15 +134,18 @@ def test_agente_no_atiende_fuera_de_horario_si_esta_restringido(app, base, monke
 
 # ---------------------------------------------------------------- OTP
 
+
 def test_otp_rechaza_codigo_incorrecto_y_limita_intentos(app):
     cliente = app.test_client()
     cliente.post("/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR})
     for _ in range(5):
-        r = cliente.post("/api/v1/turnos/publico/verificar-codigo",
-                         json={"celular": CELULAR, "codigo": "000000"})
+        r = cliente.post(
+            "/api/v1/turnos/publico/verificar-codigo", json={"celular": CELULAR, "codigo": "000000"}
+        )
         assert r.status_code == 400
-    r = cliente.post("/api/v1/turnos/publico/verificar-codigo",
-                     json={"celular": CELULAR, "codigo": "000000"})
+    r = cliente.post(
+        "/api/v1/turnos/publico/verificar-codigo", json={"celular": CELULAR, "codigo": "000000"}
+    )
     assert "Solicita" in r.get_json()["error"]
 
 
@@ -138,32 +163,44 @@ def test_otp_sin_modo_prueba_no_revela_codigo(app):
 
 # ---------------------------------------------------------------- flujo público
 
+
 def test_reserva_consulta_y_cancelacion_publica(app, base):
     cliente = app.test_client()
     verificacion = verificar_celular(cliente)
     franja = primera_franja(cliente, base)[0]
 
-    r = cliente.post("/api/v1/turnos/publico", json={
-        "nombre": "Ana Gómez", "celular": CELULAR, "token_verificacion": verificacion,
-        "punto_id": base["sede"].id, "tramite_id": base["tramite"].id,
-        "franja_id": franja["franja_id"]})
+    r = cliente.post(
+        "/api/v1/turnos/publico",
+        json={
+            "nombre": "Ana Gómez",
+            "celular": CELULAR,
+            "token_verificacion": verificacion,
+            "punto_id": base["sede"].id,
+            "tramite_id": base["tramite"].id,
+            "franja_id": franja["franja_id"],
+        },
+    )
     assert r.status_code == 201, r.get_json()
     turno = r.get_json()["turno"]
     assert turno["celular"] == "300****567"  # enmascarado
     assert "usuario_id" not in turno
 
-    r = cliente.post("/api/v1/turnos/publico/consultar",
-                     json={"codigo": turno["codigo"], "celular": CELULAR})
+    r = cliente.post(
+        "/api/v1/turnos/publico/consultar", json={"codigo": turno["codigo"], "celular": CELULAR}
+    )
     assert r.status_code == 200
     assert r.get_json()["turno"]["estado"] == "ESPERANDO"
 
     # Otro celular no puede ver ni cancelar el turno
-    r = cliente.post("/api/v1/turnos/publico/consultar",
-                     json={"codigo": turno["codigo"], "celular": "3110000000"})
+    r = cliente.post(
+        "/api/v1/turnos/publico/consultar",
+        json={"codigo": turno["codigo"], "celular": "3110000000"},
+    )
     assert r.status_code == 400
 
-    r = cliente.post("/api/v1/turnos/publico/cancelar",
-                     json={"codigo": turno["codigo"], "celular": CELULAR})
+    r = cliente.post(
+        "/api/v1/turnos/publico/cancelar", json={"codigo": turno["codigo"], "celular": CELULAR}
+    )
     assert r.status_code == 200
     assert r.get_json()["turno"]["estado"] == "CANCELADO"
 
@@ -172,10 +209,17 @@ def test_reserva_publica_exige_verificacion_del_mismo_celular(app, base):
     cliente = app.test_client()
     verificacion = verificar_celular(cliente, "3009999999")
     franja = primera_franja(cliente, base)[0]
-    r = cliente.post("/api/v1/turnos/publico", json={
-        "nombre": "Ana Gómez", "celular": CELULAR, "token_verificacion": verificacion,
-        "punto_id": base["sede"].id, "tramite_id": base["tramite"].id,
-        "franja_id": franja["franja_id"]})
+    r = cliente.post(
+        "/api/v1/turnos/publico",
+        json={
+            "nombre": "Ana Gómez",
+            "celular": CELULAR,
+            "token_verificacion": verificacion,
+            "punto_id": base["sede"].id,
+            "tramite_id": base["tramite"].id,
+            "franja_id": franja["franja_id"],
+        },
+    )
     assert r.status_code == 400
 
 
@@ -185,23 +229,39 @@ def test_limite_de_turnos_activos_por_cliente(app, base):
     franjas = primera_franja(cliente, base)
     codigos = []
     for franja in franjas[:4]:
-        r = cliente.post("/api/v1/turnos/publico", json={
-            "nombre": "Ana Gómez", "celular": CELULAR, "token_verificacion": verificacion,
-            "punto_id": base["sede"].id, "tramite_id": base["tramite"].id,
-            "franja_id": franja["franja_id"]})
+        r = cliente.post(
+            "/api/v1/turnos/publico",
+            json={
+                "nombre": "Ana Gómez",
+                "celular": CELULAR,
+                "token_verificacion": verificacion,
+                "punto_id": base["sede"].id,
+                "tramite_id": base["tramite"].id,
+                "franja_id": franja["franja_id"],
+            },
+        )
         codigos.append(r.status_code)
     assert codigos == [201, 201, 201, 400]
 
 
 # ---------------------------------------------------------------- agente
 
+
 def _reservar_directo(base, celular=CELULAR, dias=0, hora=None):
     from datetime import time
-    from app.dominios.usuarios.servicios import registrar_cliente_publico
+
     from app.dominios.turnos.servicios import crear_turno
+    from app.dominios.usuarios.servicios import registrar_cliente_publico
+
     fecha = hoy_local() + timedelta(days=dias)
-    franja = Franja(punto_id=base["sede"].id, tramite_id=base["tramite"].id, fecha=fecha,
-                    hora_inicio=hora or time(23, 0), hora_fin=time(23, 30), capacidad=5)
+    franja = Franja(
+        punto_id=base["sede"].id,
+        tramite_id=base["tramite"].id,
+        fecha=fecha,
+        hora_inicio=hora or time(23, 0),
+        hora_fin=time(23, 30),
+        capacidad=5,
+    )
     db.session.add(franja)
     db.session.commit()
     usuario = registrar_cliente_publico("Cliente Demo", celular)
@@ -242,6 +302,7 @@ def test_agente_devuelve_turno_a_la_cola(app, base):
 
 # ---------------------------------------------------------------- seguridad
 
+
 def test_usuario_desactivado_pierde_acceso_aunque_tenga_token(app, base):
     h = token(base["admin"])
     cliente = app.test_client()
@@ -253,8 +314,10 @@ def test_usuario_desactivado_pierde_acceso_aunque_tenga_token(app, base):
 
 def test_token_con_rol_falsificado_no_sirve(app, base):
     # Un agente con un token que dice ADMIN: el rol real en BD manda.
-    falso = {"Authorization": "Bearer " + create_access_token(
-        identity=str(base["agente"].id), additional_claims={"rol": "ADMIN"})}
+    falso = {
+        "Authorization": "Bearer "
+        + create_access_token(identity=str(base["agente"].id), additional_claims={"rol": "ADMIN"})
+    }
     assert app.test_client().get("/api/v1/admin/agentes/", headers=falso).status_code == 403
 
 
@@ -265,12 +328,17 @@ def test_login_con_mensaje_generico_y_cliente_publico_sin_acceso(app, base):
     assert r.get_json()["error"] == "Correo o contraseña incorrectos."
 
     from app.dominios.usuarios.servicios import registrar_cliente_publico
+
     registrar_cliente_publico("Pepe Pérez", CELULAR)
-    r = cliente.post("/api/v1/usuarios/login", json={
-        "correo": f"cliente_{CELULAR}@publico.filacero.local", "password": ""})
+    r = cliente.post(
+        "/api/v1/usuarios/login",
+        json={"correo": f"cliente_{CELULAR}@publico.filacero.local", "password": ""},
+    )
     assert r.status_code in (400, 401)
 
-    r = cliente.post("/api/v1/usuarios/login", json={"correo": "admin@x.co", "password": "Admin12345"})
+    r = cliente.post(
+        "/api/v1/usuarios/login", json={"correo": "admin@x.co", "password": "Admin12345"}
+    )
     assert r.status_code == 200 and r.get_json()["usuario"]["rol"] == "ADMIN"
 
 
@@ -283,7 +351,9 @@ def test_rate_limit_de_login(app, base):
     app.config.update(TESTING=False, LIMITE_LOGIN_POR_MINUTO=3)
     cliente = app.test_client()
     estados = [
-        cliente.post("/api/v1/usuarios/login", json={"correo": "x@x.co", "password": "x"}).status_code
+        cliente.post(
+            "/api/v1/usuarios/login", json={"correo": "x@x.co", "password": "x"}
+        ).status_code
         for _ in range(4)
     ]
     assert estados[-1] == 429
@@ -301,22 +371,39 @@ def test_cors_solo_origen_permitido_y_cabeceras_seguras(app):
 
 def test_produccion_rechaza_configuracion_insegura():
     with pytest.raises(RuntimeError):
-        create_app({"PRODUCCION": True, "SECRET_KEY": "corta", "JWT_SECRET_KEY": "corta",
-                    "SQLALCHEMY_DATABASE_URI": "sqlite://"})
+        create_app(
+            {
+                "PRODUCCION": True,
+                "SECRET_KEY": "corta",
+                "JWT_SECRET_KEY": "corta",
+                "SQLALCHEMY_DATABASE_URI": "sqlite://",
+            }
+        )
 
 
 # ---------------------------------------------------------------- admin
 
+
 def test_admin_crea_agente_y_edita_catalogo(app, base):
     cliente = app.test_client()
     h = token(base["admin"])
-    r = cliente.post("/api/v1/admin/agentes/", headers=h, json={
-        "nombre": "Nuevo Agente", "correo": "nuevo@x.co", "password": "Clave12345",
-        "punto_id": base["sede"].id})
+    r = cliente.post(
+        "/api/v1/admin/agentes/",
+        headers=h,
+        json={
+            "nombre": "Nuevo Agente",
+            "correo": "nuevo@x.co",
+            "password": "Clave12345",
+            "punto_id": base["sede"].id,
+        },
+    )
     assert r.status_code == 201, r.get_json()
 
-    r = cliente.post("/api/v1/admin/agentes/", headers=h, json={
-        "nombre": "Débil", "correo": "debil@x.co", "password": "123"})
+    r = cliente.post(
+        "/api/v1/admin/agentes/",
+        headers=h,
+        json={"nombre": "Débil", "correo": "debil@x.co", "password": "123"},
+    )
     assert r.status_code == 400
 
     r = cliente.put(f"/api/v1/sedes/{base['sede'].id}", headers=h, json={"activo": False})
@@ -325,18 +412,24 @@ def test_admin_crea_agente_y_edita_catalogo(app, base):
     todas = cliente.get("/api/v1/sedes/?todos=1", headers=h).get_json()["puntos"]
     assert len(publicas) == 0 and len(todas) == 1
 
-    r = cliente.post("/api/v1/tramites/", headers=h, json={"nombre": "Soporte", "tiempo_estimado": 5})
-    assert r.status_code == 400  # duplicado
+    r = cliente.post(
+        "/api/v1/tramites/", headers=h, json={"nombre": "Soporte", "tiempo_estimado": 5}
+    )
+    assert r.status_code == 409  # duplicado -> Conflicto (app/errores.py)
 
 
 def test_metricas_por_sede_incluyen_nombre(app, base):
     _reservar_directo(base)
-    datos = app.test_client().get("/api/v1/admin/agentes/metricas/sedes",
-                                  headers=token(base["admin"])).get_json()
+    datos = (
+        app.test_client()
+        .get("/api/v1/admin/agentes/metricas/sedes", headers=token(base["admin"]))
+        .get_json()
+    )
     assert datos["sedes"][0]["nombre"] == "Sede Centro"
 
 
 # ---------------------------------------------------------------- regresiones
+
 
 def test_cola_solo_hoy_oculta_turnos_de_otros_dias(app, base):
     _reservar_directo(base, dias=2)
@@ -359,17 +452,19 @@ def test_espera_de_turno_ajeno_responde_404(app, base):
 
 def test_cancelacion_publica_con_celular_incorrecto_responde_400(app, base):
     turno = _reservar_directo(base)
-    r = app.test_client().post("/api/v1/turnos/publico/cancelar",
-                               json={"codigo": turno.codigo, "celular": "3110000000"})
+    r = app.test_client().post(
+        "/api/v1/turnos/publico/cancelar", json={"codigo": turno.codigo, "celular": "3110000000"}
+    )
     assert r.status_code == 400
 
 
 def test_pantalla_de_sala_no_expone_datos_personales(app, base):
-    from datetime import datetime, timezone as tz
+    from datetime import datetime
+
     turno = _reservar_directo(base)
     turno.estado = "LLAMADO"
     turno.agente_id = base["agente"].id
-    turno.fecha_llamado = datetime.now(tz.utc).replace(tzinfo=None)
+    turno.fecha_llamado = datetime.now(UTC).replace(tzinfo=None)
     db.session.commit()
     r = app.test_client().get(f"/api/v1/turnos/publico/sala?sede_id={base['sede'].id}").get_json()
     llamado = r["llamados"][0]

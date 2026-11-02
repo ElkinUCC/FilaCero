@@ -9,7 +9,7 @@ Resumen de los controles implementados, cómo se verifican y qué falta antes de
 | Robo/adivinación de contraseñas | Hash scrypt (Werkzeug), mínimo 8 caracteres con letras y números | `app/seguridad.py` | `test_usuarios_permisos.py` |
 | Fuerza bruta | Límite por IP (login 10/min) **y** bloqueo de cuenta 15 min tras 5 fallos | `seguridad.limitar`, `usuarios/servicios.py` | `test_bloqueo_tras_5_intentos...` |
 | Enumeración de usuarios | Mismo mensaje para correo inexistente, clave errada o cuenta inactiva; tiempo de respuesta igualado | `iniciar_sesion` | `test_login_con_mensaje_generico...` |
-| Token robado o desactualizado | JWT de 60 min; el rol se valida contra la BD en cada petición; tokens revocados al cambiar clave/rol, desactivar o cerrar sesión | `app/__init__.py`, `requiere_rol` | `test_cambio_de_rol...`, `test_logout_revoca...` |
+| Token robado o desactualizado | JWT de 60 min; el rol se valida contra la BD en cada petición; tokens revocados al instante (versión de sesión en el token) al cambiar clave/rol, desactivar o cerrar sesión | `app/__init__.py`, `requiere_rol` | `test_cambio_de_rol...`, `test_logout_revoca...` |
 | Escalamiento de privilegios | Roles ADMIN / SUPERVISOR (solo lectura) / AGENTE; un admin no puede quitarse su rol ni desactivarse; siempre queda ≥1 admin | `usuarios/admin_controladores.py` | `test_protecciones_del_administrador` |
 | Claves temporales filtradas | Se muestran una sola vez y obligan a cambiarlas al ingresar (validado en el servidor) | `requiere_rol` (`CAMBIAR_CLAVE`) | `test_admin_crea_supervisor...` |
 | Suplantación de ciudadano | Reserva pública exige verificar el celular con código de 6 dígitos (5 intentos, 5 min) | `turnos/otp.py` | `test_otp_*` |

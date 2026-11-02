@@ -1,4 +1,18 @@
-﻿import logging
+"""App factory de FilaCero.
+
+Igual que el proyecto de referencia: crea la app, inicializa extensiones,
+registra un blueprint por dominio y los manejadores globales de error.
+
+    app/
+      __init__.py      <- este archivo (crear_app / create_app)
+      config.py        <- configuración leída del .env
+      errores.py       <- excepciones de dominio + formato de error
+      seguridad.py     <- JWT, roles, contraseñas, límites por IP
+      horario.py       <- reglas de horario y cupo por sede
+      dominios/<dominio>/{controladores,servicios,repositorios,modelos,dtos}.py
+"""
+
+import logging
 import os
 
 from flask import Flask, jsonify, request
@@ -15,6 +29,9 @@ jwt = JWTManager()
 
 log = logging.getLogger("filacero")
 
+# Versión de la API (todas las rutas viven bajo /api/v1)
+API_VERSION = "v1"
+
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -24,6 +41,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     from app.config import validar_configuracion
+
     validar_configuracion(app)
 
     # Detrás de nginx: confiar en X-Forwarded-For solo del número de proxies
@@ -31,6 +49,7 @@ def create_app(test_config=None):
     proxies = int(app.config.get("PROXIES_CONFIABLES", 0) or 0)
     if proxies:
         from werkzeug.middleware.proxy_fix import ProxyFix
+
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
 
     logging.basicConfig(
@@ -52,23 +71,22 @@ def create_app(test_config=None):
     )
 
     # Modelos: registrar todos antes de usar migraciones.
-    from app.dominios.usuarios.modelos import Usuario  # noqa: F401
-    from app.dominios.sedes.modelos import Punto  # noqa: F401
-    from app.dominios.tramites.modelos import Tramite  # noqa: F401
-    from app.dominios.franjas.modelos import Franja  # noqa: F401
-    from app.dominios.turnos.modelos import Turno  # noqa: F401
+    from app.dominios.agentes.controladores import admin_agentes_bp, agentes_bp
     from app.dominios.auditoria.modelos import Auditoria  # noqa: F401
-
-    from app.dominios.usuarios.controladores import usuarios_bp
-    from app.dominios.sedes.controladores import puntos_bp
-    from app.dominios.tramites.controladores import tramites_bp
-    from app.dominios.franjas.controladores import franjas_bp
     from app.dominios.franjas.admin_controladores import admin_franjas_bp
-    from app.dominios.turnos.controladores import turnos_bp
-    from app.dominios.agentes.controladores import agentes_bp, admin_agentes_bp
-    from app.dominios.turnos.prediccion import prediccion_bp
+    from app.dominios.franjas.controladores import franjas_bp
     from app.dominios.franjas.disponibilidad import disponibilidad_bp
+    from app.dominios.franjas.modelos import Franja  # noqa: F401
+    from app.dominios.sedes.controladores import puntos_bp
+    from app.dominios.sedes.modelos import Punto  # noqa: F401
+    from app.dominios.tramites.controladores import tramites_bp
+    from app.dominios.tramites.modelos import Tramite  # noqa: F401
+    from app.dominios.turnos.controladores import turnos_bp
+    from app.dominios.turnos.modelos import Turno  # noqa: F401
+    from app.dominios.turnos.prediccion import prediccion_bp
     from app.dominios.usuarios.admin_controladores import admin_usuarios_bp
+    from app.dominios.usuarios.controladores import usuarios_bp
+    from app.dominios.usuarios.modelos import Usuario  # noqa: F401
 
     app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
     app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
@@ -83,6 +101,20 @@ def create_app(test_config=None):
     app.register_blueprint(admin_usuarios_bp, url_prefix="/api/v1/admin/usuarios")
 
     _registrar_manejadores(app)
+
+    from app.errores import registrar_manejadores_de_dominio
+
+    registrar_manejadores_de_dominio(app)
+
+    @app.after_request
+    def marcar_exito(respuesta):
+        """Contrato uniforme: todo JSON lleva "success" (true si el código < 400)."""
+        if respuesta.is_json and not respuesta.direct_passthrough:
+            datos = respuesta.get_json(silent=True)
+            if isinstance(datos, dict) and "success" not in datos:
+                datos = {"success": respuesta.status_code < 400, **datos}
+                respuesta.set_data(app.json.dumps(datos))
+        return respuesta
 
     @app.after_request
     def cabeceras_seguridad(respuesta):
@@ -112,6 +144,7 @@ def create_app(test_config=None):
     def health_listo():
         """Listo: además la base de datos responde."""
         from sqlalchemy import text
+
         try:
             db.session.execute(text("SELECT 1"))
             return {"status": "ok", "base_de_datos": "ok"}
@@ -123,6 +156,7 @@ def create_app(test_config=None):
     @app.get("/api/v1/horario")
     def horario():
         from app.horario import info_horario
+
         return info_horario()
 
     return app
@@ -170,32 +204,27 @@ def _registrar_manejadores(app):
     @jwt.user_lookup_loader
     def cargar_usuario(_header, payload):
         from app.dominios.usuarios.modelos import Usuario
+
         try:
             usuario = db.session.get(Usuario, int(payload["sub"]))
         except (KeyError, TypeError, ValueError):
             return None
         # Token emitido antes de un cambio de credenciales / rol / logout.
-        if usuario and usuario.sesiones_desde:
-            from datetime import timezone as tz
-            limite = int(usuario.sesiones_desde.replace(tzinfo=tz.utc).timestamp())
-            if int(payload.get("iat", 0)) < limite:
-                return None
+        if usuario and not usuario.token_vigente(payload):
+            return None
         return usuario
 
     @jwt.token_verification_loader
     def token_vigente(_header, payload):
         from app.dominios.usuarios.modelos import Usuario
+
         try:
             usuario = db.session.get(Usuario, int(payload["sub"]))
         except (KeyError, TypeError, ValueError):
             return False
         if usuario is None or not usuario.activo:
             return False
-        if usuario.sesiones_desde:
-            from datetime import timezone as tz
-            limite = int(usuario.sesiones_desde.replace(tzinfo=tz.utc).timestamp())
-            return int(payload.get("iat", 0)) >= limite
-        return True
+        return usuario.token_vigente(payload)
 
     @jwt.token_verification_failed_loader
     def token_revocado(_header, _payload):
@@ -204,3 +233,7 @@ def _registrar_manejadores(app):
     @jwt.user_lookup_error_loader
     def usuario_no_encontrado(_header, _payload):
         return jsonify({"error": "Sesión inválida. Inicia sesión de nuevo."}), 401
+
+
+# Nombre en español, igual que en el proyecto de referencia (app.py lo usa).
+crear_app = create_app

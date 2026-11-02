@@ -4,6 +4,7 @@ from flask import has_request_context, request
 
 from app import db
 from app.horario import a_iso_utc
+
 from .modelos import Auditoria
 
 log = logging.getLogger("filacero.auditoria")
@@ -32,6 +33,7 @@ ACCIONES = {
 def _actor_actual():
     try:
         from flask_jwt_extended import current_user, verify_jwt_in_request
+
         verify_jwt_in_request(optional=True)
         return current_user.id if current_user else None
     except Exception:

@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import current_app
 
 from app import db
 from app.dominios.sedes.modelos import Punto
 from app.horario import ahora_local, apertura, cierre, dia_habil
+
 from .repositorios import (
     obtener_agente,
     obtener_cola,
@@ -15,7 +16,7 @@ from .repositorios import (
 
 
 def _utc_ahora():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def en_horario_de_atencion():
@@ -27,9 +28,7 @@ def _validar_horario():
     if not current_app.config.get("RESTRINGIR_ATENCION_HORARIO", True):
         return
     if not en_horario_de_atencion():
-        raise ValueError(
-            f"Fuera del horario de atención ({apertura():%H:%M} a {cierre():%H:%M})."
-        )
+        raise ValueError(f"Fuera del horario de atención ({apertura():%H:%M} a {cierre():%H:%M}).")
 
 
 def _validar_agente(usuario_id):

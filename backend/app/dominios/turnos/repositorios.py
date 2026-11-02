@@ -3,6 +3,7 @@ from flask import current_app
 from app import db
 from app.dominios.franjas.modelos import Franja
 from app.horario import hoy_local
+
 from .modelos import Turno
 
 ESTADOS = ("ESPERANDO", "LLAMADO", "EN_ATENCION", "ATENDIDO", "CANCELADO", "NO_ASISTIO")
@@ -16,11 +17,7 @@ def guardar(turno):
 
 
 def obtener_por_usuario(usuario_id):
-    return (
-        Turno.query.filter_by(usuario_id=usuario_id)
-        .order_by(Turno.hora_solicitud.desc())
-        .all()
-    )
+    return Turno.query.filter_by(usuario_id=usuario_id).order_by(Turno.hora_solicitud.desc()).all()
 
 
 def obtener_por_id(turno_id):
@@ -34,12 +31,15 @@ def obtener_por_codigo(codigo):
 def consulta_cola(punto_id):
     """Turnos en espera de una sede, desde hoy, en orden de la hora de su franja."""
     return (
-        Turno.query
-        .join(Franja, Turno.franja_id == Franja.id)
+        Turno.query.join(Franja, Turno.franja_id == Franja.id)
         .filter(
             Turno.punto_id == punto_id,
             Turno.estado == "ESPERANDO",
-            Franja.fecha == hoy_local() if current_app.config.get("COLA_SOLO_HOY") else Franja.fecha >= hoy_local(),
+            (
+                Franja.fecha == hoy_local()
+                if current_app.config.get("COLA_SOLO_HOY")
+                else Franja.fecha >= hoy_local()
+            ),
         )
         .order_by(
             Franja.fecha.asc(),

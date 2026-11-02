@@ -7,5 +7,5 @@
         "hora_inicio": franja.hora_inicio.strftime("%H:%M"),
         "hora_fin": franja.hora_fin.strftime("%H:%M"),
         "capacidad": franja.capacidad,
-        "activa": franja.activa
+        "activa": franja.activa,
     }

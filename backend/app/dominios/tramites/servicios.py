@@ -1,29 +1,45 @@
 from app import db
+from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
+
 from .modelos import Tramite
+
+# --- Excepciones de dominio (el app factory las traduce a HTTP) ---
+
+
+class TramiteNoEncontradoError(NoEncontradoError):
+    pass
+
+
+class TramiteDuplicadoError(ConflictoError):
+    pass
+
+
+class TramiteConTurnosError(ConflictoError):
+    pass
 
 
 def _texto(valor, campo, maximo, obligatorio=False):
     if valor is None:
         valor = ""
     if not isinstance(valor, str):
-        raise ValueError(f"El campo {campo} debe ser texto.")
+        raise DatosInvalidosError(f"El campo {campo} debe ser texto.")
     valor = valor.strip()
     if obligatorio and not valor:
-        raise ValueError(f"El {campo} del trámite es obligatorio.")
+        raise DatosInvalidosError(f"El {campo} del trámite es obligatorio.")
     if len(valor) > maximo:
-        raise ValueError(f"El campo {campo} no puede superar {maximo} caracteres.")
+        raise DatosInvalidosError(f"El campo {campo} no puede superar {maximo} caracteres.")
     return valor or None
 
 
 def _tiempo(valor):
     if isinstance(valor, bool):
-        raise ValueError("El tiempo estimado debe ser un entero positivo.")
+        raise DatosInvalidosError("El tiempo estimado debe ser un entero positivo.")
     try:
         tiempo = int(valor)
     except (TypeError, ValueError):
-        raise ValueError("El tiempo estimado debe ser un entero positivo.")
+        raise DatosInvalidosError("El tiempo estimado debe ser un entero positivo.") from None
     if tiempo <= 0 or tiempo > 480 or (isinstance(valor, float) and not valor.is_integer()):
-        raise ValueError("El tiempo estimado debe estar entre 1 y 480 minutos.")
+        raise DatosInvalidosError("El tiempo estimado debe estar entre 1 y 480 minutos.")
     return tiempo
 
 
@@ -41,7 +57,7 @@ def listar_tramites():
 def crear_tramite(datos):
     nombre = _texto(datos.get("nombre"), "nombre", 100, obligatorio=True)
     if _nombre_duplicado(nombre):
-        raise ValueError("Ya existe un trámite con ese nombre.")
+        raise TramiteDuplicadoError("Ya existe un trámite con ese nombre.")
 
     tramite = Tramite(
         nombre=nombre,
@@ -57,12 +73,12 @@ def crear_tramite(datos):
 def actualizar_tramite(tramite_id, datos):
     tramite = db.session.get(Tramite, tramite_id)
     if not tramite:
-        raise ValueError("El trámite no existe.")
+        raise TramiteNoEncontradoError("El trámite no existe.")
 
     if "nombre" in datos:
         nombre = _texto(datos["nombre"], "nombre", 100, obligatorio=True)
         if _nombre_duplicado(nombre, tramite.id):
-            raise ValueError("Ya existe un trámite con ese nombre.")
+            raise TramiteDuplicadoError("Ya existe un trámite con ese nombre.")
         tramite.nombre = nombre
     if "descripcion" in datos:
         tramite.descripcion = _texto(datos["descripcion"], "descripción", 1000)
@@ -80,10 +96,10 @@ def eliminar_tramite(tramite_id):
 
     tramite = db.session.get(Tramite, tramite_id)
     if not tramite:
-        raise ValueError("El trámite no existe.")
+        raise TramiteNoEncontradoError("El trámite no existe.")
 
     if tramite.turnos:
-        raise ValueError(
+        raise TramiteConTurnosError(
             "El trámite tiene turnos registrados. Desactívalo en lugar de eliminarlo."
         )
 

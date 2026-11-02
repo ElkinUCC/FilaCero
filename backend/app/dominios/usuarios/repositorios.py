@@ -1,4 +1,5 @@
 from app import db
+
 from .modelos import Usuario
 
 
@@ -8,10 +9,7 @@ def buscar_por_correo(correo):
 
 def buscar_por_celular(celular):
     return (
-        Usuario.query
-        .filter_by(celular=celular, rol="CLIENTE")
-        .order_by(Usuario.id.asc())
-        .first()
+        Usuario.query.filter_by(celular=celular, rol="CLIENTE").order_by(Usuario.id.asc()).first()
     )
 
 

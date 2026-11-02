@@ -1,456 +1,231 @@
 # FilaCero
 
-> **Proyecto final de arquitectura:** ver [`docs/arquitectura/`](docs/arquitectura/README.md) (C4, ADR, despliegue, riesgos, evolución) y [`SECURITY.md`](SECURITY.md).
+> Sistema de turnos con **atención garantizada dentro de la franja reservada**: si reservas de 4:00 a 4:30 p. m., te atienden en ese intervalo.
+> Proyecto final de Arquitectura de Software y Computacional (Momento Evaluativo 3).
 
-## Inicio rápido
-
-```bash
-# Backend (carpeta backend, con el entorno virtual activo)
-pip install -r requirements-dev.txt
-flask db upgrade
-python simulacion.py --cargar      # borra y carga una semana simulada (escribe BORRAR)
-python run.py                      # API en http://127.0.0.1:5000
-
-# Frontend (carpeta frontend-react)
-npm install
-npm run dev                        # http://localhost:5173  ·  pantalla de sala: /sala
-
-# Verificación
-python -m pytest                   # pruebas automáticas
-python simulacion.py               # verificación de punta a punta
-python simulacion.py --carga --url http://127.0.0.1:5000   # carga y sobrecupo
-
-# Producción (un servidor)
-docker compose --env-file deploy/.env.produccion up -d --build
-```
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)](https://flask.palletsprojects.com/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
+[![Tests](https://img.shields.io/badge/Tests-87%20passing-brightgreen.svg)](backend/tests)
+[![Simulación](https://img.shields.io/badge/Simulaci%C3%B3n-50%2F50-brightgreen.svg)](backend/simulacion.py)
+[![WCAG](https://img.shields.io/badge/WCAG%202.2-AA-0f2a2e.svg)](docs/arquitectura/02-atributos-de-calidad.md)
 
 ---
 
+## Descripción
 
-**Proyecto final — Arquitectura de Software y Computacional**
+**Caso:** *TecniVisión*, centro de reparación de televisores con **5 sedes**, **2 administradores** y **8 asesores**, que atiende **todos los días de 8:00 a 18:00**.
 
-Sistema de gestión inteligente de turnos y tiempos de atención presencial.
+Un sistema de turnos normal ordena la fila, pero no promete *cuándo* te atienden. FilaCero sí lo promete, con tres reglas:
+
+1. **Franjas de 30 minutos y atención de máximo 10 minutos**, es decir, **3 personas por asesor en cada franja**.
+2. **El cupo es por sede**: 3 × asesores activos. Nunca se vende más de lo que la sede puede atender, ni siquiera con reservas simultáneas.
+3. **Un asistente de despacho** ordena la cola por el plazo de cada franja (EDF) y recomienda llamar, iniciar, finalizar, marcar ausencia o tomar una pausa activa.
+
+| Rol | Qué hace | Pantalla |
+|---|---|---|
+| Ciudadano (sin cuenta) | Reserva con su celular verificado por código y consulta o cancela su turno | `/` |
+| Asesor (`AGENTE`) | Atiende la cola de su sede con el asistente de despacho | `/agente` |
+| Supervisor | Ve todo el panel, en modo solo lectura | `/admin` |
+| Administrador | Gestiona sedes, trámites, asesores, usuarios, permisos y bitácora | `/admin/:seccion` |
+| TV de la sala | Muestra a quién se llama, sin datos personales, y lo anuncia en voz alta | `/sala?sede=1` |
 
 ---
 
-## 1. Descripción del proyecto
+## Stack tecnológico
 
-FilaCero es una plataforma orientada a mejorar la gestión de turnos en procesos de atención presencial. Su propósito es reducir los tiempos de espera, organizar la demanda de los servicios y facilitar la administración de las solicitudes de atención.
-
-La plataforma busca permitir que los usuarios consulten trámites, seleccionen opciones de atención y soliciten turnos sin necesidad de permanecer físicamente en una fila durante todo el proceso.
-
-El sistema contempla funcionalidades para clientes, agentes de atención y administradores, con una evolución progresiva hacia la medición de tiempos y el análisis de información operativa.
-
-## 2. Objetivos
-
-### Objetivo general
-
-Diseñar y desarrollar una plataforma modular para gestionar turnos de atención presencial, aplicando principios de arquitectura de software, separación de responsabilidades, seguridad y persistencia de datos.
-
-### Objetivos específicos
-
-- Implementar una API REST utilizando Python y Flask.
-- Organizar el backend mediante una arquitectura de monolito modular.
-- Gestionar usuarios y autenticación mediante JSON Web Tokens (JWT).
-- Modelar sedes, trámites, franjas horarias y turnos.
-- Persistir la información utilizando MySQL y SQLAlchemy.
-- Controlar los cambios en la estructura de la base de datos mediante migraciones.
-- Incorporar pruebas automatizadas y validaciones de seguridad.
-- Preparar la plataforma para futuras funcionalidades administrativas, operativas y analíticas.
-
-## 3. Arquitectura del sistema
-
-FilaCero utiliza una arquitectura de **monolito modular**.
-
-El backend se ejecuta como una única aplicación, organizada internamente en dominios de negocio independientes. Esta decisión permite separar responsabilidades, facilitar el mantenimiento y reducir la complejidad inicial frente a una arquitectura distribuida de microservicios.
-
-### Arquitectura general
-
-```text
-Cliente
-   |
-   v
-API REST
-   |
-   v
-Backend Flask
-   |
-   +-----------------------+
-   |                       |
-   v                       v
-Dominios de negocio    Seguridad
-   |                       |
-   +-----------+-----------+
-               |
-               v
-        Servicios de negocio
-               |
-               v
-          Repositorios
-               |
-               v
-             MySQL
-```
-
-### Flujo de una solicitud
-
-```text
-Solicitud HTTP
-      |
-      v
-Controlador
-      |
-      v
-Validación de datos (DTO)
-      |
-      v
-Servicio de negocio
-      |
-      v
-Repositorio
-      |
-      v
-Base de datos
-      |
-      v
-Respuesta JSON
-```
-
-Cada componente tiene una responsabilidad definida para evitar concentrar toda la lógica en los controladores.
-
-## 4. Tecnologías utilizadas
-
-| Tecnología | Propósito |
+| Capa | Tecnología |
 |---|---|
-| Python | Lenguaje de programación del backend |
-| Flask | Framework para construir la API REST |
-| Flask-SQLAlchemy | Integración del ORM con Flask |
-| SQLAlchemy | Modelado y acceso a datos |
-| MySQL | Sistema gestor de base de datos |
-| PyMySQL | Conector entre Python y MySQL |
-| Flask-Migrate | Administración de migraciones |
-| Alembic | Control de versiones del esquema de datos |
-| Flask-JWT-Extended | Autenticación mediante JWT |
-| Werkzeug | Utilidades de seguridad, incluido el hash de contraseñas |
-| Marshmallow | Validación y serialización de datos |
-| Flask-CORS | Configuración de acceso entre orígenes |
-| python-dotenv | Lectura de variables de entorno |
-| pytest | Pruebas automatizadas |
+| API | Python 3.12 · Flask 3.1 · Blueprints por dominio · Marshmallow |
+| Datos | MySQL 8 (SQLite en memoria para pruebas) · SQLAlchemy 2 · Alembic / Flask-Migrate |
+| Seguridad | Flask-JWT-Extended · hash de Werkzeug · rate limit por IP · OTP por celular |
+| Frontend | React 19 · Vite · CSS propio con *tokens* (sin framework de UI) |
+| Calidad | pytest · black · ruff · oxlint · axe-core (accesibilidad) · Postman/newman |
+| Ejecución | waitress (WSGI) · nginx · Docker Compose (despliegue futuro) |
 
-## 5. Dominios del sistema
+---
 
-El backend se organiza por dominios de negocio.
+## Arquitectura
 
-| Dominio | Responsabilidad |
-|---|---|
-| Usuarios | Registro, autenticación y gestión de identidad |
-| Sedes o puntos de atención | Representación de los lugares donde se presta el servicio |
-| Trámites | Definición de los servicios disponibles |
-| Franjas horarias | Organización de los horarios y la disponibilidad |
-| Turnos | Registro y seguimiento de las solicitudes de atención |
-
-La implementación de los dominios se realizará progresivamente durante los diferentes sprints.
-
-## 6. Roles del sistema
-
-FilaCero contempla tres perfiles principales:
-
-- **CLIENTE:** consulta la oferta de servicios, solicita turnos y consulta su estado e historial.
-- **AGENTE:** gestiona la cola de atención, llama turnos y registra los resultados de la atención.
-- **ADMIN:** administra sedes, trámites, horarios, agentes y parámetros generales del sistema.
-
-Las funcionalidades de cada rol se incorporarán progresivamente, aplicando autenticación y autorización según corresponda.
-
-## 7. Estructura del proyecto
-
-La estructura principal del backend es la siguiente:
+La arquitectura es un **monolito modular por dominios** (ADR-0001), con la misma organización por capas del proyecto de referencia del curso (ADR-0009). El detalle está en [`docs/arquitectura/`](docs/arquitectura/README.md): C4, 9 ADR, despliegue, riesgos y evolución.
 
 ```text
 FilaCero/
-├── README.md
-└── backend/
-    ├── app/
-    │   ├── dominios/
-    │   │   ├── usuarios/
-    │   │   │   ├── controladores.py
-    │   │   │   ├── servicios.py
-    │   │   │   ├── repositorios.py
-    │   │   │   ├── modelos.py
-    │   │   │   ├── dtos.py
-    │   │   │   └── __init__.py
-    │   │   ├── sedes/
-    │   │   ├── tramites/
-    │   │   └── turnos/
-    │   ├── __init__.py
-    │   ├── config.py
-    │   └── seguridad.py
-    ├── migrations/
-    │   └── versions/
-    ├── tests/
-    ├── venv/
-    ├── .env
-    ├── .env.example
-    ├── .gitignore
-    ├── requirements.txt
-    └── run.py
+├── backend/                         # API REST /api/v1
+│   ├── app.py                       # Punto de entrada (crear_app)
+│   ├── wsgi.py                      # Producción con waitress
+│   ├── simulacion.py                # Verificación, datos demo y prueba de carga
+│   ├── pytest.ini · pyproject.toml  # pytest · black + ruff
+│   ├── requirements.txt · requirements-dev.txt · .env.example
+│   ├── app/
+│   │   ├── __init__.py              # Factory: blueprints, CORS, JWT, cabeceras
+│   │   ├── config.py                # Configuración leída del .env
+│   │   ├── errores.py               # Excepciones de dominio + manejador global
+│   │   ├── seguridad.py             # Roles, contraseñas, límite por IP
+│   │   ├── horario.py               # Horario 8–18, franjas y CUPO POR SEDE
+│   │   └── dominios/
+│   │       ├── usuarios/  sedes/  tramites/  franjas/
+│   │       ├── turnos/              # reserva pública, OTP, consulta, sala
+│   │       ├── agentes/             # atención, métricas, despacho.py (EDF)
+│   │       └── auditoria/           # bitácora
+│   │           └── controladores · servicios · repositorios · modelos · dtos
+│   ├── migrations/                  # 8 migraciones Alembic
+│   ├── scripts/                     # create_db · generate_secret · promover_admin
+│   ├── tests/                       # conftest.py + 9 archivos de prueba
+│   └── docs/                        # conceptos, validación manual, postman, roadmap
+├── frontend-react/                  # SPA
+│   ├── src/
+│   │   ├── api/                     # http.js + un módulo por recurso
+│   │   ├── auth/                    # session.service.js · permissions.js
+│   │   ├── router/                  # routes.jsx · guards.js · navegacion.js
+│   │   ├── pages/                   # Portal, Admin, Agente, Sala, 403, 404
+│   │   ├── components/ hooks/ utils/ css/
+│   └── docs/                        # arquitectura SPA, contrato, validación manual
+├── docs/arquitectura/               # Entregable del Momento Evaluativo 3
+├── docker-compose.yml · deploy/     # Despliegue en un servidor (para más adelante)
+└── SECURITY.md
 ```
 
-> Nota: la estructura anterior es ilustrativa. Los dominios existentes se encuentran bajo `app/dominios/`, y la estructura de carpetas puede evolucionar durante el desarrollo.
+### Flujo de una petición
 
-### Responsabilidades de los componentes
-
-- `controladores.py`: recibe solicitudes HTTP y construye las respuestas de la API.
-- `dtos.py`: valida y estructura los datos de entrada y salida.
-- `servicios.py`: implementa las reglas de negocio.
-- `repositorios.py`: concentra las operaciones de acceso a datos.
-- `modelos.py`: define las entidades y su correspondencia con las tablas.
-- `config.py`: centraliza la configuración de la aplicación.
-- `seguridad.py`: reúne los componentes de seguridad.
-- `migrations/`: conserva el historial de cambios del esquema de la base de datos.
-- `run.py`: permite iniciar el backend.
-
-## 8. Configuración del entorno de desarrollo
-
-### Requisitos
-
-- Python instalado.
-- MySQL Server instalado.
-- Git.
-- PowerShell en Windows.
-
-### Clonar o abrir el proyecto
-
-Desde una terminal, ingresar a la carpeta del proyecto:
-
-```powershell
-cd FilaCero/backend
+```text
+Navegador ──► router/guards (¿sesión? ¿rol?) ──► página ──► *.api.js ──► http.js
+                                                                           │ HTTP + JSON + Bearer
+                                                                           ▼
+Blueprint (controlador) ──► requiere_rol / limitar ──► DTO (Marshmallow)
+        │
+        ▼
+Servicio (reglas: cupo por sede, OTP, despacho) ──► Repositorio ──► MySQL
+        │
+        ├── éxito  → {"success": true, ...datos}
+        └── ErrorDeDominio → manejador global → {"success": false, "error": "..."} + 400/401/403/404/409/429
 ```
 
-### Crear el entorno virtual
+### Base de datos
 
-Si todavía no existe:
+```text
+puntos (sedes) 1───* franjas *───1 tramites
+     │                 │
+     │                 1
+     │                 *
+     └──────────────* turnos *──────── usuarios (cliente y asesor)
+usuarios: rol, activo, punto_asignado_id, intentos_fallidos, bloqueado_hasta, version_sesion
+auditoria: acción, detalle, usuario, IP, fecha
+```
+
+---
+
+## Requisitos previos
+
+- Python 3.12 o superior
+- Node.js 20 o superior
+- MySQL 8 (en local se usa el puerto `3307`)
+- Git
+
+---
+
+## Instalación paso a paso (Windows · PowerShell)
+
+### 1. Backend
 
 ```powershell
+cd FilaCero\backend
 python -m venv venv
-```
-
-### Activar el entorno virtual en PowerShell
-
-```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
 ```
 
-La terminal debe mostrar `(venv)`.
-
-### Instalar las dependencias
+### 2. Variables de entorno
 
 ```powershell
-python -m pip install -r requirements.txt
+copy .env.example .env
+python scripts\generate_secret.py      # pega SECRET_KEY y JWT_SECRET_KEY en el .env
 ```
 
-## 9. Configuración de la base de datos
+Completa `DB_USER` y `DB_PASSWORD` en el `.env`. **El `.env` nunca se sube a Git.**
 
-FilaCero utiliza MySQL como sistema de persistencia.
+### 3. Base de datos y migraciones
 
-Configuración prevista para el entorno local:
+```powershell
+python scripts\create_db.py            # crea filacero_db si no existe
+flask db upgrade                       # aplica las 8 migraciones
+```
 
-| Parámetro | Valor |
+### 4. Datos de demostración (una semana simulada)
+
+```powershell
+python simulacion.py --cargar --desde 2026-10-25 --hasta 2026-10-30
+# Escribe BORRAR y Enter. Al final imprime las cuentas de demostración.
+```
+
+Las contraseñas de demostración **no** están en este README. Las imprime ese comando; guárdalas en tu gestor de contraseñas.
+
+### 5. Ejecutar
+
+```powershell
+# Terminal 1 (backend)
+python app.py                          # http://127.0.0.1:5000
+
+# Terminal 2 (frontend)
+cd ..\frontend-react
+npm install
+npm run dev                            # http://localhost:5173
+```
+
+| URL | Pantalla |
 |---|---|
-| Host | `localhost` |
-| Puerto | `3307` |
-| Base de datos | `filacero_db` |
-| Usuario | `filacero_user` |
+| http://localhost:5173/ | Portal del ciudadano |
+| http://localhost:5173/?ingresar=1 | Acceso del personal |
+| http://localhost:5173/admin | Panel (administrador o supervisor) |
+| http://localhost:5173/agente | Consola del asesor |
+| http://localhost:5173/sala?sede=1 | Pantalla de la sala de espera |
 
-Los valores deben coincidir con la configuración real de MySQL y las variables definidas en el archivo `.env`.
+---
 
-### Variables de entorno
-
-El proyecto contempla variables como:
-
-```dotenv
-SECRET_KEY=
-JWT_SECRET_KEY=
-JWT_EXP_MINUTES=
-
-DB_HOST=localhost
-DB_PORT=3307
-DB_NAME=filacero_db
-DB_USER=filacero_user
-DB_PASSWORD=
-DB_CHARSET=utf8mb4
-```
-
-Los valores sensibles deben configurarse localmente. No se deben publicar contraseñas ni claves secretas en el repositorio.
-
-El archivo `.env.example` debe contener únicamente valores ilustrativos, sin credenciales reales.
-
-## 10. Ejecución del backend
-
-Con el entorno virtual activo y las dependencias instaladas, ingresar a `backend` y ejecutar:
+## Verificación
 
 ```powershell
-python run.py
+cd backend
+python -m pytest                       # 87 pruebas (94 con test_mejoras_entrega.py)
+python simulacion.py                   # 50 verificaciones de punta a punta (en memoria)
+ruff check . ; black --check .         # estilo, con las mismas reglas que la referencia
+python simulacion.py --carga --url http://127.0.0.1:5000   # carga y sobrecupo
+
+cd ..\frontend-react
+npm run lint ; npm run build
 ```
 
-La aplicación está configurada para utilizar inicialmente el puerto `5000`.
+- **Postman:** `backend/docs/postman/` tiene 64 peticiones sobre las 54 rutas, con aserciones.
+- **Validación manual guiada:** [`backend/docs/VALIDACION-MANUAL.md`](backend/docs/VALIDACION-MANUAL.md) y [`frontend-react/docs/VALIDACION-MANUAL-FRONTEND.md`](frontend-react/docs/VALIDACION-MANUAL-FRONTEND.md).
 
-Dirección local:
+---
 
-http://localhost:5000
+## Documentación
 
-## 11. Endpoints disponibles actualmente
+| Documento | Para qué |
+|---|---|
+| [`docs/arquitectura/`](docs/arquitectura/README.md) | Entregable de arquitectura: requisitos, C4, ADR, despliegue, riesgos, evolución y checklist de la guía 16 |
+| [`backend/README.md`](backend/README.md) | API: estructura, contrato, endpoints y comandos |
+| [`backend/docs/CONCEPTOS-FUNDAMENTALES.md`](backend/docs/CONCEPTOS-FUNDAMENTALES.md) | Conceptos aplicados en el backend |
+| [`frontend-react/README.md`](frontend-react/README.md) | SPA: capas, rutas, guardas y accesibilidad |
+| [`frontend-react/docs/CONTRATO-BACKEND-FRONTEND.md`](frontend-react/docs/CONTRATO-BACKEND-FRONTEND.md) | Qué envía y qué recibe cada pantalla |
+| [`SECURITY.md`](SECURITY.md) | Amenazas, controles y checklist antes de producción |
 
-### Estado básico de la API
+---
 
-| Método | Endpoint | Propósito |
-|---|---|---|
-| GET | `/` | Información básica del proyecto |
-| GET | `/health` | Comprobación del estado de la API |
+## Estado del proyecto
 
-### Usuarios
+| Área | Estado |
+|---|---|
+| Reserva sin cuenta con OTP, consulta y cancelación | ✅ |
+| Cupo por sede y despacho EDF con alertas a los 8 y 10 min | ✅ |
+| Consola del asesor, panel en vivo, sala con voz | ✅ |
+| Usuarios, permisos, bloqueo de cuenta, revocación inmediata y bitácora | ✅ |
+| Accesibilidad WCAG 2.2 AA (axe-core: 0 violaciones) | ✅ |
+| Arquitectura alineada con el proyecto de referencia | ✅ (ADR-0009) |
+| Proveedor real de SMS y despliegue en dominio | ⏳ Planeado ([roadmap](backend/docs/roadmap/roadmap.md)) |
 
-| Método | Endpoint | Propósito |
-|---|---|---|
-| POST | `/api/v1/usuarios/registro` | Registro de usuarios |
-| POST | `/api/v1/usuarios/login` | Autenticación e inicio de sesión |
+---
 
-### Ejemplo de registro
-
-```json
-{
-  "nombre": "Usuario de prueba",
-  "correo": "usuario@ejemplo.com",
-  "password": "contraseña-de-prueba"
-}
-```
-
-### Ejemplo de inicio de sesión
-
-```json
-{
-  "correo": "usuario@ejemplo.com",
-  "password": "contraseña-de-prueba"
-}
-```
-
-El inicio de sesión está diseñado para devolver un token de acceso JWT cuando las credenciales son válidas.
-
-Los ejemplos son ilustrativos; las respuestas definitivas dependen de la implementación de los controladores.
-
-## 12. Seguridad
-
-Las decisiones de seguridad del proyecto incluyen:
-
-- Almacenamiento de contraseñas mediante hashes, no en texto plano.
-- Validación de las credenciales durante el inicio de sesión.
-- Uso de JWT para identificar usuarios autenticados.
-- Definición de roles para el control de acceso.
-- Gestión de secretos mediante variables de entorno.
-- Exclusión de archivos sensibles y generados del control de versiones.
-
-La autorización por roles y la protección de los diferentes dominios deberán verificarse a medida que se implementen nuevas funcionalidades.
-
-## 13. Migraciones de base de datos
-
-El proyecto utiliza Flask-Migrate y Alembic para administrar los cambios en el esquema de datos.
-
-Consultar el estado actual:
-
-```powershell
-python -m flask --app "app:create_app()" db current
-```
-
-Consultar el historial:
-
-```powershell
-python -m flask --app "app:create_app()" db history
-```
-
-Generar una migración después de modificar los modelos:
-
-```powershell
-python -m flask --app "app:create_app()" db migrate -m "Descripcion del cambio"
-```
-
-Aplicar las migraciones revisadas:
-
-```powershell
-python -m flask --app "app:create_app()" db upgrade
-```
-
-Las migraciones generadas deben revisarse antes de aplicarse. No se deben borrar ni recrear tablas existentes sin evaluar las consecuencias sobre los datos.
-
-## 14. Pruebas y validación
-
-El proyecto utiliza pytest para las pruebas automatizadas.
-
-Ejecutar las pruebas:
-
-```powershell
-python -m pytest -v
-```
-
-La validación debe cubrir progresivamente:
-
-- Disponibilidad de la API.
-- Registro e inicio de sesión.
-- Validación de datos.
-- Persistencia en MySQL.
-- Relaciones entre entidades.
-- Solicitud y seguimiento de turnos.
-- Reglas de disponibilidad.
-- Seguridad y permisos por rol.
-
-Las pruebas automatizadas deben incorporarse a medida que se implementen los módulos.
-
-## 15. Plan de desarrollo por sprints
-
-| Sprint | Objetivo | Estado |
-|---|---|---|
-| 01 | Base del proyecto y arquitectura | Completado según la documentación |
-| 02 | Usuarios y seguridad | Completado según la documentación |
-| 03 | Modelo de negocio: sedes, trámites, franjas y turnos | En desarrollo |
-| 04 | Funcionalidades administrativas | Planificado |
-| 05 | Funcionalidades del cliente | Planificado |
-| 06 | Operación de los agentes | Planificado |
-| 07 | Tiempos e inteligencia operativa | Planificado |
-| 08 | Métricas y reportes | Planificado |
-| 09 | Calidad y seguridad | Planificado |
-| 10 | Integración y entrega | Planificado |
-
-Los estados de los sprints posteriores se actualizarán conforme se implementen y validen sus funcionalidades.
-
-## 16. Estado actual del proyecto
-
-Al momento de esta documentación:
-
-- La aplicación Flask puede iniciarse mediante su fábrica de aplicación.
-- Los endpoints `/` y `/health` responden correctamente.
-- Los endpoints de registro e inicio de sesión están registrados.
-- La configuración de SQLAlchemy y Flask-Migrate permite consultar MySQL.
-- La revisión de Alembic correspondiente a usuarios está identificada como la revisión actual.
-- La base de datos inspeccionada contiene las tablas `usuarios` y `alembic_version`.
-- Los archivos de modelos para puntos de atención, trámites y turnos están presentes.
-- La integración completa de los dominios de negocio y las pruebas automatizadas está pendiente de validación y desarrollo.
-
-## 17. Próximos pasos
-
-El siguiente objetivo es completar el Sprint 03 mediante:
-
-1. Validación de los modelos existentes.
-2. Definición del dominio de franjas horarias.
-3. Revisión de las relaciones y restricciones entre entidades.
-4. Registro de los modelos y controladores en la aplicación.
-5. Generación y revisión de migraciones.
-6. Implementación y prueba de los endpoints de negocio.
-7. Validación del flujo de solicitud de turnos.
-8. Actualización de la documentación y las evidencias del sprint.
-
-## 18. Autoría académica
-
-**Proyecto:** FilaCero  
-**Tipo:** Proyecto final académico  
-**Área:** Arquitectura de Software y Computacional
-
-Este documento se actualizará a medida que evolucione la arquitectura y se completen los diferentes sprints.
+**Proyecto académico** · Arquitectura de Software y Computacional · FilaCero, 2026.

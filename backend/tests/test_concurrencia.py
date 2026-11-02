@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
+
 def ejecutar_en_paralelo(operaciones):
     barrera = Barrier(len(operaciones))
 
@@ -11,7 +12,5 @@ def ejecutar_en_paralelo(operaciones):
         except Exception as error:
             return error
 
-    with ThreadPoolExecutor(
-        max_workers=len(operaciones)
-    ) as executor:
+    with ThreadPoolExecutor(max_workers=len(operaciones)) as executor:
         return list(executor.map(ejecutar, operaciones))

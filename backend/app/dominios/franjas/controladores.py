@@ -1,4 +1,5 @@
 ﻿from datetime import date
+
 from flask import Blueprint, request
 
 from .servicios import consultar_disponibilidad
@@ -17,15 +18,9 @@ def obtener_franjas():
         if fecha_texto:
             fecha = date.fromisoformat(fecha_texto)
 
-        franjas = consultar_disponibilidad(
-            punto_id=punto_id,
-            tramite_id=tramite_id,
-            fecha=fecha
-        )
+        franjas = consultar_disponibilidad(punto_id=punto_id, tramite_id=tramite_id, fecha=fecha)
 
         return {"franjas": franjas}, 200
 
     except ValueError:
-        return {
-            "error": "La fecha debe tener formato AAAA-MM-DD."
-        }, 400
+        return {"error": "La fecha debe tener formato AAAA-MM-DD."}, 400

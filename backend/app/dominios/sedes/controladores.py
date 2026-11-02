@@ -3,6 +3,7 @@ from flask_jwt_extended import get_jwt, verify_jwt_in_request
 
 from app.dominios.auditoria.servicios import registrar
 from app.seguridad import requiere_rol
+
 from .dtos import punto_response
 from .servicios import actualizar_punto, crear_punto, eliminar_punto, listar_puntos
 
@@ -28,31 +29,22 @@ def obtener_puntos():
 @puntos_bp.post("/")
 @requiere_rol("ADMIN")
 def crear():
-    try:
-        punto = crear_punto(request.get_json(silent=True) or {})
-        registrar("sede_creada", punto.nombre)
-        return {"punto": punto_response(punto), "mensaje": "Sede creada."}, 201
-    except ValueError as error:
-        return {"error": str(error)}, 400
+    punto = crear_punto(request.get_json(silent=True) or {})
+    registrar("sede_creada", punto.nombre)
+    return {"punto": punto_response(punto), "mensaje": "Sede creada."}, 201
 
 
 @puntos_bp.put("/<int:punto_id>")
 @requiere_rol("ADMIN")
 def actualizar(punto_id):
-    try:
-        punto = actualizar_punto(punto_id, request.get_json(silent=True) or {})
-        registrar("sede_editada", punto.nombre + (" (activa)" if punto.activo else " (inactiva)"))
-        return {"punto": punto_response(punto), "mensaje": "Sede actualizada."}, 200
-    except ValueError as error:
-        return {"error": str(error)}, 400
+    punto = actualizar_punto(punto_id, request.get_json(silent=True) or {})
+    registrar("sede_editada", punto.nombre + (" (activa)" if punto.activo else " (inactiva)"))
+    return {"punto": punto_response(punto), "mensaje": "Sede actualizada."}, 200
 
 
 @puntos_bp.delete("/<int:punto_id>")
 @requiere_rol("ADMIN")
 def eliminar(punto_id):
-    try:
-        eliminar_punto(punto_id)
-        registrar("sede_eliminada", f"id {punto_id}")
-        return {"mensaje": "Sede eliminada."}, 200
-    except ValueError as error:
-        return {"error": str(error)}, 400
+    eliminar_punto(punto_id)
+    registrar("sede_eliminada", f"id {punto_id}")
+    return {"mensaje": "Sede eliminada."}, 200

@@ -5,6 +5,7 @@ Roles:
   SUPERVISOR  solo lectura del panel (resumen, historial, sedes, asesores).
   AGENTE      consola de atención en su sede.
 """
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import current_user
 
@@ -13,6 +14,7 @@ from app.dominios.auditoria.modelos import Auditoria
 from app.dominios.auditoria.servicios import ACCIONES, evento_response, registrar
 from app.dominios.sedes.modelos import Punto
 from app.seguridad import encriptar_password, requiere_rol, validar_password_segura
+
 from .dtos import usuario_response
 from .modelos import Usuario
 from .repositorios import buscar_por_correo
@@ -61,7 +63,7 @@ def _sede(valor):
     try:
         punto = db.session.get(Punto, int(valor))
     except (TypeError, ValueError):
-        raise ValueError("Sede no válida.")
+        raise ValueError("Sede no válida.") from None
     if not punto or not punto.activo:
         raise ValueError("La sede no existe o está inactiva.")
     return punto.id
@@ -75,11 +77,16 @@ def listar():
         .order_by(Usuario.rol.asc(), Usuario.nombre.asc())
         .all()
     )
-    return jsonify({
-        "usuarios": [usuario_response(u) for u in usuarios],
-        "roles": ROLES,
-        "yo": current_user.id,
-    }), 200
+    return (
+        jsonify(
+            {
+                "usuarios": [usuario_response(u) for u in usuarios],
+                "roles": ROLES,
+                "yo": current_user.id,
+            }
+        ),
+        200,
+    )
 
 
 @admin_usuarios_bp.post("/")
@@ -140,7 +147,9 @@ def editar(usuario_id):
                 raise ValueError("No puedes cambiar tu propio rol.")
             if usuario.rol == "ADMIN" and _admins_activos(excluir_id=usuario.id) == 0:
                 raise ValueError("Debe quedar al menos un administrador activo.")
-            eventos.append(("rol_cambiado", f"{usuario.correo}: {ROLES[usuario.rol]} → {ROLES[nuevo_rol]}"))
+            eventos.append(
+                ("rol_cambiado", f"{usuario.correo}: {ROLES[usuario.rol]} → {ROLES[nuevo_rol]}")
+            )
             usuario.rol = nuevo_rol
             usuario.revocar_sesiones()
             if nuevo_rol != "AGENTE":
@@ -151,12 +160,18 @@ def editar(usuario_id):
             activo = bool(datos["activo"])
             if es_yo and not activo:
                 raise ValueError("No puedes desactivar tu propia cuenta.")
-            if not activo and usuario.rol == "ADMIN" and _admins_activos(excluir_id=usuario.id) == 0:
+            if (
+                not activo
+                and usuario.rol == "ADMIN"
+                and _admins_activos(excluir_id=usuario.id) == 0
+            ):
                 raise ValueError("Debe quedar al menos un administrador activo.")
             usuario.activo = activo
             if not activo:
                 usuario.revocar_sesiones()
-            eventos.append(("usuario_activado" if activo else "usuario_desactivado", usuario.correo))
+            eventos.append(
+                ("usuario_activado" if activo else "usuario_desactivado", usuario.correo)
+            )
         db.session.commit()
     except ValueError as error:
         db.session.rollback()
@@ -164,7 +179,9 @@ def editar(usuario_id):
 
     for accion, detalle in eventos:
         registrar(accion, detalle)
-    registrar("usuario_editado", f"{usuario.correo}" + (f" ({'; '.join(cambios)})" if cambios else ""))
+    registrar(
+        "usuario_editado", f"{usuario.correo}" + (f" ({'; '.join(cambios)})" if cambios else "")
+    )
     return jsonify({"mensaje": "Usuario actualizado.", "usuario": usuario_response(usuario)}), 200
 
 
@@ -185,11 +202,16 @@ def restablecer_clave(usuario_id):
     usuario.revocar_sesiones()
     db.session.commit()
     registrar("clave_restablecida", usuario.correo)
-    return jsonify({
-        "mensaje": "Contraseña restablecida. Deberá cambiarla al ingresar.",
-        "clave_temporal": clave,
-        "usuario": usuario_response(usuario),
-    }), 200
+    return (
+        jsonify(
+            {
+                "mensaje": "Contraseña restablecida. Deberá cambiarla al ingresar.",
+                "clave_temporal": clave,
+                "usuario": usuario_response(usuario),
+            }
+        ),
+        200,
+    )
 
 
 @admin_usuarios_bp.get("/auditoria")
@@ -216,12 +238,19 @@ def auditoria():
     total = consulta.count()
     eventos = (
         consulta.order_by(Auditoria.fecha.desc(), Auditoria.id.desc())
-        .offset((pagina - 1) * por_pagina).limit(por_pagina).all()
+        .offset((pagina - 1) * por_pagina)
+        .limit(por_pagina)
+        .all()
     )
-    return jsonify({
-        "pagina": pagina,
-        "total": total,
-        "total_paginas": (total + por_pagina - 1) // por_pagina,
-        "acciones": ACCIONES,
-        "eventos": [evento_response(e) for e in eventos],
-    }), 200
+    return (
+        jsonify(
+            {
+                "pagina": pagina,
+                "total": total,
+                "total_paginas": (total + por_pagina - 1) // por_pagina,
+                "acciones": ACCIONES,
+                "eventos": [evento_response(e) for e in eventos],
+            }
+        ),
+        200,
+    )

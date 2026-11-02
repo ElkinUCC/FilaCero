@@ -1,4 +1,5 @@
 from app import db
+
 from .modelos import Tramite
 
 

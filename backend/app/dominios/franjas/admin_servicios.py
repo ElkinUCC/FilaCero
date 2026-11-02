@@ -6,6 +6,7 @@ from app import db
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
 from app.horario import dentro_de_horario, hoy_local
+
 from .modelos import Franja
 
 
@@ -21,7 +22,7 @@ def crear_franja(datos):
         raise ValueError(
             "Se requieren punto_id, tramite_id, fecha (AAAA-MM-DD), "
             "hora_inicio, hora_fin y capacidad válidos."
-        )
+        ) from None
 
     punto = db.session.get(Punto, punto_id)
     tramite = db.session.get(Tramite, tramite_id)
@@ -53,7 +54,7 @@ def crear_franja(datos):
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        raise ValueError("Ya existe una franja con esa sede, trámite, fecha y hora.")
+        raise ValueError("Ya existe una franja con esa sede, trámite, fecha y hora.") from None
     return franja
 
 

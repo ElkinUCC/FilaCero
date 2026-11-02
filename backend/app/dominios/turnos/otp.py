@@ -3,6 +3,7 @@
 Almacén en memoria (una instancia). En producción conecte un proveedor SMS
 en `_enviar_sms` y, si hay varias instancias, guarde los códigos en Redis.
 """
+
 import hmac
 import secrets
 import threading

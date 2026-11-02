@@ -11,8 +11,8 @@ from app.horario import (
     ahora_local,
     asegurar_franjas,
     capacidad_sede,
-    ocupacion_sede_dia,
     dentro_de_horario,
+    ocupacion_sede_dia,
     validar_fecha_reservable,
     zona,
 )
@@ -57,8 +57,7 @@ def consultar_disponibilidad():
     asegurar_franjas(sede, tramite, fecha_consulta)
 
     franjas = (
-        Franja.query
-        .filter(
+        Franja.query.filter(
             Franja.punto_id == sede_id,
             Franja.tramite_id == tramite_id,
             Franja.fecha == fecha_consulta,
@@ -70,12 +69,16 @@ def consultar_disponibilidad():
 
     # Un solo query para contar reservas de todas las franjas del día.
     ids = [f.id for f in franjas]
-    conteo = dict(
-        db.session.query(Turno.franja_id, db.func.count(Turno.id))
-        .filter(Turno.franja_id.in_(ids), Turno.estado.notin_(("CANCELADO",)))
-        .group_by(Turno.franja_id)
-        .all()
-    ) if ids else {}
+    conteo = (
+        dict(
+            db.session.query(Turno.franja_id, db.func.count(Turno.id))
+            .filter(Turno.franja_id.in_(ids), Turno.estado.notin_(("CANCELADO",)))
+            .group_by(Turno.franja_id)
+            .all()
+        )
+        if ids
+        else {}
+    )
 
     cupo_sede = capacidad_sede(sede_id)
     ocupada = ocupacion_sede_dia(sede_id, fecha_consulta)
@@ -91,30 +94,40 @@ def consultar_disponibilidad():
 
         reservados = conteo.get(franja.id, 0)
         # Disponible = lo que permita la franja Y la sede completa a esa hora.
-        disponibles = max(0, min(
-            franja.capacidad - reservados,
-            cupo_sede - ocupada.get(franja.hora_inicio, 0),
-        ))
+        disponibles = max(
+            0,
+            min(
+                franja.capacidad - reservados,
+                cupo_sede - ocupada.get(franja.hora_inicio, 0),
+            ),
+        )
         if disponibles == 0:
             continue
 
-        resultado.append({
-            "franja_id": franja.id,
-            "sede_id": franja.punto_id,
-            "tramite_id": franja.tramite_id,
-            "fecha": franja.fecha.isoformat(),
-            "hora_inicio": franja.hora_inicio.strftime("%H:%M"),
-            "hora_fin": franja.hora_fin.strftime("%H:%M"),
-            "capacidad": franja.capacidad,
-            "reservados": reservados,
-            "disponibles": disponibles,
-            "jornada": "mañana" if franja.hora_inicio.hour < 12 else "tarde",
-        })
+        resultado.append(
+            {
+                "franja_id": franja.id,
+                "sede_id": franja.punto_id,
+                "tramite_id": franja.tramite_id,
+                "fecha": franja.fecha.isoformat(),
+                "hora_inicio": franja.hora_inicio.strftime("%H:%M"),
+                "hora_fin": franja.hora_fin.strftime("%H:%M"),
+                "capacidad": franja.capacidad,
+                "reservados": reservados,
+                "disponibles": disponibles,
+                "jornada": "mañana" if franja.hora_inicio.hour < 12 else "tarde",
+            }
+        )
 
-    return jsonify({
-        "sede": sede.nombre,
-        "tramite": tramite.nombre,
-        "fecha": fecha_consulta.isoformat(),
-        "cantidad": len(resultado),
-        "franjas": resultado,
-    }), 200
+    return (
+        jsonify(
+            {
+                "sede": sede.nombre,
+                "tramite": tramite.nombre,
+                "fecha": fecha_consulta.isoformat(),
+                "cantidad": len(resultado),
+                "franjas": resultado,
+            }
+        ),
+        200,
+    )

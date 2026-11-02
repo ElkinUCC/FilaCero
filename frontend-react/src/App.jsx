@@ -1,42 +1,82 @@
-import { useEffect, useState } from "react";
-import AdminApp from "./admin/AdminApp";
-import Consola from "./agente/Consola";
-import { api, cerrarSesion, EVENTO_SESION_EXPIRADA, obtenerUsuario } from "./api";
-import PortalPublico from "./cliente/PortalPublico";
-import Sala from "./sala/Sala";
-import { CambioObligatorio } from "./ui/CambiarClave";
-import { ToastProvider } from "./ui/Toast";
+/**
+ * Raíz del frontend: sesión + enrutador + notificaciones.
+ *
+ * Flujo (igual que main.js del proyecto de referencia):
+ *   URL -> matchRoute (routes.jsx) -> resolveRoute (guards.js) -> página
+ */
+import { useCallback, useEffect, useState } from "react";
+import { logout } from "./api/auth.api";
+import { EVENTO_SESION_EXPIRADA } from "./api/http";
+import { homeFor } from "./auth/permissions";
+import { clearSession, getUsuario } from "./auth/session.service";
+import { ToastProvider } from "./components/ui/Toast";
+import ForbiddenPage from "./pages/ForbiddenPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import { resolveRoute } from "./router/guards";
+import { navegar, useRutaActual } from "./router/navegacion";
+import { matchRoute } from "./router/routes";
 
 export default function App() {
-  const [usuario, setUsuario] = useState(obtenerUsuario);
+  const ruta = useRutaActual();
+  const [usuario, setUsuario] = useState(getUsuario);
 
-  // Si el token vence (o el usuario fue desactivado) se vuelve al portal.
+  // Token vencido, revocado o cuenta desactivada: vuelve al portal.
   useEffect(() => {
-    const salir = () => setUsuario(null);
-    window.addEventListener(EVENTO_SESION_EXPIRADA, salir);
-    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, salir);
+    const expirada = () => {
+      setUsuario(null);
+      navegar("/?ingresar=1", { reemplazar: true });
+    };
+    window.addEventListener(EVENTO_SESION_EXPIRADA, expirada);
+    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, expirada);
   }, []);
 
-  function salir() {
+  const alIngresar = useCallback((u) => {
+    setUsuario(u);
+    navegar(homeFor(u), { reemplazar: true });
+  }, []);
+
+  const alSalir = useCallback(() => {
     // Revoca el token en el servidor; si falla (sin red), igual se cierra aquí.
-    api.post("/usuarios/logout", {}).catch(() => {}).finally(() => {
-      cerrarSesion();
-      setUsuario(null);
-    });
-  }
+    logout()
+      .catch(() => {})
+      .finally(() => {
+        clearSession();
+        setUsuario(null);
+        navegar("/", { reemplazar: true });
+      });
+  }, []);
 
-  // Pantalla pública de sala de espera (televisor de cada sede).
-  if (window.location.pathname.startsWith("/sala")) return <ToastProvider><Sala /></ToastProvider>;
+  /** Tras cambiar la contraseña llegan datos nuevos del usuario. */
+  const alActualizarUsuario = useCallback((u) => {
+    setUsuario(u);
+    if (window.location.pathname === "/cambiar-clave") navegar(homeFor(u), { reemplazar: true });
+  }, []);
 
-  let vista;
-  if (usuario?.debe_cambiar_clave) {
-    vista = <CambioObligatorio usuario={usuario} onListo={setUsuario} onSalir={salir} />;
-  } else if (usuario?.rol === "ADMIN" || usuario?.rol === "SUPERVISOR") {
-    vista = <AdminApp usuario={usuario} onSalir={salir} onUsuario={setUsuario} />;
-  } else if (usuario?.rol === "AGENTE") {
-    vista = <Consola usuario={usuario} onSalir={salir} />;
-  } else {
-    vista = <PortalPublico onIngresar={setUsuario} />;
+  const resultado = resolveRoute(matchRoute(ruta), usuario);
+
+  useEffect(() => {
+    if (resultado.redirect) navegar(resultado.redirect, { reemplazar: true });
+  }, [resultado.redirect]);
+
+  useEffect(() => {
+    const titulo = resultado.route?.titulo;
+    document.title = titulo ? `${titulo} · FilaCero` : "FilaCero";
+  }, [resultado.route]);
+
+  let vista = null;
+  if (resultado.notFound) vista = <NotFoundPage />;
+  else if (resultado.forbidden) vista = <ForbiddenPage usuario={usuario} onSalir={alSalir} />;
+  else if (resultado.route) {
+    const Pagina = resultado.route.page;
+    vista = (
+      <Pagina
+        usuario={usuario}
+        params={resultado.params}
+        onIngresar={alIngresar}
+        onSalir={alSalir}
+        onUsuario={alActualizarUsuario}
+      />
+    );
   }
 
   return <ToastProvider>{vista}</ToastProvider>;

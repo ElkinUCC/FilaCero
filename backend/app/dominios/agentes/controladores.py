@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
@@ -14,8 +14,16 @@ from app.dominios.turnos.repositorios import ESTADOS
 from app.dominios.usuarios.dtos import usuario_response
 from app.dominios.usuarios.modelos import Usuario
 from app.dominios.usuarios.servicios import registrar_usuario
-from app.horario import a_iso_utc, ahora_local, duracion_max_atencion_min, hoy_local, info_horario, zona
+from app.horario import (
+    a_iso_utc,
+    ahora_local,
+    duracion_max_atencion_min,
+    hoy_local,
+    info_horario,
+    zona,
+)
 from app.seguridad import encriptar_password, requiere_rol, validar_password_segura
+
 from .despacho import (
     cumplimiento,
     estado_franja_actual,
@@ -23,13 +31,13 @@ from .despacho import (
     recomendar,
 )
 from .servicios import (
-    llamar_turno,
     consultar_cola,
     devolver_a_cola,
     en_horario_de_atencion,
     finalizar_atencion,
     iniciar_atencion,
     llamar_siguiente,
+    llamar_turno,
     marcar_no_asistio,
     turno_activo,
 )
@@ -45,7 +53,7 @@ def _agente_id():
 def _rango_utc_de_hoy():
     """Inicio y fin del día local expresados en UTC sin zona (como se guardan)."""
     inicio = datetime.combine(hoy_local(), time.min, tzinfo=zona())
-    inicio = inicio.astimezone(timezone.utc).replace(tzinfo=None)
+    inicio = inicio.astimezone(UTC).replace(tzinfo=None)
     return inicio, inicio + timedelta(days=1)
 
 
@@ -53,7 +61,10 @@ def _promedio_segundos(turnos):
     duraciones = [
         (t.fecha_fin - t.fecha_inicio).total_seconds()
         for t in turnos
-        if t.estado == "ATENDIDO" and t.fecha_inicio and t.fecha_fin and t.fecha_fin >= t.fecha_inicio
+        if t.estado == "ATENDIDO"
+        and t.fecha_inicio
+        and t.fecha_fin
+        and t.fecha_fin >= t.fecha_inicio
     ]
     return round(sum(duraciones) / len(duraciones), 1) if duraciones else None
 
@@ -61,6 +72,7 @@ def _promedio_segundos(turnos):
 # =====================================================================
 # AGENTE  (/api/v1/agente)
 # =====================================================================
+
 
 def _accion(funcion, *args, mensaje):
     try:
@@ -95,47 +107,65 @@ def panel():
     ).all()
     recientes = sorted(
         [t for t in mios_hoy if t.estado in ("ATENDIDO", "NO_ASISTIO")],
-        key=lambda t: t.fecha_fin, reverse=True,
+        key=lambda t: t.fecha_fin,
+        reverse=True,
     )[:5]
 
     cola = []
     for p in proyeccion:
         datos = turno_response(p["turno"])
-        datos.update({
-            "puntualidad": p["puntualidad"],
-            "inicio_proyectado": p["inicio_proyectado"].strftime("%H:%M"),
-            "duracion_estimada_seg": p["duracion_estimada_seg"],
-            "margen_seg": p["margen_seg"],
-            "es_hoy": p["turno"].franja.fecha == ahora.date(),
-        })
+        datos.update(
+            {
+                "puntualidad": p["puntualidad"],
+                "inicio_proyectado": p["inicio_proyectado"].strftime("%H:%M"),
+                "duracion_estimada_seg": p["duracion_estimada_seg"],
+                "margen_seg": p["margen_seg"],
+                "es_hoy": p["turno"].franja.fecha == ahora.date(),
+            }
+        )
         cola.append(datos)
 
-    return jsonify({
-        "ahora": ahora.isoformat(timespec="seconds"),
-        "agente": {
-            "nombre": agente.nombre,
-            "sede": agente.punto_asignado.nombre if agente.punto_asignado else None,
-            "sede_direccion": agente.punto_asignado.direccion if agente.punto_asignado else None,
-        },
-        "error": error,
-        "en_horario": en_horario_de_atencion(),
-        "horario": info_horario(),
-        "max_atencion_seg": duracion_max_atencion_min() * 60,
-        "franja_actual": estado_franja_actual(agente.punto_asignado_id, ahora) if agente.punto_asignado_id else None,
-        "actual": turno_response(activo) if activo else None,
-        "recomendacion": recomendar(agente, activo, proyeccion, ahora) if not error else None,
-        "cola": cola,
-        "resumen": {
-            "en_espera": len(cola),
-            "en_espera_hoy": sum(1 for t in cola if t["es_hoy"]),
-            "en_riesgo": sum(1 for t in cola if t["puntualidad"] in ("en_riesgo", "atrasado")),
-            "atendidos_hoy": sum(1 for t in mios_hoy if t.estado == "ATENDIDO"),
-            "no_asistio_hoy": sum(1 for t in mios_hoy if t.estado == "NO_ASISTIO"),
-            "promedio_hoy_segundos": _promedio_segundos(mios_hoy),
-            **cumplimiento(mios_hoy),
-        },
-        "recientes": [turno_response(t) for t in recientes],
-    }), 200
+    return (
+        jsonify(
+            {
+                "ahora": ahora.isoformat(timespec="seconds"),
+                "agente": {
+                    "nombre": agente.nombre,
+                    "sede": agente.punto_asignado.nombre if agente.punto_asignado else None,
+                    "sede_direccion": (
+                        agente.punto_asignado.direccion if agente.punto_asignado else None
+                    ),
+                },
+                "error": error,
+                "en_horario": en_horario_de_atencion(),
+                "horario": info_horario(),
+                "max_atencion_seg": duracion_max_atencion_min() * 60,
+                "franja_actual": (
+                    estado_franja_actual(agente.punto_asignado_id, ahora)
+                    if agente.punto_asignado_id
+                    else None
+                ),
+                "actual": turno_response(activo) if activo else None,
+                "recomendacion": (
+                    recomendar(agente, activo, proyeccion, ahora) if not error else None
+                ),
+                "cola": cola,
+                "resumen": {
+                    "en_espera": len(cola),
+                    "en_espera_hoy": sum(1 for t in cola if t["es_hoy"]),
+                    "en_riesgo": sum(
+                        1 for t in cola if t["puntualidad"] in ("en_riesgo", "atrasado")
+                    ),
+                    "atendidos_hoy": sum(1 for t in mios_hoy if t.estado == "ATENDIDO"),
+                    "no_asistio_hoy": sum(1 for t in mios_hoy if t.estado == "NO_ASISTIO"),
+                    "promedio_hoy_segundos": _promedio_segundos(mios_hoy),
+                    **cumplimiento(mios_hoy),
+                },
+                "recientes": [turno_response(t) for t in recientes],
+            }
+        ),
+        200,
+    )
 
 
 @agentes_bp.get("/cola")
@@ -143,10 +173,15 @@ def panel():
 def cola():
     try:
         turnos = consultar_cola(_agente_id())
-        return jsonify({
-            "total_en_espera": len(turnos),
-            "turnos": [turno_response(t) for t in turnos],
-        }), 200
+        return (
+            jsonify(
+                {
+                    "total_en_espera": len(turnos),
+                    "turnos": [turno_response(t) for t in turnos],
+                }
+            ),
+            200,
+        )
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
 
@@ -163,7 +198,10 @@ def turno_actual_agente():
 def llamar():
     try:
         turno = llamar_siguiente(_agente_id())
-        return jsonify({"mensaje": "Turno llamado correctamente.", "turno": turno_response(turno)}), 200
+        return (
+            jsonify({"mensaje": "Turno llamado correctamente.", "turno": turno_response(turno)}),
+            200,
+        )
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
 
@@ -202,6 +240,7 @@ def devolver(turno_id):
 # ADMIN  (/api/v1/admin/agentes)
 # =====================================================================
 
+
 def _consulta_turnos_admin():
     consulta = Turno.query.join(Franja, Turno.franja_id == Franja.id)
 
@@ -209,7 +248,7 @@ def _consulta_turnos_admin():
         desde = date.fromisoformat(request.args["desde"]) if request.args.get("desde") else None
         hasta = date.fromisoformat(request.args["hasta"]) if request.args.get("hasta") else None
     except ValueError:
-        raise ValueError("Las fechas deben usar formato YYYY-MM-DD.")
+        raise ValueError("Las fechas deben usar formato YYYY-MM-DD.") from None
 
     if desde and hasta and desde > hasta:
         raise ValueError("La fecha inicial no puede superar la fecha final.")
@@ -228,7 +267,7 @@ def _consulta_turnos_admin():
                 if identificador <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(f"{nombre} debe ser un entero positivo.")
+                raise ValueError(f"{nombre} debe ser un entero positivo.") from None
             consulta = consulta.filter(columna == identificador)
 
     estado = request.args.get("estado")
@@ -241,7 +280,11 @@ def _consulta_turnos_admin():
     if buscar:
         patron = f"%{buscar[:40]}%"
         consulta = consulta.join(Usuario, Turno.usuario_id == Usuario.id).filter(
-            db.or_(Turno.codigo.ilike(patron), Usuario.nombre.ilike(patron), Usuario.celular.ilike(patron))
+            db.or_(
+                Turno.codigo.ilike(patron),
+                Usuario.nombre.ilike(patron),
+                Usuario.celular.ilike(patron),
+            )
         )
     return consulta
 
@@ -271,7 +314,7 @@ def _sede_valida(punto_id):
     try:
         punto_id = int(punto_id)
     except (TypeError, ValueError):
-        raise ValueError("punto_id debe ser un entero.")
+        raise ValueError("punto_id debe ser un entero.") from None
     punto = db.session.get(Punto, punto_id)
     if not punto or not punto.activo:
         raise ValueError("La sede no existe o está inactiva.")
@@ -290,10 +333,13 @@ def crear_agente():
         if "@" not in correo or len(correo) > 120:
             raise ValueError("Ingresa un correo válido.")
         punto_id = _sede_valida(datos.get("punto_id"))
-        agente = registrar_usuario(nombre, correo, datos.get("password", ""), rol="AGENTE", punto_id=punto_id)
+        agente = registrar_usuario(
+            nombre, correo, datos.get("password", ""), rol="AGENTE", punto_id=punto_id
+        )
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
     from app.dominios.auditoria.servicios import registrar
+
     registrar("usuario_creado", f"{agente.correo} como Asesor")
     return jsonify({"mensaje": "Agente creado.", "agente": _agente_dict(agente)}), 201
 
@@ -324,6 +370,7 @@ def actualizar_agente(usuario_id):
         db.session.rollback()
         return jsonify({"error": str(error)}), 400
     from app.dominios.auditoria.servicios import registrar
+
     registrar("usuario_editado", agente.correo)
     return jsonify({"mensaje": "Agente actualizado.", "agente": _agente_dict(agente)}), 200
 
@@ -346,7 +393,16 @@ def asignar_sede(usuario_id):
 
     agente.punto_asignado_id = punto.id
     db.session.commit()
-    return jsonify({"mensaje": "Sede asignada correctamente.", "agente_id": agente.id, "punto_id": punto.id}), 200
+    return (
+        jsonify(
+            {
+                "mensaje": "Sede asignada correctamente.",
+                "agente_id": agente.id,
+                "punto_id": punto.id,
+            }
+        ),
+        200,
+    )
 
 
 @admin_agentes_bp.delete("/<int:usuario_id>/sede")
@@ -359,7 +415,16 @@ def desasignar_sede(usuario_id):
         return jsonify({"error": "El agente no tiene una sede asignada."}), 400
     agente.punto_asignado_id = None
     db.session.commit()
-    return jsonify({"mensaje": "Asignación de sede eliminada.", "agente_id": agente.id, "punto_asignado_id": None}), 200
+    return (
+        jsonify(
+            {
+                "mensaje": "Asignación de sede eliminada.",
+                "agente_id": agente.id,
+                "punto_asignado_id": None,
+            }
+        ),
+        200,
+    )
 
 
 @admin_agentes_bp.get("/metricas")
@@ -371,20 +436,28 @@ def obtener_metricas():
         return jsonify({"error": str(error)}), 400
 
     por_estado = {estado: sum(t.estado == estado for t in turnos) for estado in ESTADOS}
-    return jsonify({
-        "total_turnos": len(turnos),
-        "por_estado": por_estado,
-        "atendidos": por_estado["ATENDIDO"],
-        "cancelados": por_estado["CANCELADO"],
-        "no_asistio": por_estado["NO_ASISTIO"],
-        "en_espera": por_estado["ESPERANDO"],
-        "en_proceso": por_estado["LLAMADO"] + por_estado["EN_ATENCION"],
-        "promedio_atencion_segundos": _promedio_segundos(turnos),
-        "max_atencion_seg": duracion_max_atencion_min() * 60,
-        **cumplimiento(turnos),
-        "agentes_activos": Usuario.query.filter_by(rol="AGENTE", activo=True).count(),
-        "filtros": {k: request.args.get(k) for k in ("desde", "hasta", "punto_id", "tramite_id", "estado")},
-    }), 200
+    return (
+        jsonify(
+            {
+                "total_turnos": len(turnos),
+                "por_estado": por_estado,
+                "atendidos": por_estado["ATENDIDO"],
+                "cancelados": por_estado["CANCELADO"],
+                "no_asistio": por_estado["NO_ASISTIO"],
+                "en_espera": por_estado["ESPERANDO"],
+                "en_proceso": por_estado["LLAMADO"] + por_estado["EN_ATENCION"],
+                "promedio_atencion_segundos": _promedio_segundos(turnos),
+                "max_atencion_seg": duracion_max_atencion_min() * 60,
+                **cumplimiento(turnos),
+                "agentes_activos": Usuario.query.filter_by(rol="AGENTE", activo=True).count(),
+                "filtros": {
+                    k: request.args.get(k)
+                    for k in ("desde", "hasta", "punto_id", "tramite_id", "estado")
+                },
+            }
+        ),
+        200,
+    )
 
 
 @admin_agentes_bp.get("/historial")
@@ -408,13 +481,18 @@ def historial_turnos():
         .limit(por_pagina)
         .all()
     )
-    return jsonify({
-        "pagina": pagina,
-        "por_pagina": por_pagina,
-        "total": total,
-        "total_paginas": (total + por_pagina - 1) // por_pagina,
-        "turnos": [turno_response(t) for t in turnos],
-    }), 200
+    return (
+        jsonify(
+            {
+                "pagina": pagina,
+                "por_pagina": por_pagina,
+                "total": total,
+                "total_paginas": (total + por_pagina - 1) // por_pagina,
+                "turnos": [turno_response(t) for t in turnos],
+            }
+        ),
+        200,
+    )
 
 
 @admin_agentes_bp.get("/metricas/sedes")
@@ -438,16 +516,23 @@ def metricas_por_sede():
         .order_by(func.count(Turno.id).desc())
         .all()
     )
-    return jsonify({"sedes": [
-        {
-            "punto_id": f.punto_id,
-            "nombre": f.nombre,
-            "total_turnos": f.total,
-            "en_espera": int(f.espera or 0),
-            "atendidos": int(f.atendidos or 0),
-        }
-        for f in filas
-    ]}), 200
+    return (
+        jsonify(
+            {
+                "sedes": [
+                    {
+                        "punto_id": f.punto_id,
+                        "nombre": f.nombre,
+                        "total_turnos": f.total,
+                        "en_espera": int(f.espera or 0),
+                        "atendidos": int(f.atendidos or 0),
+                    }
+                    for f in filas
+                ]
+            }
+        ),
+        200,
+    )
 
 
 @admin_agentes_bp.get("/metricas/tramites")
@@ -465,9 +550,17 @@ def metricas_por_tramite():
         .order_by(func.count(Turno.id).desc())
         .all()
     )
-    return jsonify({"tramites": [
-        {"tramite_id": f.tramite_id, "nombre": f.nombre, "total_turnos": f.total} for f in filas
-    ]}), 200
+    return (
+        jsonify(
+            {
+                "tramites": [
+                    {"tramite_id": f.tramite_id, "nombre": f.nombre, "total_turnos": f.total}
+                    for f in filas
+                ]
+            }
+        ),
+        200,
+    )
 
 
 @admin_agentes_bp.get("/en-vivo")
@@ -487,46 +580,57 @@ def en_vivo():
             primero = hoy[0]["turno"].franja
             proxima = {
                 "hora": f"{primero.hora_inicio:%H:%M}",
-                "cantidad": sum(1 for p in hoy if p["turno"].franja.hora_inicio == primero.hora_inicio),
+                "cantidad": sum(
+                    1 for p in hoy if p["turno"].franja.hora_inicio == primero.hora_inicio
+                ),
             }
-        asesores = Usuario.query.filter_by(rol="AGENTE", activo=True, punto_asignado_id=sede.id).all()
-        resultado.append({
-            "punto_id": sede.id,
-            "nombre": sede.nombre,
-            "franja_actual": estado_franja_actual(sede.id, ahora),
-            "proxima": proxima,
-            "en_espera_hoy": len(hoy),
-            "en_riesgo": sum(1 for p in hoy if p["puntualidad"] in ("en_riesgo", "atrasado")),
-            "asesores": [
-                {
-                    "nombre": a.nombre,
-                    "turno": t.codigo if t else None,
-                    "estado": t.estado if t else "LIBRE",
-                }
-                for a in asesores
-                for t in [Turno.query.filter(
-                    Turno.agente_id == a.id, Turno.estado.in_(("LLAMADO", "EN_ATENCION"))
-                ).first()]
-            ],
-        })
-
-    recientes = (
-        Turno.query.order_by(Turno.hora_solicitud.desc(), Turno.id.desc()).limit(8).all()
-    )
-    return jsonify({
-        "ahora": ahora.isoformat(timespec="seconds"),
-        "sedes": resultado,
-        "recientes": [
+        asesores = Usuario.query.filter_by(
+            rol="AGENTE", activo=True, punto_asignado_id=sede.id
+        ).all()
+        resultado.append(
             {
-                "id": t.id,
-                "codigo": t.codigo,
-                "sede": t.punto.nombre if t.punto else None,
-                "tramite": t.tramite.nombre if t.tramite else None,
-                "fecha": t.franja.fecha.isoformat(),
-                "hora": f"{t.franja.hora_inicio:%H:%M}",
-                "estado": t.estado,
-                "reservado": a_iso_utc(t.hora_solicitud),
+                "punto_id": sede.id,
+                "nombre": sede.nombre,
+                "franja_actual": estado_franja_actual(sede.id, ahora),
+                "proxima": proxima,
+                "en_espera_hoy": len(hoy),
+                "en_riesgo": sum(1 for p in hoy if p["puntualidad"] in ("en_riesgo", "atrasado")),
+                "asesores": [
+                    {
+                        "nombre": a.nombre,
+                        "turno": t.codigo if t else None,
+                        "estado": t.estado if t else "LIBRE",
+                    }
+                    for a in asesores
+                    for t in [
+                        Turno.query.filter(
+                            Turno.agente_id == a.id, Turno.estado.in_(("LLAMADO", "EN_ATENCION"))
+                        ).first()
+                    ]
+                ],
             }
-            for t in recientes
-        ],
-    }), 200
+        )
+
+    recientes = Turno.query.order_by(Turno.hora_solicitud.desc(), Turno.id.desc()).limit(8).all()
+    return (
+        jsonify(
+            {
+                "ahora": ahora.isoformat(timespec="seconds"),
+                "sedes": resultado,
+                "recientes": [
+                    {
+                        "id": t.id,
+                        "codigo": t.codigo,
+                        "sede": t.punto.nombre if t.punto else None,
+                        "tramite": t.tramite.nombre if t.tramite else None,
+                        "fecha": t.franja.fecha.isoformat(),
+                        "hora": f"{t.franja.hora_inicio:%H:%M}",
+                        "estado": t.estado,
+                        "reservado": a_iso_utc(t.hora_solicitud),
+                    }
+                    for t in recientes
+                ],
+            }
+        ),
+        200,
+    )

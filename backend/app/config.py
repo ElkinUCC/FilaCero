@@ -78,7 +78,8 @@ class Config:
     HORA_APERTURA = _int("HORA_APERTURA", 8)
     HORA_CIERRE = _int("HORA_CIERRE", 18)
     DIAS_ATENCION = [
-        int(d) for d in os.getenv("DIAS_ATENCION", "0,1,2,3,4,5,6").split(",")
+        int(d)
+        for d in os.getenv("DIAS_ATENCION", "0,1,2,3,4,5,6").split(",")
         if d.strip().isdigit()
     ]
     DURACION_FRANJA_MIN = _int("DURACION_FRANJA_MIN", 30)
@@ -131,9 +132,10 @@ def validar_configuracion(app):
     if not app.config.get("PRODUCCION"):
         if len(app.config.get("JWT_SECRET_KEY") or "") < 32:
             import logging
+
             logging.getLogger("filacero").warning(
                 "JWT_SECRET_KEY tiene menos de 32 caracteres. Genera una con: "
-                "python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
             )
         return
 
@@ -153,6 +155,4 @@ def validar_configuracion(app):
         problemas.append("CORS_ALLOWED_ORIGINS no puede ser '*' en producción.")
 
     if problemas:
-        raise RuntimeError(
-            "Configuración insegura para producción:\n- " + "\n- ".join(problemas)
-        )
+        raise RuntimeError("Configuración insegura para producción:\n- " + "\n- ".join(problemas))

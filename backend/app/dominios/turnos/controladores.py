@@ -1,9 +1,12 @@
+from datetime import UTC
+
 from flask import Blueprint, current_app, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from app.dominios.usuarios.servicios import registrar_cliente_publico
 from app.seguridad import limitar, normalizar_celular
+
 from . import otp
 from .dtos import turno_publico_response, turno_response
 from .prediccion import estimar_espera
@@ -28,12 +31,13 @@ def _entero(datos, campo):
     try:
         return int(valor)
     except (TypeError, ValueError):
-        raise ValueError(f"{campo} no es válido.")
+        raise ValueError(f"{campo} no es válido.") from None
 
 
 # ---------------------------------------------------------------------
 # Verificación del celular
 # ---------------------------------------------------------------------
+
 
 @turnos_bp.post("/publico/solicitar-codigo")
 @limitar("LIMITE_OTP_POR_MINUTO")
@@ -51,11 +55,13 @@ def solicitar_codigo_celular():
 
     respuesta = {"mensaje": "Te enviamos un código de verificación.", "modo_prueba": False}
     if codigo is not None:
-        respuesta.update({
-            "mensaje": "Modo prueba: el código se muestra en pantalla.",
-            "modo_prueba": True,
-            "codigo_prueba": codigo,
-        })
+        respuesta.update(
+            {
+                "mensaje": "Modo prueba: el código se muestra en pantalla.",
+                "modo_prueba": True,
+                "codigo_prueba": codigo,
+            }
+        )
     return respuesta, 200
 
 
@@ -81,19 +87,18 @@ def _celular_verificado(datos):
     if not token:
         raise ValueError("Debes verificar tu celular antes de continuar.")
     try:
-        verificacion = _serializador_verificacion().loads(
-            token, max_age=VIGENCIA_VERIFICACION_SEG
-        )
+        verificacion = _serializador_verificacion().loads(token, max_age=VIGENCIA_VERIFICACION_SEG)
     except SignatureExpired:
-        raise ValueError("La verificación expiró. Verifica tu celular nuevamente.")
+        raise ValueError("La verificación expiró. Verifica tu celular nuevamente.") from None
     except BadSignature:
-        raise ValueError("La verificación del celular no es válida.")
+        raise ValueError("La verificación del celular no es válida.") from None
     return verificacion.get("celular")
 
 
 # ---------------------------------------------------------------------
 # Reserva pública (sin cuenta)
 # ---------------------------------------------------------------------
+
 
 @turnos_bp.post("/publico")
 @limitar("LIMITE_OTP_POR_MINUTO")
@@ -166,6 +171,7 @@ def cancelar_publico():
 # Pantalla de sala de espera (pública, sin datos personales completos)
 # ---------------------------------------------------------------------
 
+
 def _nombre_corto(nombre):
     partes = (nombre or "").split()
     if not partes:
@@ -176,13 +182,13 @@ def _nombre_corto(nombre):
 @turnos_bp.get("/publico/sala")
 @limitar("LIMITE_PUBLICO_POR_MINUTO")
 def pantalla_sala():
-    from datetime import timedelta, timezone as tz
+    from datetime import timedelta
 
+    from app import db
     from app.dominios.franjas.modelos import Franja
     from app.dominios.sedes.modelos import Punto
     from app.dominios.turnos.modelos import Turno
     from app.horario import ahora_local, hoy_local, info_horario
-    from app import db
 
     sedes = Punto.query.filter_by(activo=True).order_by(Punto.nombre).all()
     sede_id = request.args.get("sede_id", type=int)
@@ -191,7 +197,7 @@ def pantalla_sala():
         return {"sedes": [{"id": p.id, "nombre": p.nombre} for p in sedes], "sede": None}, 200
 
     hoy = hoy_local()
-    hace_30 = (ahora_local() - timedelta(minutes=30)).astimezone(tz.utc).replace(tzinfo=None)
+    hace_30 = (ahora_local() - timedelta(minutes=30)).astimezone(UTC).replace(tzinfo=None)
     llamados = (
         Turno.query.join(Franja, Turno.franja_id == Franja.id)
         .filter(
@@ -213,6 +219,7 @@ def pantalla_sala():
         .all()
     )
     from app.horario import a_iso_utc
+
     return {
         "sedes": [{"id": p.id, "nombre": p.nombre} for p in sedes],
         "sede": {"id": sede.id, "nombre": sede.nombre, "direccion": sede.direccion},
@@ -229,8 +236,11 @@ def pantalla_sala():
             for t in llamados
         ],
         "siguientes": [
-            {"codigo": t.codigo[-6:], "nombre": _nombre_corto(t.usuario.nombre if t.usuario else ""),
-             "hora": f"{t.franja.hora_inicio:%H:%M}"}
+            {
+                "codigo": t.codigo[-6:],
+                "nombre": _nombre_corto(t.usuario.nombre if t.usuario else ""),
+                "hora": f"{t.franja.hora_inicio:%H:%M}",
+            }
             for t in siguientes
         ],
     }, 200
@@ -239,6 +249,7 @@ def pantalla_sala():
 # ---------------------------------------------------------------------
 # Clientes con cuenta
 # ---------------------------------------------------------------------
+
 
 @turnos_bp.post("/")
 @jwt_required()
