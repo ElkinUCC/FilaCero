@@ -16,7 +16,6 @@ La API está organizada **por dominios**. Cada dominio tiene sus propias capas, 
 ```
 backend/
 ├── app.py                      # Punto de entrada en desarrollo: python app.py
-├── run.py                      # Alias histórico de app.py
 ├── wsgi.py                     # Producción: waitress-serve wsgi:app
 ├── simulacion.py               # Verificación, carga de datos demo y prueba de carga
 ├── requirements.txt            # Dependencias con versión fija

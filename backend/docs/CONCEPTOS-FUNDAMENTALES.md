@@ -7,7 +7,7 @@ Esta guía explica los conceptos que aplica la API. Cada uno lleva un ejemplo re
 La aplicación no se crea al importar el módulo. La crea una función, `app/__init__.py::crear_app(test_config=None)`. Así:
 
 - las pruebas crean una app nueva con SQLite en memoria (`tests/conftest.py`);
-- `app.py`, `run.py`, `wsgi.py` y `simulacion.py` reutilizan la misma fábrica;
+- `app.py` (desarrollo), `wsgi.py` (producción) y `simulacion.py` reutilizan la misma fábrica;
 - las extensiones (`db`, `migrate`, `jwt`) se crean una sola vez y se conectan dentro de la fábrica.
 
 ## 2. Monolito modular por dominios

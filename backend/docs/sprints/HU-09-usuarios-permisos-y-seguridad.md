@@ -59,7 +59,7 @@
 
 - **ADR-0007 · JWT corto + rol en BD + revocación:** se descartaron las sesiones en servidor (estado compartido, CSRF) y un proveedor externo de identidad (costo).
 - **ADR-0009 · Guardas de ruta como en la referencia:** ocultar botones **no** es seguridad; la decisión real la toma el backend.
-- Detalle de amenazas y controles: [`SECURITY.md`](../../SECURITY.md).
+- Detalle de amenazas y controles: [`SECURITY.md`](../../../SECURITY.md).
 
 ## Evidencia
 
