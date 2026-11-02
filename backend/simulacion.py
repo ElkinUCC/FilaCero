@@ -72,8 +72,9 @@ if os.name == "nt":
 # DATOS DEL NEGOCIO SIMULADO
 # ======================================================================
 
-CLAVE_ADMIN = "Admin12345"
-CLAVE_ASESOR = "Asesor12345"
+# En un servidor público cambia estas claves con variables de entorno.
+CLAVE_ADMIN = os.getenv("SIM_CLAVE_ADMIN", "Admin12345")
+CLAVE_ASESOR = os.getenv("SIM_CLAVE_ASESOR", "Asesor12345")
 
 SEDES = [
     ("Sede Centro", "Cra. 50 # 52-20, Centro, Medellín"),

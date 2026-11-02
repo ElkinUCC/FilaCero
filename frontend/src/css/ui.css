@@ -578,3 +578,31 @@ html[data-contraste="alto"] :focus-visible { outline-width: 3px; }
 html[data-contraste="alto"] .estado,
 html[data-contraste="alto"] .punt,
 html[data-contraste="alto"] .chip { border: 1px solid currentColor; }
+
+/* Aviso de servidor lento (servidores gratuitos que se "duermen") */
+.aviso-servidor {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--tinta);
+  color: #fff;
+  font-size: 14px;
+  box-shadow: var(--sombra-pop);
+  transform: translateX(-50%);
+}
+.aviso-servidor__punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ambar);
+  animation: latido-servidor 1.2s ease-in-out infinite;
+}
+@keyframes latido-servidor { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .aviso-servidor__punto { animation: none; } }

@@ -19,6 +19,45 @@ def _int(nombre, defecto):
         return defecto
 
 
+def _url_base_de_datos():
+    """DATABASE_URL tal como la entregan los proveedores en la nube (Aiven,
+    Railway...): 'mysql://usuario:clave@host:puerto/bd?ssl-mode=REQUIRED'.
+    Se adapta al conector PyMySQL y se activa TLS si el proveedor lo exige."""
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        return None, False
+    exige_tls = "ssl-mode=required" in url.lower() or "sslmode=require" in url.lower()
+    if url.startswith("mysql://"):
+        url = "mysql+pymysql://" + url[len("mysql://") :]
+    if "?" in url and url.startswith("mysql"):
+        base, consulta = url.split("?", 1)
+        parametros = [
+            p
+            for p in consulta.split("&")
+            if p and not p.lower().startswith(("ssl-mode", "sslmode"))
+        ]
+        url = base + ("?" + "&".join(parametros) if parametros else "")
+    if url.startswith("mysql") and "charset=" not in url:
+        url += ("&" if "?" in url else "?") + "charset=utf8mb4"
+    return url, exige_tls
+
+
+def _opciones_motor(exige_tls):
+    """pool_pre_ping/recycle: las BD en la nube cierran conexiones inactivas.
+    TLS: con DB_SSL_CA (ruta al certificado del proveedor) se verifica el
+    servidor; con solo DB_SSL=true la conexión va cifrada sin verificarlo."""
+    opciones = {"pool_pre_ping": True, "pool_recycle": 280}
+    ca = os.getenv("DB_SSL_CA")
+    if ca:
+        opciones["connect_args"] = {"ssl": {"ca": ca}}
+    elif exige_tls or _bool("DB_SSL", False):
+        opciones["connect_args"] = {"ssl": {"check_hostname": False}}
+    return opciones
+
+
+_URL_BD, _TLS_BD = _url_base_de_datos()
+
+
 class Config:
     # ------------------------------------------------------------------
     # Entorno
@@ -58,14 +97,14 @@ class Config:
     DB_NAME = os.getenv("DB_NAME", "filacero_db")
     DB_CHARSET = os.getenv("DB_CHARSET", "utf8mb4")
 
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or (
+    SQLALCHEMY_DATABASE_URI = _URL_BD or (
         f"mysql+pymysql://"
         f"{DB_USER}:{DB_PASSWORD}@"
         f"{DB_HOST}:{DB_PORT}/"
         f"{DB_NAME}?charset={DB_CHARSET}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    SQLALCHEMY_ENGINE_OPTIONS = _opciones_motor(_TLS_BD)
 
     # Limita el tamaño de los cuerpos JSON (protección básica DoS).
     MAX_CONTENT_LENGTH = 64 * 1024
@@ -105,6 +144,9 @@ class Config:
     # En modo prueba el código se devuelve en la respuesta (NO producción).
     # ------------------------------------------------------------------
     OTP_TEST_MODE = _bool("FILACERO_OTP_TEST_MODE", not PRODUCCION)
+    # Demostración pública (servidor gratuito, sin proveedor de SMS): permite
+    # mostrar el código de verificación en pantalla aunque sea producción.
+    DEMO_PUBLICA = _bool("DEMO_PUBLICA", False)
     OTP_VIGENCIA_SEG = _int("OTP_VIGENCIA_SEG", 300)
     OTP_MAX_INTENTOS = _int("OTP_MAX_INTENTOS", 5)
 
@@ -152,8 +194,11 @@ def validar_configuracion(app):
         if len(valor) < 32 or valor.startswith("solo-desarrollo"):
             problemas.append(f"{clave} debe tener al menos 32 caracteres aleatorios.")
 
-    if app.config.get("OTP_TEST_MODE"):
-        problemas.append("FILACERO_OTP_TEST_MODE no puede estar activo en producción.")
+    if app.config.get("OTP_TEST_MODE") and not app.config.get("DEMO_PUBLICA"):
+        problemas.append(
+            "FILACERO_OTP_TEST_MODE no puede estar activo en producción "
+            "(salvo una demostración pública con DEMO_PUBLICA=true)."
+        )
 
     if app.config.get("DEBUG"):
         problemas.append("FLASK_DEBUG debe estar desactivado en producción.")

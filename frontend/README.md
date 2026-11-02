@@ -78,6 +78,10 @@ npm run build      # dist/ para producción (nginx)
 
 `VITE_API_URL` se define en `.env.development` (`http://127.0.0.1:5000/api/v1`) y en `.env.production` (`/api/v1`, detrás de nginx).
 
+### Despliegue en Vercel
+
+Importa el repositorio y configura `frontend` como **Root Directory**, con Vite como framework. Define `VITE_API_URL` con la URL pública del backend más `/api/v1` (por ejemplo, `https://filacero-api.onrender.com/api/v1`). `vercel.json` conserva el enrutamiento SPA al abrir directamente rutas como `/admin`, `/agente` y `/sala`.
+
 ## Documentación
 
 - [`docs/ARQUITECTURA-SPA-REACT.md`](docs/ARQUITECTURA-SPA-REACT.md): capas, flujo y equivalencia con la referencia.

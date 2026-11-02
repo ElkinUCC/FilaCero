@@ -15,6 +15,15 @@ import { formatApiError, MENSAJE_SIN_CONEXION } from "../utils/errorMessages";
 export const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api/v1").replace(/\/+$/, "");
 
 export const EVENTO_SESION_EXPIRADA = "filacero:sesion-expirada";
+export const EVENTO_SERVIDOR_LENTO = "filacero:servidor-lento";
+
+let lento = false;
+let solicitudesLentas = 0;
+function avisarLento(estado) {
+  if (lento === estado) return;
+  lento = estado;
+  window.dispatchEvent(new CustomEvent(EVENTO_SERVIDOR_LENTO, { detail: estado }));
+}
 
 async function leerRespuesta(response) {
   if (response.status === 204) return null;
@@ -42,6 +51,13 @@ export async function request(path, options = {}) {
   }
   if (token && !sinToken) headers.set("Authorization", `Bearer ${token}`);
 
+  // Servidores gratuitos se "duermen": si la respuesta tarda, se avisa en pantalla.
+  let avisoActivo = false;
+  const aviso = window.setTimeout(() => {
+    avisoActivo = true;
+    solicitudesLentas += 1;
+    avisarLento(true);
+  }, 4000);
   let response;
   try {
     response = await fetch(`${API_URL}${ruta}`, { ...opcionesFetch, headers });
@@ -49,6 +65,12 @@ export async function request(path, options = {}) {
     const error = new Error(MENSAJE_SIN_CONEXION);
     error.status = 0;
     throw error;
+  } finally {
+    window.clearTimeout(aviso);
+    if (avisoActivo) {
+      solicitudesLentas -= 1;
+      avisarLento(solicitudesLentas > 0);
+    }
   }
 
   const data = await leerRespuesta(response);

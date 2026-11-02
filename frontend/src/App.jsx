@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { logout } from "./api/auth.api";
-import { EVENTO_SESION_EXPIRADA } from "./api/http";
+import { EVENTO_SERVIDOR_LENTO, EVENTO_SESION_EXPIRADA } from "./api/http";
 import { homeFor } from "./auth/permissions";
 import { clearSession, getUsuario } from "./auth/session.service";
 import { ToastProvider } from "./components/ui/Toast";
@@ -28,6 +28,14 @@ export default function App() {
     };
     window.addEventListener(EVENTO_SESION_EXPIRADA, expirada);
     return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, expirada);
+  }, []);
+
+  // Aviso cuando el servidor tarda (p. ej. un servidor gratuito despertando).
+  const [servidorLento, setServidorLento] = useState(false);
+  useEffect(() => {
+    const cambiar = (e) => setServidorLento(Boolean(e.detail));
+    window.addEventListener(EVENTO_SERVIDOR_LENTO, cambiar);
+    return () => window.removeEventListener(EVENTO_SERVIDOR_LENTO, cambiar);
   }, []);
 
   const alIngresar = useCallback((u) => {
@@ -79,5 +87,15 @@ export default function App() {
     );
   }
 
-  return <ToastProvider>{vista}</ToastProvider>;
+  return (
+    <ToastProvider>
+      {vista}
+      {servidorLento && (
+        <div className="aviso-servidor" role="status">
+          <span className="aviso-servidor__punto" aria-hidden="true" />
+          Conectando con el servidor… la primera carga puede tardar hasta un minuto.
+        </div>
+      )}
+    </ToastProvider>
+  );
 }
