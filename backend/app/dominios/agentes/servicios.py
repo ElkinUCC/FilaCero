@@ -57,6 +57,34 @@ def consultar_cola(usuario_id):
     return obtener_cola(agente.punto_asignado_id)
 
 
+def cambiar_sede_propia(usuario_id, punto_id):
+    """Rotación: el asesor elige en qué sede atiende hoy.
+
+    El cupo de ambas sedes se recalcula solo (cupo = 3 x asesores activos).
+    No se permite cambiar con un turno llamado o en atención.
+    """
+    from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
+
+    if not isinstance(punto_id, int) or isinstance(punto_id, bool):
+        raise DatosInvalidosError("Elige una sede válida.")
+    agente = obtener_agente(usuario_id)
+    if not agente:
+        raise NoEncontradoError("El asesor no existe o está inactivo.")
+    punto = db.session.get(Punto, punto_id)
+    if not punto or not punto.activo:
+        raise NoEncontradoError("La sede no existe o está inactiva.")
+    if agente.punto_asignado_id == punto.id:
+        return agente, None
+    if obtener_turno_activo(usuario_id):
+        raise ConflictoError(
+            "Termina o devuelve a la cola el turno en curso antes de cambiar de sede."
+        )
+    anterior = agente.punto_asignado.nombre if agente.punto_asignado else "sin sede"
+    agente.punto_asignado_id = punto.id
+    db.session.commit()
+    return agente, anterior
+
+
 def turno_activo(usuario_id):
     return obtener_turno_activo(usuario_id)
 

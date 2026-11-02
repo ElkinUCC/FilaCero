@@ -27,6 +27,7 @@ ACCIONES = {
     "tramite_creado": "Trámite creado",
     "tramite_editado": "Trámite editado",
     "tramite_eliminado": "Trámite eliminado",
+    "sede_cambiada": "Asesor cambió de sede",
 }
 
 

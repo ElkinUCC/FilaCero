@@ -46,6 +46,13 @@ class Usuario(db.Model):
         self.sesiones_desde = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
         self.version_sesion = (self.version_sesion or 0) + 1
 
+    @property
+    def protegida(self):
+        """Cuenta listada en CUENTAS_PROTEGIDAS (.env)."""
+        from flask import current_app
+
+        return (self.correo or "").lower() in current_app.config.get("CUENTAS_PROTEGIDAS", [])
+
     def token_vigente(self, payload):
         """True si el token (claims JWT) sigue siendo válido para esta cuenta."""
         if "ver" in payload:

@@ -1,11 +1,11 @@
-﻿# SPRINT 04 — ADMINISTRACIÓN DEL SISTEMA
+# SPRINT 04 — ADMINISTRACIÓN DEL SISTEMA
 
 ## 1. Información general
 
 **Proyecto:** FilaCero — Gestión inteligente de turnos y tiempos de atención  
 **Sprint:** 04  
 **Nombre:** Administración del sistema  
-**Estado:** Pendiente de validación funcional
+**Estado:** Implementado; conservar evidencia de endpoints y autorización.
 
 ---
 
@@ -238,3 +238,14 @@ El estado del sprint debe reflejar las funcionalidades realmente implementadas y
 **Proyecto:** FilaCero  
 **Área:** Arquitectura de Software y Computacional  
 **Sprint:** 04 — Administración del sistema
+
+
+## Historias de usuario (HU)
+| ID | Historia | Criterio de aceptación |
+|---|---|---|
+| HU-13 | Como administrador, quiero administrar sedes. | Se validan datos y relaciones antes de crear o modificar. |
+| HU-14 | Como administrador, quiero administrar trámites. | Se mantienen servicios consistentes y habilitados/deshabilitados. |
+| HU-15 | Como administrador, quiero configurar franjas. | Se validan fechas, horas, capacidad, sede y trámite. |
+| HU-16 | Como administrador, quiero proteger las operaciones administrativas. | Solo JWT válido con rol ADMIN permite escrituras. |
+
+**Criterio de integridad:** conservar registros históricos relacionados con turnos; preferir desactivación sobre borrado físico.

@@ -1,11 +1,11 @@
-﻿# SPRINT 03 — MODELO DE NEGOCIO, FRANJAS Y RESERVAS
+# SPRINT 03 — MODELO DE NEGOCIO, FRANJAS Y RESERVAS
 
 ## 1. Información general
 
 **Proyecto:** FilaCero — Gestión inteligente de turnos y tiempos de atención  
 **Sprint:** 03  
 **Nombre:** Modelo de negocio, franjas y reservas  
-**Estado:** En validación funcional
+**Estado:** Implementado; validación vinculada al conjunto de pruebas y al flujo integrado.
 
 ---
 
@@ -247,3 +247,15 @@ El estado de completitud debe actualizarse únicamente después de verificar el 
 **Proyecto:** FilaCero  
 **Área:** Arquitectura de Software y Computacional  
 **Sprint:** 03 — Modelo de negocio, franjas y reservas
+
+
+## Historias de usuario (HU)
+| ID | Historia | Criterio de aceptación |
+|---|---|---|
+| HU-08 | Como cliente, quiero consultar sedes activas. | Se devuelven sedes habilitadas con identificadores válidos. |
+| HU-09 | Como cliente, quiero consultar trámites disponibles. | Se muestran servicios habilitados para reservar. |
+| HU-10 | Como cliente, quiero consultar franjas por sede, trámite y fecha. | La API filtra la disponibilidad y devuelve cupos. |
+| HU-11 | Como cliente, quiero reservar un turno. | Se valida identidad, franja, capacidad y duplicidad. |
+| HU-12 | Como cliente, quiero consultar y cancelar mis turnos. | Solo accedo a mis reservas y cancelo estados permitidos. |
+
+**Nota:** verificar que la ruta de disponibilidad documentada coincida con el controlador vigente. Durante la depuración se observó `GET /api/v1/franjas/disponibles`.

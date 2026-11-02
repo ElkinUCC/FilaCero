@@ -36,6 +36,7 @@ def usuario_response(usuario):
         "punto_asignado_id": usuario.punto_asignado_id,
         "sede": usuario.punto_asignado.nombre if usuario.punto_asignado else None,
         "debe_cambiar_clave": bool(usuario.debe_cambiar_clave),
+        "protegida": usuario.protegida,
         "ultimo_acceso": a_iso_utc(usuario.ultimo_acceso),
         "fecha_creacion": a_iso_utc(usuario.fecha_creacion),
     }

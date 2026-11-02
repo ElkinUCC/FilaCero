@@ -1,11 +1,11 @@
-﻿# SPRINT 05 — FLUJO COMPLETO DEL CLIENTE
+# SPRINT 05 — FLUJO COMPLETO DEL CLIENTE
 
 ## 1. Información general
 
 **Proyecto:** FilaCero — Gestión inteligente de turnos y tiempos de atención  
 **Sprint:** 05  
 **Nombre:** Flujo completo del cliente  
-**Estado:** Pendiente de validación funcional
+**Estado:** Implementado; validar flujo final de extremo a extremo.
 
 ---
 
@@ -267,3 +267,15 @@ El sprint solo debe marcarse como completado cuando los criterios de aceptación
 **Proyecto:** FilaCero  
 **Área:** Arquitectura de Software y Computacional  
 **Sprint:** 05 — Flujo completo del cliente
+
+
+## Historias de usuario (HU)
+| ID | Historia | Criterio de aceptación |
+|---|---|---|
+| HU-17 | Como cliente, quiero completar una reserva guiada. | El recorrido solicita sede, trámite, horario y datos de forma ordenada. |
+| HU-18 | Como cliente, quiero verificar mi celular con OTP. | El código se valida; el modo de prueba se identifica como no productivo. |
+| HU-19 | Como cliente, quiero obtener un código de turno. | La confirmación muestra identificador único y resumen. |
+| HU-20 | Como cliente, quiero consultar mis turnos. | La consulta devuelve únicamente los turnos propios. |
+| HU-21 | Como cliente, quiero cancelar una reserva permitida. | Se valida propiedad y estado y se libera capacidad. |
+
+**Pendiente de integración externa:** si el entorno usa OTP de prueba, no documentar el envío SMS real como terminado.

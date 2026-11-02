@@ -235,5 +235,5 @@ def _registrar_manejadores(app):
         return jsonify({"error": "Sesión inválida. Inicia sesión de nuevo."}), 401
 
 
-# Nombre en español, igual que en el proyecto de referencia (app.py lo usa).
+# Nombre en español, igual que en el proyecto de referencia (run.py lo usa).
 crear_app = create_app

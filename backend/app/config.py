@@ -116,6 +116,13 @@ class Config:
     # reservan con su celular). Desactivado por defecto en producción.
     REGISTRO_PUBLICO = _bool("REGISTRO_PUBLICO", not PRODUCCION)
 
+    # Cuentas protegidas (correos separados por coma): no se pueden desactivar
+    # ni cambiar de rol o correo desde el panel, y la simulación las conserva
+    # al borrar y recargar los datos. Sus contraseñas viven solo en la BD (hash).
+    CUENTAS_PROTEGIDAS = [
+        c.strip().lower() for c in os.getenv("CUENTAS_PROTEGIDAS", "").split(",") if c.strip()
+    ]
+
     # Número de proxies de confianza delante de Flask (nginx = 1). Necesario
     # para que el límite por IP use la IP real del cliente.
     PROXIES_CONFIABLES = _int("PROXIES_CONFIABLES", 0)

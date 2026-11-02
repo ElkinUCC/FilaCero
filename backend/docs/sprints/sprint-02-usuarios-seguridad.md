@@ -8,7 +8,7 @@
 
 **Nombre:** Usuarios y Seguridad
 
-**Estado:** Completado
+**Estado:** Completado.
 
 ---
 
@@ -547,3 +547,12 @@ SPRINT 09 ─── CALIDAD Y SEGURIDAD
      │
      ▼
 SPRINT 10 ─── INTEGRACIÓN Y ENTREGA
+
+
+## Historias de usuario relacionadas
+| ID | Historia | Criterio de aceptación |
+|---|---|---|
+| HU-04 | Como usuario, quiero registrarme para acceder al sistema. | Los datos se validan y el usuario queda persistido. |
+| HU-05 | Como usuario, quiero iniciar sesión de forma segura. | Credenciales válidas generan JWT; las inválidas se rechazan. |
+| HU-06 | Como administrador, quiero permisos por rol. | Las rutas protegidas rechazan tokens ausentes o roles insuficientes. |
+| HU-07 | Como usuario, quiero que mi contraseña se almacene protegida. | Se almacena un hash, nunca la contraseña en texto plano. |

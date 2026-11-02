@@ -131,6 +131,17 @@ def editar(usuario_id):
 
     datos = request.get_json(silent=True) or {}
     es_yo = usuario.id == current_user.id
+    if usuario.protegida and (
+        ("activo" in datos and not datos["activo"])
+        or ("rol" in datos and datos["rol"] != usuario.rol)
+        or ("correo" in datos and str(datos["correo"]).strip().lower() != usuario.correo)
+    ):
+        return (
+            jsonify(
+                {"error": "Cuenta protegida: no se puede desactivar ni cambiar su rol o correo."}
+            ),
+            409,
+        )
     cambios = []
     eventos = []  # se registran solo si todo el cambio se guarda
     try:

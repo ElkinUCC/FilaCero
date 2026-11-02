@@ -3,7 +3,7 @@
 **Proyecto:** FilaCero  
 **Módulo:** Backend — Flask REST API  
 **Sprint:** 07  
-**Estado:** Implementado y validado mediante pruebas automatizadas locales  
+**Estado:** Implementado y validado por pruebas automatizadas; Postman pendiente de archivo.
 **Sprint anterior:** Sprint 06 — Agentes y atención de turnos
 
 ---
@@ -299,3 +299,17 @@ Las evidencias de consola de pruebas y rutas ya fueron compartidas durante el de
 El Sprint 07 amplía el backend de FilaCero con funcionalidades administrativas, métricas, consulta del turno actual e historial paginado. De acuerdo con las evidencias compartidas, la suite automatizada terminó con 30 pruebas aprobadas y las rutas correspondientes quedaron registradas en Flask.
 
 La validación de la ejecución automatizada está completada para el estado reportado. La comprobación individual de endpoints mediante Postman y el archivo de evidencias deben completarse para cerrar la documentación integral del sprint.
+
+
+
+## Historias de usuario (HU)
+| ID | Historia | Criterio de aceptación |
+|---|---|---|
+| HU-27 | Como administrador, quiero listar agentes. | Se muestran datos operativos sin credenciales. |
+| HU-28 | Como administrador, quiero asignar y desasignar sedes. | Se valida rol, existencia y estado del agente y sede. |
+| HU-29 | Como administrador, quiero consultar métricas generales. | Se agregan turnos por estado y filtros admitidos. |
+| HU-30 | Como administrador, quiero comparar métricas por sede y trámite. | Los totales reflejan los datos persistidos. |
+| HU-31 | Como administrador, quiero consultar historial paginado. | Se validan filtros y metadatos de paginación. |
+| HU-32 | Como agente, quiero consultar mi turno actual. | La respuesta se limita al agente autenticado. |
+
+El Sprint 07 amplía la administración y analítica; no sustituye el ciclo operativo documentado en el Sprint 06.

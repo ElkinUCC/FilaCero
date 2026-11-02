@@ -6,21 +6,30 @@ Un solo archivo para todo lo que necesitas antes de la demo:
        python simulacion.py --cargar
        python simulacion.py --cargar --si                       # sin preguntar
        python simulacion.py --cargar --desde 2026-10-25 --hasta 2026-10-30
+       python simulacion.py --cargar --dias 15                  # 15 días, ~500 turnos
+       python simulacion.py --cargar --dias 15 --turnos 0       # operación completa (pesado)
 
      Por defecto simula los 6 días anteriores a hoy (si hoy es 31 de octubre:
      del 25 al 30), más el día de hoy hasta la hora actual y una cola de
      turnos pendientes para hoy y mañana, así la consola del asesor tiene
      gente esperando.
 
+     Algunos días un asesor rota a otra sede (queda en la Actividad).
+     Las cuentas de CUENTAS_PROTEGIDAS (.env) se conservan con su contraseña.
+
   2) SOLO BORRAR todos los registros
        python simulacion.py --borrar
+
+  3) EN VIVO durante la presentación (reservas llegando solas, Ctrl+C para)
+       python simulacion.py --en-vivo
+       python simulacion.py --en-vivo --cada 8                 # más rápido
 
   4) PRUEBA DE CARGA contra el servidor encendido (evidencia de rendimiento)
        python simulacion.py --carga --url http://127.0.0.1:5000 --usuarios 40 --segundos 20
      El servidor debe correr con RATE_LIMIT_ACTIVO=false y FILACERO_OTP_TEST_MODE=true
      (si no, el límite por IP corta la prueba, que es justo lo que debe hacer).
 
-  3) VERIFICAR que todo funciona (no toca tu base de datos)
+  5) VERIFICAR que todo funciona (no toca tu base de datos)
        python simulacion.py
        python simulacion.py --url http://127.0.0.1:5000        # contra el servidor
                                                                 # (requiere --cargar antes)
@@ -231,6 +240,10 @@ DEMANDA_DIA = {0: 1.0, 1: 0.9, 2: 0.9, 3: 0.95, 4: 1.0, 5: 0.8, 6: 0.5}
 
 def borrar_todo(db):
     """Vacía todas las tablas de la aplicación (no toca alembic_version)."""
+    # Cierra la transacción de la sesión ORM: en MySQL, una consulta previa sin
+    # cerrar retiene un bloqueo de metadatos y TRUNCATE se quedaría esperando.
+    db.session.rollback()
+    db.session.close()
     tablas = list(reversed(db.metadata.sorted_tables))
     motor = db.engine.dialect.name
     with db.engine.begin() as con:
@@ -312,12 +325,22 @@ def _clientes(db, rnd, cantidad=160):
     return clientes
 
 
-def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True):
+def cargar_semana(
+    db, desde, hasta, semilla=None, con_hoy=True, con_manana=True, turnos_objetivo=None
+):
     """Simula la operación día a día respetando las reglas de FilaCero."""
     from app.dominios.auditoria.modelos import Auditoria
     from app.dominios.franjas.modelos import Franja
     from app.dominios.turnos.modelos import Turno
-    from app.horario import ahora_local, asegurar_franjas, capacidad_sede, zona
+    from app.horario import (
+        ahora_local,
+        apertura,
+        asegurar_franjas,
+        capacidad_sede,
+        cierre,
+        dia_habil,
+        zona,
+    )
 
     rnd = random.Random(semilla)
     datos = crear_catalogo(db)
@@ -339,6 +362,30 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
     if con_manana:
         dias.append(hoy + timedelta(days=1))
 
+    # Horas de inicio de las franjas del día (8:00, 8:30, ... 17:30)
+    paso = timedelta(minutes=30)
+    horas_dia, cursor = [], datetime.combine(hoy, apertura())
+    while cursor + paso <= datetime.combine(hoy, cierre()):
+        horas_dia.append(cursor.time())
+        cursor += paso
+
+    # Volumen: los días pasados se escalan para sumar ~turnos_objetivo (más
+    # liviano en MySQL). Hoy y mañana conservan una cola realista para la demo.
+    escala_pasado = 1.0
+    if turnos_objetivo:
+        por_dia = sum(
+            3 * sum(1 for a in datos["asesores"] if a.punto_asignado_id == s.id)
+            for s in datos["sedes"]
+        ) * sum(DEMANDA_HORA.get(h.hour, 0.6) for h in horas_dia)
+        esperado = sum(por_dia * DEMANDA_DIA[d.weekday()] * 0.925 for d in dias if d < hoy)
+        escala_pasado = min(1.0, turnos_objetivo / esperado) if esperado else 1.0
+
+    def cantidad(cupo, factor):
+        """Cantidad entera con redondeo probabilístico (evita franjas siempre vacías)."""
+        esperado = cupo * factor * rnd.uniform(0.7, 1.15)
+        n = int(esperado) + (1 if rnd.random() < esperado - int(esperado) else 0)
+        return max(0, min(cupo, n))
+
     def nuevo_codigo(fecha_solicitud):
         while True:
             c = f"FC-{fecha_solicitud:%Y%m%d}-{rnd.getrandbits(24):06X}"
@@ -346,17 +393,26 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                 codigos.add(c)
                 return c
 
+    base = {a.id: a.punto_asignado_id for a in datos["asesores"]}
+
     for fecha in dias:
         futuro = fecha > hoy
+        rotaciones = _rotar_asesores(db, datos, base, fecha, hoy, rnd)
         for sede in datos["sedes"]:
-            for servicio in datos["servicios"]:
-                asegurar_franjas(sede, servicio, fecha)
-            franjas = {
-                (f.tramite_id, f.hora_inicio): f
-                for f in Franja.query.filter_by(punto_id=sede.id, fecha=fecha).all()
-            }
-            horas = sorted({h for _, h in franjas})
             cupo = capacidad_sede(sede.id)
+            if fecha >= hoy:
+                # Hoy y mañana: todas las franjas (para poder reservar en vivo)
+                for servicio in datos["servicios"]:
+                    asegurar_franjas(sede, servicio, fecha)
+                franjas = {
+                    (f.tramite_id, f.hora_inicio): f
+                    for f in Franja.query.filter_by(punto_id=sede.id, fecha=fecha).all()
+                }
+                horas = sorted({h for _, h in franjas})
+            else:
+                # Días pasados: solo se crean las franjas que tienen turnos (rápido)
+                franjas = {}
+                horas = horas_dia if dia_habil(fecha) else []
             asesores = [a for a in datos["asesores"] if a.punto_asignado_id == sede.id]
             # Algunos días un asesor abre tarde su puesto (tráfico, reunión...):
             # es lo que en la vida real genera los pocos turnos fuera de franja.
@@ -374,10 +430,12 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                 inicio_f = datetime.combine(fecha, hora, tzinfo=zona())
                 factor = DEMANDA_HORA.get(hora.hour, 0.6) * DEMANDA_DIA[fecha.weekday()]
                 if futuro:
-                    factor *= 0.45
-                elif inicio_f > ahora:
-                    factor *= 0.7
-                n = max(0, min(cupo, round(cupo * factor * rnd.uniform(0.7, 1.15))))
+                    factor *= 0.3 if turnos_objetivo else 0.45
+                elif fecha == hoy:
+                    factor *= (0.5 if turnos_objetivo else 1.0) * (0.7 if inicio_f > ahora else 1)
+                else:
+                    factor *= escala_pasado
+                n = cantidad(cupo, factor)
                 if not n:
                     continue
 
@@ -390,9 +448,20 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                     idx = rnd.choices(range(len(SERVICIOS)), weights=pesos)[0]
                     servicio = datos["servicios"][idx]
                     franja = franjas.get((servicio.id, hora))
-                    if (
-                        franja is None
-                    ):  # sede/servicio sin esa franja: se toma otra del mismo horario
+                    if franja is None and fecha < hoy:
+                        fin_h = (datetime.combine(fecha, hora) + paso).time()
+                        franja = Franja(
+                            punto_id=sede.id,
+                            tramite_id=servicio.id,
+                            fecha=fecha,
+                            hora_inicio=hora,
+                            hora_fin=fin_h,
+                            capacidad=cupo,
+                            activa=True,
+                        )
+                        db.session.add(franja)
+                        franjas[(servicio.id, hora)] = franja
+                    elif franja is None:  # sin esa franja: se toma otra del mismo horario
                         franja = next(f for (t, h), f in franjas.items() if h == hora)
                         servicio = next(s for s in datos["servicios"] if s.id == franja.tramite_id)
 
@@ -404,7 +473,7 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                         usuario_id=cliente.id,
                         tramite_id=servicio.id,
                         punto_id=sede.id,
-                        franja_id=franja.id,
+                        franja=franja,
                         hora_solicitud=utc(solicitud),
                         estado="ESPERANDO",
                     )
@@ -442,7 +511,22 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                     totales[turno.estado] += 1
                     db.session.add(turno)
 
-        # Ingresos del personal ese día (para la sección Actividad)
+        # Rotaciones del día en la bitácora (antes de abrir, 7:50 a. m.)
+        for asesor, origen, destino in rotaciones:
+            db.session.add(
+                Auditoria(
+                    fecha=utc(
+                        datetime.combine(fecha, datetime.min.time(), tzinfo=zona())
+                        + timedelta(hours=7, minutes=50)
+                    ),
+                    usuario_id=asesor.id,
+                    accion="sede_cambiada",
+                    detalle=f"{asesor.nombre}: {origen} → {destino}",
+                    ip=f"192.168.1.{rnd.randint(10, 80)}",
+                )
+            )
+
+        # Ingresos y salidas del personal ese día (para la sección Actividad)
         if fecha <= hoy:
             for persona in datos["admins"] + datos["asesores"]:
                 if persona.rol == "ADMIN" and rnd.random() < 0.3:
@@ -462,6 +546,18 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                     )
                 )
                 persona.ultimo_acceso = utc(entrada)
+                salida = datetime.combine(fecha, datetime.min.time(), tzinfo=zona()) + timedelta(
+                    hours=18, minutes=rnd.randint(2, 25)
+                )
+                if salida <= ahora:
+                    db.session.add(
+                        Auditoria(
+                            fecha=utc(salida),
+                            usuario_id=persona.id,
+                            accion="logout",
+                            ip=f"192.168.1.{rnd.randint(10, 80)}",
+                        )
+                    )
                 if rnd.random() < 0.04:
                     db.session.add(
                         Auditoria(
@@ -473,13 +569,82 @@ def cargar_semana(db, desde, hasta, semilla=None, con_hoy=True, con_manana=True)
                         )
                     )
         db.session.commit()
+        extra = "".join(f" {GRIS}· {a.nombre.split()[0]} rota a {d}{FIN}" for a, _, d in rotaciones)
         print(
             f"  {VERDE}✓{FIN} {DIAS_ES[fecha.weekday()]} {fecha.day} de {MESES_ES[fecha.month - 1]}"
+            + extra
             + (f" {GRIS}(hoy, hasta ahora + cola){FIN}" if fecha == hoy else "")
             + (f" {GRIS}(reservas de mañana){FIN}" if fecha > hoy else "")
         )
 
     return datos, totales
+
+
+def _rotar_asesores(db, datos, base, fecha, hoy, rnd):
+    """Rotación realista: algunos días un asesor de una sede con 2 apoya una
+    sede con 1. Hoy y mañana cada uno vuelve a su sede base (la de la tabla
+    de credenciales). El cupo de ambas sedes cambia solo (3 x asesores)."""
+    for a in datos["asesores"]:
+        a.punto_asignado_id = base[a.id]
+    cambios = []
+    if fecha < hoy and rnd.random() < 0.55:
+        nombres = {s.id: s.nombre for s in datos["sedes"]}
+        por_sede = {}
+        for a in datos["asesores"]:
+            por_sede.setdefault(a.punto_asignado_id, []).append(a)
+        donantes = [sid for sid, lista in por_sede.items() if len(lista) >= 2]
+        receptoras = [s.id for s in datos["sedes"] if len(por_sede.get(s.id, [])) <= 1]
+        if donantes and receptoras:
+            origen = rnd.choice(donantes)
+            asesor = rnd.choice(por_sede[origen])
+            destino = rnd.choice(receptoras)
+            asesor.punto_asignado_id = destino
+            cambios.append((asesor, nombres[origen], nombres[destino]))
+    db.session.commit()
+    return cambios
+
+
+def _guardar_protegidas(app):
+    """Copia (con su hash) las cuentas de CUENTAS_PROTEGIDAS antes de borrar."""
+    from app.dominios.usuarios.modelos import Usuario
+
+    correos = app.config.get("CUENTAS_PROTEGIDAS", [])
+    if not correos:
+        return []
+    return [
+        {
+            "nombre": u.nombre,
+            "correo": u.correo,
+            "rol": u.rol,
+            "password_hash": u.password_hash,
+            "sede": u.punto_asignado.nombre if u.punto_asignado else None,
+        }
+        for u in Usuario.query.filter(Usuario.correo.in_(correos)).all()
+    ]
+
+
+def _restaurar_protegidas(db, copias):
+    from app.dominios.sedes.modelos import Punto
+    from app.dominios.usuarios.modelos import Usuario
+
+    primera = Punto.query.filter_by(activo=True).order_by(Punto.id).first()
+    for c in copias:
+        sede = Punto.query.filter_by(nombre=c["sede"]).first() if c["sede"] else None
+        if c["rol"] == "AGENTE" and not sede:
+            sede = primera
+        db.session.add(
+            Usuario(
+                nombre=c["nombre"],
+                correo=c["correo"],
+                rol=c["rol"],
+                password_hash=c["password_hash"],
+                activo=True,
+                punto_asignado_id=sede.id if (sede and c["rol"] == "AGENTE") else None,
+            )
+        )
+    db.session.commit()
+    for c in copias:
+        print(f"  {VERDE}✓{FIN} Cuenta protegida conservada: {c['correo']} ({c['rol']})")
 
 
 def _descripcion_bd(app):
@@ -508,18 +673,23 @@ def comando_cargar(args, solo_borrar=False):
                 print("Cancelado. No se modificó nada.")
                 return 1
 
+        protegidas = _guardar_protegidas(app)
         if db.engine.dialect.name == "sqlite":
             db.drop_all()  # SQLite (demo): esquema siempre al día con los modelos
             db.create_all()
         tablas = borrar_todo(db)
         print(f"{VERDE}✓{FIN} Base de datos vacía ({len(tablas)} tablas)")
         if solo_borrar:
+            _restaurar_protegidas(db, protegidas)
             return 0
 
         from app.horario import hoy_local
 
         hoy = hoy_local()
-        desde = date.fromisoformat(args.desde) if args.desde else hoy - timedelta(days=6)
+        if args.dias and not args.desde:
+            desde = hoy - timedelta(days=max(1, args.dias))
+        else:
+            desde = date.fromisoformat(args.desde) if args.desde else hoy - timedelta(days=6)
         hasta = date.fromisoformat(args.hasta) if args.hasta else hoy - timedelta(days=1)
         if desde > hasta:
             print(f"{ROJO}--desde no puede ser posterior a --hasta.{FIN}")
@@ -530,7 +700,10 @@ def comando_cargar(args, solo_borrar=False):
             f"{datetime.now():%H:%M} y las reservas de mañana:"
         )
         inicio = time.time()
-        datos, t = cargar_semana(db, desde, hasta, semilla=args.semilla)
+        datos, t = cargar_semana(
+            db, desde, hasta, semilla=args.semilla, turnos_objetivo=args.turnos or None
+        )
+        _restaurar_protegidas(db, protegidas)
 
         from app.dominios.agentes.despacho import cumplimiento
         from app.dominios.turnos.modelos import Turno
@@ -551,6 +724,107 @@ def comando_cargar(args, solo_borrar=False):
             print(f"  Administrador  {correo:<32} {CLAVE_ADMIN}   ({n})")
         for _n, correo, i in ASESORES:
             print(f"  Asesor         {correo:<32} {CLAVE_ASESOR}  ({SEDES[i][0]})")
+        print(
+            f"\n{GRIS}Para ver reservas llegando en vivo durante la presentación:"
+            f"  python simulacion.py --en-vivo{FIN}"
+        )
+    return 0
+
+
+# ======================================================================
+# MODO EN VIVO: reservas llegando mientras se presenta
+# ======================================================================
+
+
+def comando_en_vivo(args):
+    """Crea reservas de ciudadanos ficticios cada pocos segundos en la BD real,
+    respetando el cupo por sede. Sirve para ver el panel y la consola reaccionar
+    sin tocar nada. Ctrl+C para detener."""
+    from app import create_app, db
+    from app.dominios.franjas.modelos import Franja
+    from app.dominios.sedes.modelos import Punto
+    from app.dominios.tramites.modelos import Tramite
+    from app.dominios.turnos.modelos import Turno
+    from app.dominios.turnos.servicios import crear_turno
+    from app.dominios.usuarios.servicios import registrar_cliente_publico
+    from app.horario import ahora_local, asegurar_franjas, hoy_local
+
+    app = create_app()
+    rnd = random.Random()
+    with app.app_context():
+        if app.config.get("PRODUCCION"):
+            print(f"{ROJO}El modo en vivo no se ejecuta con FLASK_ENV=production.{FIN}")
+            return 1
+        sedes = Punto.query.filter_by(activo=True).all()
+        servicios = Tramite.query.filter_by(activo=True).all()
+        if not sedes or not servicios:
+            print(f"{ROJO}No hay sedes o trámites. Primero: python simulacion.py --cargar{FIN}")
+            return 1
+        print(
+            f"{NEGRITA}Modo en vivo{FIN} · {_descripcion_bd(app)}\n"
+            f"Una reserva cada ~{args.cada} s (Ctrl+C para detener). "
+            f"Mira el panel de admin y la consola del asesor.\n"
+        )
+        creadas = 0
+        try:
+            while True:
+                ahora = ahora_local()
+                sede = rnd.choice(sedes)
+                servicio = rnd.choice(servicios)
+                turno = None
+                for fecha in (hoy_local(), hoy_local() + timedelta(days=1)):
+                    asegurar_franjas(sede, servicio, fecha)
+                    proximas = (
+                        Franja.query.filter_by(
+                            punto_id=sede.id, tramite_id=servicio.id, fecha=fecha, activa=True
+                        )
+                        .order_by(Franja.hora_inicio)
+                        .all()
+                    )
+                    proximas = [
+                        f for f in proximas if fecha > ahora.date() or f.hora_inicio > ahora.time()
+                    ][:4]
+                    rnd.shuffle(proximas)
+                    for franja in proximas:
+                        prefijo = rnd.choice(["00", "10", "15", "20"])
+                        celular = f"3{prefijo}{rnd.randint(1000000, 9999999)}"
+                        nombre = (
+                            f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)} {rnd.choice(APELLIDOS)}"
+                        )
+                        try:
+                            cliente = registrar_cliente_publico(nombre, celular)
+                            turno = crear_turno(cliente.id, servicio.id, sede.id, franja.id)
+                            break
+                        except ValueError:
+                            db.session.rollback()  # sin cupo: se intenta otra franja
+                    if turno:
+                        break
+                if turno:
+                    creadas += 1
+                    print(
+                        f"  {VERDE}●{FIN} {ahora:%H:%M:%S}  {turno.codigo}  "
+                        f"{sede.nombre:<16} {servicio.nombre[:26]:<26} "
+                        f"{turno.franja.fecha:%d/%m} {turno.franja.hora_inicio:%H:%M}  "
+                        f"{GRIS}{nombre}{FIN}"
+                    )
+                else:
+                    print(f"  {AMBAR}●{FIN} {ahora:%H:%M:%S}  {sede.nombre}: sin cupo cercano")
+                # De vez en cuando alguien cancela (libera cupo, como en la vida real)
+                if creadas and rnd.random() < 0.12:
+                    espera = (
+                        Turno.query.filter_by(estado="ESPERANDO")
+                        .order_by(Turno.id.desc())
+                        .limit(20)
+                        .all()
+                    )
+                    if espera:
+                        cancelado = rnd.choice(espera)
+                        cancelado.estado = "CANCELADO"
+                        db.session.commit()
+                        print(f"  {GRIS}○ {cancelado.codigo} canceló su turno{FIN}")
+                time.sleep(max(2, args.cada * rnd.uniform(0.6, 1.4)))
+        except KeyboardInterrupt:
+            print(f"\n{NEGRITA}Listo:{FIN} {creadas} reservas creadas en vivo.")
     return 0
 
 
@@ -1150,6 +1424,15 @@ def main():
     parser.add_argument("--desde", help="Primer día a simular (AAAA-MM-DD). Por defecto: hoy - 6")
     parser.add_argument("--hasta", help="Último día completo a simular. Por defecto: ayer")
     parser.add_argument(
+        "--dias", type=int, help="Simula los N días anteriores a hoy (ej. --dias 15)"
+    )
+    parser.add_argument(
+        "--turnos",
+        type=int,
+        default=500,
+        help="Turnos aproximados de los días pasados (0 = operación completa). Por defecto 500",
+    )
+    parser.add_argument(
         "--semilla", type=int, help="Número fijo para repetir exactamente los mismos datos"
     )
     parser.add_argument("--url", help="Verificar contra un servidor, ej. http://127.0.0.1:5000")
@@ -1161,7 +1444,14 @@ def main():
         "--usuarios", type=int, default=30, help="Usuarios simultáneos en la prueba de carga"
     )
     parser.add_argument("--segundos", type=int, default=20, help="Duración de la prueba de carga")
+    parser.add_argument(
+        "--en-vivo", action="store_true", help="Crea reservas cada pocos segundos (Ctrl+C para)"
+    )
+    parser.add_argument("--cada", type=int, default=15, help="Segundos entre reservas en vivo")
     args = parser.parse_args()
+
+    if args.en_vivo:
+        return comando_en_vivo(args)
 
     if args.borrar:
         return comando_cargar(args, solo_borrar=True)

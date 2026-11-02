@@ -3,6 +3,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import func
+from sqlalchemy.orm import contains_eager
 
 from app import db
 from app.dominios.franjas.modelos import Franja
@@ -131,6 +132,7 @@ def panel():
                 "ahora": ahora.isoformat(timespec="seconds"),
                 "agente": {
                     "nombre": agente.nombre,
+                    "sede_id": agente.punto_asignado_id,
                     "sede": agente.punto_asignado.nombre if agente.punto_asignado else None,
                     "sede_direccion": (
                         agente.punto_asignado.direccion if agente.punto_asignado else None
@@ -166,6 +168,25 @@ def panel():
         ),
         200,
     )
+
+
+@agentes_bp.put("/sede")
+@requiere_rol("AGENTE")
+def cambiar_mi_sede():
+    """El asesor rota de sede desde su consola (registro en la bitácora)."""
+    from app.dominios.agentes.servicios import cambiar_sede_propia
+    from app.dominios.auditoria.servicios import registrar
+
+    datos = request.get_json(silent=True) or {}
+    agente, anterior = cambiar_sede_propia(_agente_id(), datos.get("punto_id"))
+    sede = agente.punto_asignado.nombre
+    if anterior is not None:
+        registrar("sede_cambiada", f"{agente.nombre}: {anterior} → {sede}")
+    return {
+        "mensaje": f"Ahora atiendes en {sede}.",
+        "sede_id": agente.punto_asignado_id,
+        "sede": sede,
+    }, 200
 
 
 @agentes_bp.get("/cola")
@@ -361,6 +382,8 @@ def actualizar_agente(usuario_id):
         if "punto_id" in datos:
             agente.punto_asignado_id = _sede_valida(datos["punto_id"])
         if "activo" in datos:
+            if agente.protegida and not datos["activo"]:
+                raise ValueError("Cuenta protegida: no se puede desactivar.")
             agente.activo = bool(datos["activo"])
         if datos.get("password"):
             validar_password_segura(datos["password"])
@@ -431,7 +454,8 @@ def desasignar_sede(usuario_id):
 @requiere_rol("ADMIN", "SUPERVISOR")
 def obtener_metricas():
     try:
-        turnos = _consulta_turnos_admin().all()
+        # La franja ya viene en el JOIN: se carga en la misma consulta (sin N+1).
+        turnos = _consulta_turnos_admin().options(contains_eager(Turno.franja)).all()
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
 

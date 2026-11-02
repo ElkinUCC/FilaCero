@@ -8,7 +8,7 @@
 
 **Nombre:** Base del proyecto
 
-**Estado:** Completado
+**Estado:** Completado.
 
 ---
 
@@ -416,3 +416,12 @@ La arquitectura permite incorporar progresivamente los diferentes dominios del s
 
 El proyecto queda preparado para comenzar la implementación de usuarios y seguridad en el siguiente sprint.
 
+
+
+
+## Historias de usuario relacionadas
+| ID | Historia | Criterio de aceptación |
+|---|---|---|
+| HU-01 | Como equipo de desarrollo, queremos una base organizada para mantener el sistema. | La aplicación inicia con configuración centralizada y dominios organizados. |
+| HU-02 | Como equipo, queremos persistencia y migraciones controladas. | La conexión y el mecanismo de migraciones funcionan localmente. |
+| HU-03 | Como consumidor, quiero una API versionada para integrar módulos. | Las rutas principales quedan registradas bajo el prefijo definido. |
