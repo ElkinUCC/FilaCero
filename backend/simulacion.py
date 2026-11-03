@@ -6,7 +6,7 @@ Un solo archivo para todo lo que necesitas antes de la demo:
        python simulacion.py --cargar
        python simulacion.py --cargar --si                       # sin preguntar
        python simulacion.py --cargar --desde 2026-10-25 --hasta 2026-10-30
-       python simulacion.py --cargar --dias 15                  # 15 días, ~500 turnos
+       python simulacion.py --cargar --dias 15                  # 15 días, ~1200 turnos
        python simulacion.py --cargar --dias 15 --turnos 0       # operación completa (pesado)
 
      Por defecto simula los 6 días anteriores a hoy (si hoy es 31 de octubre:
@@ -22,20 +22,20 @@ Un solo archivo para todo lo que necesitas antes de la demo:
 
   3) EN VIVO durante la presentación (reservas llegando solas, Ctrl+C para)
        python simulacion.py --en-vivo
-       python simulacion.py --en-vivo --cada 8                 # más rápido
+       python simulacion.py --en-vivo --cada 10 --por-ciclo 3  # 3 turnos por ciclo
 
   4) PRUEBA DE CARGA contra el servidor encendido (evidencia de rendimiento)
        python simulacion.py --carga --url http://127.0.0.1:5000 --usuarios 40 --segundos 20
-     El servidor debe correr con RATE_LIMIT_ACTIVO=false y FILACERO_OTP_TEST_MODE=true
-     (si no, el límite por IP corta la prueba, que es justo lo que debe hacer).
+     El servidor local debe correr con RATE_LIMIT_ACTIVO=false y
+     FILACERO_OTP_TEST_MODE=true. El modo OTP de prueba solo funciona desde localhost.
 
   5) VERIFICAR que todo funciona (no toca tu base de datos)
        python simulacion.py
        python simulacion.py --url http://127.0.0.1:5000        # contra el servidor
                                                                 # (requiere --cargar antes)
 
-El negocio simulado: TecniVisión, 5 sedes, 2 administradores y 8 asesores.
-Atención todos los días de 8:00 a 18:00 en franjas de 30 min, máximo
+El negocio simulado: TecniVisión, 4 sedes, 2 administradores, 1 supervisor y 8 asesores.
+Atención todos los días, 24 horas, en franjas de 30 min, máximo
 10 min por persona (3 cupos por asesor y franja). Los clientes son
 personas ficticias que reservan con su celular, sin registrarse.
 """
@@ -50,6 +50,10 @@ import time
 import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime, timedelta
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -75,13 +79,13 @@ if os.name == "nt":
 # En un servidor público cambia estas claves con variables de entorno.
 CLAVE_ADMIN = os.getenv("SIM_CLAVE_ADMIN", "Admin12345")
 CLAVE_ASESOR = os.getenv("SIM_CLAVE_ASESOR", "Asesor12345")
+CLAVE_SUPERVISOR = os.getenv("SIM_CLAVE_SUPERVISOR") or secrets.token_urlsafe(18)
 
 SEDES = [
     ("Sede Centro", "Cra. 50 # 52-20, Centro, Medellín"),
     ("Sede El Poblado", "Cl. 10 # 43D-30, El Poblado, Medellín"),
     ("Sede Itagüí", "Cra. 50A # 50-45, Itagüí, Antioquia"),
     ("Sede Laureles", "Cra. 76 # 33A-15, Laureles, Medellín"),
-    ("Sede Montería", "Cl. 29 # 3-40, Centro, Montería"),
 ]
 
 # nombre, descripción, minutos estimados (máx. 10 por regla), peso de demanda
@@ -118,8 +122,9 @@ ADMINS = [
     ("Andrés Restrepo Mejía", "andres.restrepo@filacero.co"),
 ]
 ADMIN_CORREO = ADMINS[0][1]
+SUPERVISORES = [("María Fernanda Giraldo", "supervisora@filacero.co")]
 
-# nombre, correo, índice de sede (8 asesores: 2+2+2+1+1)
+# nombre, correo, índice de sede (8 asesores: 2 por sede)
 ASESORES = [
     ("Carlos Mejía", "carlos.mejia@filacero.co", 0),
     ("Diana Ospina", "diana.ospina@filacero.co", 0),
@@ -128,7 +133,7 @@ ASESORES = [
     ("Mauricio Vélez", "mauricio.velez@filacero.co", 2),
     ("Paola Zuluaga", "paola.zuluaga@filacero.co", 2),
     ("Santiago Ríos", "santiago.rios@filacero.co", 3),
-    ("Valeria Montes", "valeria.montes@filacero.co", 4),
+    ("Valeria Montes", "valeria.montes@filacero.co", 3),
 ]
 ASESOR_DEMO = ASESORES[0][1]
 
@@ -220,6 +225,14 @@ MESES_ES = [
 
 # Demanda relativa por hora del día y día de la semana (0 = lunes)
 DEMANDA_HORA = {
+    0: 0.08,
+    1: 0.06,
+    2: 0.04,
+    3: 0.04,
+    4: 0.05,
+    5: 0.08,
+    6: 0.15,
+    7: 0.3,
     8: 0.45,
     9: 0.7,
     10: 0.95,
@@ -230,6 +243,12 @@ DEMANDA_HORA = {
     15: 0.9,
     16: 0.85,
     17: 0.55,
+    18: 0.5,
+    19: 0.4,
+    20: 0.3,
+    21: 0.22,
+    22: 0.15,
+    23: 0.1,
 }
 DEMANDA_DIA = {0: 1.0, 1: 0.9, 2: 0.9, 3: 0.95, 4: 1.0, 5: 0.8, 6: 0.5}
 
@@ -285,6 +304,18 @@ def crear_catalogo(db):
         crear(Usuario, {"correo": c}, nombre=n, rol="ADMIN", activo=True, password_hash=clave_admin)
         for n, c in ADMINS
     ]
+    clave_supervisor = encriptar_password(CLAVE_SUPERVISOR)
+    supervisores = [
+        crear(
+            Usuario,
+            {"correo": c},
+            nombre=n,
+            rol="SUPERVISOR",
+            activo=True,
+            password_hash=clave_supervisor,
+        )
+        for n, c in SUPERVISORES
+    ]
     asesores = [
         crear(
             Usuario,
@@ -298,7 +329,13 @@ def crear_catalogo(db):
         for n, c, i in ASESORES
     ]
     db.session.commit()
-    return {"sedes": sedes, "servicios": servicios, "admins": admins, "asesores": asesores}
+    return {
+        "sedes": sedes,
+        "servicios": servicios,
+        "admins": admins,
+        "supervisores": supervisores,
+        "asesores": asesores,
+    }
 
 
 def _clientes(db, rnd, cantidad=160):
@@ -363,12 +400,13 @@ def cargar_semana(
     if con_manana:
         dias.append(hoy + timedelta(days=1))
 
-    # Horas de inicio de las franjas del día (8:00, 8:30, ... 17:30)
+    # Horas de inicio de las franjas del día, incluida la última parcial (23:30–23:59).
     paso = timedelta(minutes=30)
+    limite_dia = datetime.combine(hoy, cierre())
     horas_dia, cursor = [], datetime.combine(hoy, apertura())
-    while cursor + paso <= datetime.combine(hoy, cierre()):
+    while cursor < limite_dia:
         horas_dia.append(cursor.time())
-        cursor += paso
+        cursor = min(cursor + paso, limite_dia)
 
     # Volumen: los días pasados se escalan para sumar ~turnos_objetivo (más
     # liviano en MySQL). Hoy y mañana conservan una cola realista para la demo.
@@ -450,7 +488,10 @@ def cargar_semana(
                     servicio = datos["servicios"][idx]
                     franja = franjas.get((servicio.id, hora))
                     if franja is None and fecha < hoy:
-                        fin_h = (datetime.combine(fecha, hora) + paso).time()
+                        fin_h = min(
+                            datetime.combine(fecha, hora) + paso,
+                            datetime.combine(fecha, cierre()),
+                        ).time()
                         franja = Franja(
                             punto_id=sede.id,
                             tramite_id=servicio.id,
@@ -633,16 +674,15 @@ def _restaurar_protegidas(db, copias):
         sede = Punto.query.filter_by(nombre=c["sede"]).first() if c["sede"] else None
         if c["rol"] == "AGENTE" and not sede:
             sede = primera
-        db.session.add(
-            Usuario(
-                nombre=c["nombre"],
-                correo=c["correo"],
-                rol=c["rol"],
-                password_hash=c["password_hash"],
-                activo=True,
-                punto_asignado_id=sede.id if (sede and c["rol"] == "AGENTE") else None,
-            )
-        )
+        usuario = Usuario.query.filter_by(correo=c["correo"]).first()
+        if usuario is None:
+            usuario = Usuario(correo=c["correo"])
+            db.session.add(usuario)
+        usuario.nombre = c["nombre"]
+        usuario.rol = c["rol"]
+        usuario.password_hash = c["password_hash"]
+        usuario.activo = True
+        usuario.punto_asignado_id = sede.id if (sede and c["rol"] == "AGENTE") else None
     db.session.commit()
     for c in copias:
         print(f"  {VERDE}✓{FIN} Cuenta protegida conservada: {c['correo']} ({c['rol']})")
@@ -656,6 +696,11 @@ def _descripcion_bd(app):
     return uri
 
 
+def _base_es_remota(url):
+    host = url.host
+    return bool(host and host.lower() not in {"localhost", "127.0.0.1", "::1"})
+
+
 def comando_cargar(args, solo_borrar=False):
     from app import create_app, db
 
@@ -664,8 +709,38 @@ def comando_cargar(args, solo_borrar=False):
         if app.config.get("PRODUCCION"):
             print(f"{ROJO}Por seguridad la simulación no se ejecuta con FLASK_ENV=production.{FIN}")
             return 1
+        host = db.engine.url.host
+        base_remota = _base_es_remota(db.engine.url)
+        if base_remota and not args.permitir_borrar_remoto:
+            print(
+                f"{ROJO}Se canceló: --cargar/--borrar vacía la base de datos "
+                f"y el destino parece remoto ({host}).{FIN}\n"
+                "Para poblar una base remota, confirma primero con "
+                "--permitir-borrar-remoto y escribe BORRAR. "
+                "Para añadir reservas sin borrar, usa --en-vivo."
+            )
+            return 1
+        if not solo_borrar:
+            from app.horario import hoy_local
+
+            hoy = hoy_local()
+            try:
+                desde = (
+                    hoy - timedelta(days=args.dias)
+                    if args.dias and not args.desde
+                    else date.fromisoformat(args.desde)
+                    if args.desde
+                    else hoy - timedelta(days=6)
+                )
+                hasta = date.fromisoformat(args.hasta) if args.hasta else hoy - timedelta(days=1)
+            except ValueError:
+                print(f"{ROJO}Las fechas deben tener formato AAAA-MM-DD.{FIN}")
+                return 1
+            if desde > hasta:
+                print(f"{ROJO}--desde no puede ser posterior a --hasta.{FIN}")
+                return 1
         print(f"Base de datos: {NEGRITA}{_descripcion_bd(app)}{FIN}")
-        if not args.si:
+        if not args.si or base_remota:
             print(
                 f"{AMBAR}Se borrarán TODOS los registros "
                 f"(sedes, trámites, usuarios, turnos, actividad).{FIN}"
@@ -683,18 +758,6 @@ def comando_cargar(args, solo_borrar=False):
         if solo_borrar:
             _restaurar_protegidas(db, protegidas)
             return 0
-
-        from app.horario import hoy_local
-
-        hoy = hoy_local()
-        if args.dias and not args.desde:
-            desde = hoy - timedelta(days=max(1, args.dias))
-        else:
-            desde = date.fromisoformat(args.desde) if args.desde else hoy - timedelta(days=6)
-        hasta = date.fromisoformat(args.hasta) if args.hasta else hoy - timedelta(days=1)
-        if desde > hasta:
-            print(f"{ROJO}--desde no puede ser posterior a --hasta.{FIN}")
-            return 1
 
         print(
             f"\nSimulando TecniVisión del {desde:%d/%m} al {hasta:%d/%m}, hoy hasta las "
@@ -721,10 +784,20 @@ def comando_cargar(args, solo_borrar=False):
             f"dentro de 10 min: {c['dentro_tiempo_max_pct']}%"
         )
         print(f"\n{NEGRITA}Credenciales{FIN}")
+        correos_protegidos = {c["correo"].lower() for c in protegidas}
         for n, correo in ADMINS:
-            print(f"  Administrador  {correo:<32} {CLAVE_ADMIN}   ({n})")
+            clave = "(clave conservada)" if correo.lower() in correos_protegidos else CLAVE_ADMIN
+            print(f"  Administrador  {correo:<32} {clave}   ({n})")
+        for n, correo in SUPERVISORES:
+            clave = (
+                "(clave conservada)"
+                if correo.lower() in correos_protegidos
+                else CLAVE_SUPERVISOR
+            )
+            print(f"  Supervisor     {correo:<32} {clave}  ({n})")
         for _n, correo, i in ASESORES:
-            print(f"  Asesor         {correo:<32} {CLAVE_ASESOR}  ({SEDES[i][0]})")
+            clave = "(clave conservada)" if correo.lower() in correos_protegidos else CLAVE_ASESOR
+            print(f"  Asesor         {correo:<32} {clave}  ({SEDES[i][0]})")
         print(
             f"\n{GRIS}Para ver reservas llegando en vivo durante la presentación:"
             f"  python simulacion.py --en-vivo{FIN}"
@@ -736,11 +809,164 @@ def comando_cargar(args, solo_borrar=False):
 # MODO EN VIVO: reservas llegando mientras se presenta
 # ======================================================================
 
+def _agentes_demo_automaticos():
+    from app.dominios.usuarios.modelos import Usuario
+
+    correos_demo = {correo.lower() for _nombre, correo, _sede in ASESORES}
+    protegidas = {
+        correo.lower()
+        for correo in __import__("flask").current_app.config.get("CUENTAS_PROTEGIDAS", [])
+    }
+    return [
+        agente
+        for agente in Usuario.query.filter_by(rol="AGENTE", activo=True).all()
+        if agente.correo.lower() in correos_demo - protegidas
+        and not agente.protegida
+        and agente.punto_asignado_id is not None
+    ]
+
+
+def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
+    """Avanza únicamente reservas creadas por esta ejecución de --en-vivo."""
+    from app.dominios.agentes.servicios import (
+        finalizar_atencion,
+        iniciar_atencion,
+        llamar_turno,
+    )
+    from app.dominios.turnos.modelos import Turno
+
+    if not trabajos or not agentes:
+        return
+
+    ids_agentes = [agente.id for agente in agentes]
+    activos = Turno.query.filter(
+        Turno.agente_id.in_(ids_agentes),
+        Turno.estado.in_(("LLAMADO", "EN_ATENCION")),
+    ).all()
+    ocupados = {turno.agente_id for turno in activos}
+
+    for turno_id, trabajo in list(trabajos.items()):
+        turno = db.session.get(Turno, turno_id)
+        if turno is None:
+            trabajos.pop(turno_id)
+            continue
+
+        if trabajo["estado"] == "ESPERANDO":
+            if turno.estado != "ESPERANDO":
+                trabajos.pop(turno_id)
+                continue
+            agente = next(
+                (
+                    candidato
+                    for candidato in agentes
+                    if candidato.punto_asignado_id == turno.punto_id
+                    and candidato.id not in ocupados
+                ),
+                None,
+            )
+            if agente is None:
+                continue
+            try:
+                llamar_turno(agente.id, turno.id)
+            except ValueError as error:
+                print(f"  {AMBAR}⚠ No se pudo llamar {turno.codigo}: {error}{FIN}")
+                trabajos.pop(turno_id)
+                continue
+            trabajo.update(
+                estado="LLAMADO",
+                agente_id=agente.id,
+                siguiente_en=instante + rnd.uniform(2, 5),
+            )
+            ocupados.add(agente.id)
+            print(f"  {AMBAR}↗ {agente.nombre} llama {turno.codigo}{FIN}")
+            continue
+
+        if turno.agente_id != trabajo["agente_id"]:
+            print(f"  {AMBAR}⚠ Se detuvo la simulación de {turno.codigo}: cambió su asesor.{FIN}")
+            trabajos.pop(turno_id)
+            continue
+
+        if instante < trabajo["siguiente_en"]:
+            continue
+
+        try:
+            if trabajo["estado"] == "LLAMADO" and turno.estado == "LLAMADO":
+                iniciar_atencion(trabajo["agente_id"], turno_id)
+                trabajo.update(
+                    estado="EN_ATENCION",
+                    siguiente_en=instante + rnd.uniform(18, 32),
+                )
+                print(f"  {VERDE}● {trabajo['agente_id']} atiende {turno.codigo}{FIN}")
+            elif trabajo["estado"] == "EN_ATENCION" and turno.estado == "EN_ATENCION":
+                finalizar_atencion(trabajo["agente_id"], turno_id)
+                trabajos.pop(turno_id)
+                print(f"  {VERDE}✓ Turno {turno.codigo} atendido{FIN}")
+            else:
+                print(
+                    f"  {AMBAR}⚠ Se detuvo la simulación de {turno.codigo}: "
+                    f"estado inesperado ({turno.estado}).{FIN}"
+                )
+                trabajos.pop(turno_id)
+        except ValueError as error:
+            print(f"  {AMBAR}⚠ No se pudo avanzar {turno.codigo}: {error}{FIN}")
+            trabajos.pop(turno_id)
+
+
+
+def _registrar_sesion_agentes(db, agentes, accion, detalle):
+    """Registra entrada/salida de los agentes demo para que aparezcan en Actividad."""
+    from app.dominios.auditoria.modelos import Auditoria
+
+    instante = datetime.now(UTC).replace(tzinfo=None)
+    for agente in agentes:
+        db.session.add(
+            Auditoria(
+                fecha=instante,
+                usuario_id=agente.id,
+                accion=accion,
+                detalle=detalle,
+                ip="127.0.0.1",
+            )
+        )
+        if accion == "login":
+            agente.ultimo_acceso = instante
+    db.session.commit()
+
+
+def _mostrar_tablero_operativo(Turno, agentes, trabajos, ids_turnos, creadas, intervalo):
+    """Resumen de operación para comprobar que los agentes sí están atendiendo."""
+    ids = [a.id for a in agentes]
+    estados = ("ESPERANDO", "LLAMADO", "EN_ATENCION", "ATENDIDO", "NO_ASISTIO", "CANCELADO")
+    conteos = {
+        estado: Turno.query.filter(Turno.id.in_(ids_turnos), Turno.estado == estado).count()
+        if ids_turnos else 0
+        for estado in estados
+    }
+    activos = Turno.query.filter(
+        Turno.agente_id.in_(ids), Turno.estado.in_(("LLAMADO", "EN_ATENCION"))
+    ).all() if ids else []
+    ocupados = {t.agente_id: t for t in activos}
+    print(f"\n{NEGRITA}TABLERO OPERATIVO · últimas {intervalo}s{FIN}")
+    print(
+        f"Reservas generadas: {creadas} | En espera: {conteos['ESPERANDO']} | "
+        f"Llamados: {conteos['LLAMADO']} | En atención: {conteos['EN_ATENCION']} | "
+        f"Atendidos: {conteos['ATENDIDO']} | No asistieron: {conteos['NO_ASISTIO']} | "
+        f"Cancelados: {conteos['CANCELADO']}"
+    )
+    for agente in agentes:
+        turno = ocupados.get(agente.id)
+        if turno:
+            estado = "LLAMANDO" if turno.estado == "LLAMADO" else "ATENDIENDO"
+            print(f"  {VERDE}●{FIN} {agente.nombre:<24} {estado:<12} {turno.codigo}")
+        else:
+            print(f"  {GRIS}○{FIN} {agente.nombre:<24} DISPONIBLE")
+    print()
+
 
 def comando_en_vivo(args):
     """Crea reservas de ciudadanos ficticios cada pocos segundos en la BD real,
-    respetando el cupo por sede. Sirve para ver el panel y la consola reaccionar
-    sin tocar nada. Ctrl+C para detener."""
+    respetando el cupo por sede y, por defecto, simula la atención de esas
+    reservas con los asesores demo. Nunca toma turnos ajenos. Ctrl+C para detener."""
     from app import create_app, db
     from app.dominios.franjas.modelos import Franja
     from app.dominios.sedes.modelos import Punto
@@ -761,71 +987,143 @@ def comando_en_vivo(args):
         if not sedes or not servicios:
             print(f"{ROJO}No hay sedes o trámites. Primero: python simulacion.py --cargar{FIN}")
             return 1
+        agentes_sesion = [] if args.solo_reservas else _agentes_demo_automaticos()
+        if agentes_sesion:
+            _registrar_sesion_agentes(db, agentes_sesion, "login", "Inicio de jornada · simulación FilaCero")
         print(
-            f"{NEGRITA}Modo en vivo{FIN} · {_descripcion_bd(app)}\n"
-            f"Una reserva cada ~{args.cada} s (Ctrl+C para detener). "
-            f"Mira el panel de admin y la consola del asesor.\n"
+            f"{NEGRITA}Modo operativo integral{FIN} · {_descripcion_bd(app)}\n"
+            f"Hasta {args.por_ciclo} reservas cada ~{args.cada} s "
+            + (
+                "· atención automática de turnos demo "
+                "(Ctrl+C para detener).\n"
+                if not args.solo_reservas
+                else "· sin atención automática (Ctrl+C para detener).\n"
+            )
+            + "Mira el panel de admin, la consola de cada agente y la actividad.\n"
+            + f"Tablero de consola cada {args.tablero_cada}s · duración: "
+            + (f"{args.duracion}s\n" if args.duracion else "indefinida\n")
         )
         creadas = 0
+        turnos_simulados = []
+        trabajos_atencion = {}
+        inicio_simulacion = time.monotonic()
+        ultimo_tablero = inicio_simulacion
         try:
             while True:
-                ahora = ahora_local()
-                sede = rnd.choice(sedes)
-                servicio = rnd.choice(servicios)
-                turno = None
-                for fecha in (hoy_local(), hoy_local() + timedelta(days=1)):
-                    asegurar_franjas(sede, servicio, fecha)
-                    proximas = (
-                        Franja.query.filter_by(
-                            punto_id=sede.id, tramite_id=servicio.id, fecha=fecha, activa=True
+                if args.duracion and time.monotonic() - inicio_simulacion >= args.duracion:
+                    break
+                for _ in range(args.por_ciclo):
+                    ahora = ahora_local()
+                    sede = rnd.choice(sedes)
+                    servicio = rnd.choice(servicios)
+                    turno = None
+                    nombre = ""
+                    for fecha in (hoy_local(), hoy_local() + timedelta(days=1)):
+                        asegurar_franjas(sede, servicio, fecha)
+                        proximas = (
+                            Franja.query.filter_by(
+                                punto_id=sede.id, tramite_id=servicio.id, fecha=fecha, activa=True
+                            )
+                            .order_by(Franja.hora_inicio)
+                            .all()
                         )
-                        .order_by(Franja.hora_inicio)
-                        .all()
-                    )
-                    proximas = [
-                        f for f in proximas if fecha > ahora.date() or f.hora_inicio > ahora.time()
-                    ][:4]
-                    rnd.shuffle(proximas)
-                    for franja in proximas:
-                        prefijo = rnd.choice(["00", "10", "15", "20"])
-                        celular = f"3{prefijo}{rnd.randint(1000000, 9999999)}"
-                        nombre = (
-                            f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)} {rnd.choice(APELLIDOS)}"
-                        )
-                        try:
-                            cliente = registrar_cliente_publico(nombre, celular)
-                            turno = crear_turno(cliente.id, servicio.id, sede.id, franja.id)
+                        proximas = [
+                            f
+                            for f in proximas
+                            if fecha > ahora.date() or f.hora_inicio > ahora.time()
+                        ][:4]
+                        rnd.shuffle(proximas)
+                        for franja in proximas:
+                            prefijo = rnd.choice(["00", "10", "15", "20"])
+                            celular = f"3{prefijo}{rnd.randint(1000000, 9999999)}"
+                            nombre = (
+                                f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)} "
+                                f"{rnd.choice(APELLIDOS)}"
+                            )
+                            try:
+                                cliente = registrar_cliente_publico(nombre, celular)
+                                turno = crear_turno(cliente.id, servicio.id, sede.id, franja.id)
+                                break
+                            except ValueError:
+                                db.session.rollback()
+                        if turno:
                             break
-                        except ValueError:
-                            db.session.rollback()  # sin cupo: se intenta otra franja
                     if turno:
-                        break
-                if turno:
-                    creadas += 1
-                    print(
-                        f"  {VERDE}●{FIN} {ahora:%H:%M:%S}  {turno.codigo}  "
-                        f"{sede.nombre:<16} {servicio.nombre[:26]:<26} "
-                        f"{turno.franja.fecha:%d/%m} {turno.franja.hora_inicio:%H:%M}  "
-                        f"{GRIS}{nombre}{FIN}"
-                    )
-                else:
-                    print(f"  {AMBAR}●{FIN} {ahora:%H:%M:%S}  {sede.nombre}: sin cupo cercano")
+                        creadas += 1
+                        turnos_simulados.append(turno.id)
+                        turnos_simulados = turnos_simulados[-100:]
+                        if not args.solo_reservas:
+                            trabajos_atencion[turno.id] = {
+                                "estado": "ESPERANDO",
+                                "punto_id": sede.id,
+                            }
+                        print(
+                            f"  {VERDE}●{FIN} {ahora:%H:%M:%S}  {turno.codigo}  "
+                            f"{sede.nombre:<16} {servicio.nombre[:26]:<26} "
+                            f"{turno.franja.fecha:%d/%m} {turno.franja.hora_inicio:%H:%M}  "
+                            f"{GRIS}{nombre}{FIN}"
+                        )
+                    else:
+                        print(
+                            f"  {AMBAR}●{FIN} {ahora:%H:%M:%S}  "
+                            f"{sede.nombre}: sin cupo cercano"
+                        )
+                if not args.solo_reservas:
+                    db.session.expire_all()
+                    agentes = _agentes_demo_automaticos()
+                    if not agentes:
+                        print(
+                            f"  {AMBAR}⚠ No hay asesores demo activos con sede; "
+                            f"las reservas nuevas quedarán en espera.{FIN}"
+                        )
+                    else:
+                        _avanzar_atenciones_simuladas(
+                            db, trabajos_atencion, agentes, time.monotonic(), rnd
+                        )
                 # De vez en cuando alguien cancela (libera cupo, como en la vida real)
                 if creadas and rnd.random() < 0.12:
                     espera = (
-                        Turno.query.filter_by(estado="ESPERANDO")
-                        .order_by(Turno.id.desc())
-                        .limit(20)
-                        .all()
+                        [
+                            turno
+                            for turno in Turno.query.filter(
+                                Turno.id.in_(turnos_simulados), Turno.estado == "ESPERANDO"
+                            )
+                            .order_by(Turno.id.desc())
+                            .limit(20)
+                            .all()
+                            if turno.id in trabajos_atencion
+                            and trabajos_atencion[turno.id]["estado"] == "ESPERANDO"
+                        ]
                     )
                     if espera:
                         cancelado = rnd.choice(espera)
                         cancelado.estado = "CANCELADO"
                         db.session.commit()
+                        trabajos_atencion.pop(cancelado.id, None)
                         print(f"  {GRIS}○ {cancelado.codigo} canceló su turno{FIN}")
-                time.sleep(max(2, args.cada * rnd.uniform(0.6, 1.4)))
+                ahora_mono = time.monotonic()
+                if not args.solo_reservas and ahora_mono - ultimo_tablero >= args.tablero_cada:
+                    db.session.expire_all()
+                    agentes_actuales = _agentes_demo_automaticos()
+                    _mostrar_tablero_operativo(
+                        Turno, agentes_actuales, trabajos_atencion, turnos_simulados,
+                        creadas, args.tablero_cada,
+                    )
+                    ultimo_tablero = ahora_mono
+                time.sleep(max(1, args.cada * rnd.uniform(0.6, 1.4)))
         except KeyboardInterrupt:
-            print(f"\n{NEGRITA}Listo:{FIN} {creadas} reservas creadas en vivo.")
+            print(f"\n{AMBAR}Interrupción solicitada por el usuario.{FIN}")
+        finally:
+            if agentes_sesion:
+                _registrar_sesion_agentes(
+                    db, agentes_sesion, "logout", "Fin de jornada · simulación FilaCero"
+                )
+            print(f"\n{NEGRITA}Resumen final:{FIN} {creadas} reservas creadas en vivo.")
+            if not args.solo_reservas:
+                _mostrar_tablero_operativo(
+                    Turno, _agentes_demo_automaticos(), trabajos_atencion,
+                    turnos_simulados, creadas, args.tablero_cada,
+                )
     return 0
 
 
@@ -939,7 +1237,9 @@ def escenario_ciudadano(api, celular):
     s, d, _ = api("POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular})
     codigo = d.get("codigo_prueba")
     if not paso("Solicita código de verificación", s == 200 and codigo, f"código prueba {codigo}"):
-        print(f"    {GRIS}(activa FILACERO_OTP_TEST_MODE=true en el .env){FIN}")
+        print(
+            f"    {GRIS}(activa FILACERO_OTP_TEST_MODE=true y prueba contra localhost){FIN}"
+        )
         return None
 
     s, _, _ = api(
@@ -1068,7 +1368,7 @@ def escenario_agente(api, correo):
         paso("Llama al siguiente turno", False, d.get("error", ""))
         if "horario" in d.get("error", ""):
             print(
-                f"    {GRIS}(fuera de 8:00–18:00: pon "
+                f"    {GRIS}(horario restringido: pon "
                 f"RESTRINGIR_ATENCION_HORARIO=false para probar){FIN}"
             )
         return
@@ -1422,6 +1722,11 @@ def main():
     )
     parser.add_argument("--borrar", action="store_true", help="Solo borra todos los registros")
     parser.add_argument("--si", action="store_true", help="No pedir confirmación al borrar")
+    parser.add_argument(
+        "--permitir-borrar-remoto",
+        action="store_true",
+        help="Permite --cargar/--borrar en una BD remota; aún requiere confirmar BORRAR",
+    )
     parser.add_argument("--desde", help="Primer día a simular (AAAA-MM-DD). Por defecto: hoy - 6")
     parser.add_argument("--hasta", help="Último día completo a simular. Por defecto: ayer")
     parser.add_argument(
@@ -1430,8 +1735,8 @@ def main():
     parser.add_argument(
         "--turnos",
         type=int,
-        default=500,
-        help="Turnos aproximados de los días pasados (0 = operación completa). Por defecto 500",
+        default=1200,
+        help="Turnos aproximados de los días pasados (0 = operación completa). Por defecto 1200",
     )
     parser.add_argument(
         "--semilla", type=int, help="Número fijo para repetir exactamente los mismos datos"
@@ -1448,8 +1753,39 @@ def main():
     parser.add_argument(
         "--en-vivo", action="store_true", help="Crea reservas cada pocos segundos (Ctrl+C para)"
     )
-    parser.add_argument("--cada", type=int, default=15, help="Segundos entre reservas en vivo")
+    parser.add_argument("--cada", type=int, default=10, help="Segundos entre ciclos en vivo")
+    parser.add_argument(
+        "--solo-reservas", action="store_true",
+        help="Solo crea reservas; no simula agentes atendiendo",
+    )
+    parser.add_argument(
+        "--duracion", type=int, default=0,
+        help="Segundos de operación en vivo; 0 = hasta Ctrl+C",
+    )
+    parser.add_argument(
+        "--tablero-cada", type=int, default=15,
+        help="Frecuencia en segundos del tablero operativo de agentes",
+    )
+    parser.add_argument(
+        "--por-ciclo",
+        type=int,
+        default=3,
+        help="Reservas que intenta crear en cada ciclo en vivo (por defecto 3)",
+    )
     args = parser.parse_args()
+
+    if args.cada < 1:
+        parser.error("--cada debe ser al menos 1 segundo.")
+    if args.por_ciclo < 1 or args.por_ciclo > 20:
+        parser.error("--por-ciclo debe estar entre 1 y 20.")
+    if args.duracion < 0:
+        parser.error("--duracion no puede ser negativa.")
+    if args.tablero_cada < 5:
+        parser.error("--tablero-cada debe ser al menos 5 segundos.")
+    if args.dias is not None and args.dias < 1:
+        parser.error("--dias debe ser al menos 1.")
+    if args.turnos < 0:
+        parser.error("--turnos no puede ser negativo.")
 
     if args.en_vivo:
         return comando_en_vivo(args)

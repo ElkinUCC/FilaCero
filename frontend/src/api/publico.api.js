@@ -17,16 +17,28 @@ export const franjasDisponibles = ({ sedeId, tramiteId, fecha }) =>
 export const solicitarCodigo = (celular) =>
   http.post("/turnos/publico/solicitar-codigo", { celular }, publico);
 
-export const verificarCodigo = (celular, codigo) =>
-  http.post("/turnos/publico/verificar-codigo", { celular, codigo }, publico);
+export const verificarCodigo = (celular, codigo, proposito = "reserva", codigoTurno) =>
+  http.post(
+    "/turnos/publico/verificar-codigo",
+    { celular, codigo, proposito, ...(codigoTurno ? { codigo_turno: codigoTurno } : {}) },
+    publico
+  );
 
 export const reservarTurno = (datos) => http.post("/turnos/publico", datos, publico);
 
-export const consultarTurno = (codigo, celular) =>
-  http.post("/turnos/publico/consultar", { codigo, celular }, publico);
+export const consultarTurno = (codigo, celular, tokenVerificacion) =>
+  http.post(
+    "/turnos/publico/consultar",
+    { codigo, celular, token_verificacion: tokenVerificacion },
+    publico
+  );
 
-export const cancelarTurno = (codigo, celular) =>
-  http.post("/turnos/publico/cancelar", { codigo, celular }, publico);
+export const cancelarTurno = (codigo, celular, tokenVerificacion) =>
+  http.post(
+    "/turnos/publico/cancelar",
+    { codigo, celular, token_verificacion: tokenVerificacion },
+    publico
+  );
 
 /** Pantalla de la sala de espera (sin datos personales). */
 export const pantallaSala = (sedeId) =>

@@ -9,7 +9,7 @@ const DIAS_VISIBLES = 7;
 /**
  * Formulario de reserva en una sola vista.
  * - onResumen(resumen): informa la selección en vivo (para la ficha).
- * - onConfirmado(turno, celular, espera): reserva creada.
+ * - onConfirmado(turno, celular, espera, tokenConsulta): reserva creada.
  */
 export default function ReservarTurno({ onResumen, onConfirmado }) {
   const [sedes, setSedes] = useState([]);
@@ -179,7 +179,7 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
         tramite_id: Number(tramite),
         franja_id: Number(franja),
       });
-      onConfirmado?.(r.turno, celular, r.espera);
+      onConfirmado?.(r.turno, celular, r.espera, r.token_consulta);
       setSede(""); setTramite(""); setFranja(""); setFecha(hoyISO()); setInicioDias(0);
       setNombre(""); setCelular(""); setVerificacion(""); setCodigo("");
     } catch (e) {

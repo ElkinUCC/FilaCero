@@ -16,11 +16,22 @@ from .servicios import cancelar_turno, cancelar_turno_publico, crear_turno, mis_
 turnos_bp = Blueprint("turnos", __name__)
 
 VIGENCIA_VERIFICACION_SEG = 15 * 60
+PROPOSITOS_VERIFICACION = {"reserva", "consulta", "cancelacion"}
 
 
 def _serializador_verificacion():
     return URLSafeTimedSerializer(
         current_app.config["SECRET_KEY"], salt="filacero-verificacion-celular"
+    )
+
+
+def _token_verificacion(celular, proposito="reserva", codigo_turno=None):
+    return _serializador_verificacion().dumps(
+        {
+            "celular": celular,
+            "proposito": proposito,
+            "codigo_turno": codigo_turno,
+        }
     )
 
 
@@ -74,15 +85,27 @@ def verificar_codigo_celular():
         celular = normalizar_celular(datos.get("celular"))
         if not codigo.isdigit():
             raise ValueError("Ingresa el código numérico que recibiste.")
+        proposito = str(datos.get("proposito", "reserva")).strip().lower()
+        if proposito not in PROPOSITOS_VERIFICACION:
+            raise ValueError("El propósito de verificación no es válido.")
+        codigo_turno = str(datos.get("codigo_turno", "")).strip().upper()
+        if proposito != "reserva" and not codigo_turno:
+            raise ValueError("Ingresa el código del turno que deseas verificar.")
+        if len(codigo_turno) > 30:
+            raise ValueError("El código del turno no es válido.")
         otp.verificar_codigo(celular, codigo)
     except ValueError as error:
         return {"error": str(error)}, 400
 
-    token = _serializador_verificacion().dumps({"celular": celular})
+    token = _token_verificacion(
+        celular,
+        proposito=proposito,
+        codigo_turno=codigo_turno if proposito != "reserva" else None,
+    )
     return {"mensaje": "Celular verificado correctamente.", "token_verificacion": token}, 200
 
 
-def _celular_verificado(datos):
+def _celular_verificado(datos, proposito="reserva", codigo_turno=None):
     token = str(datos.get("token_verificacion", "")).strip()
     if not token:
         raise ValueError("Debes verificar tu celular antes de continuar.")
@@ -92,6 +115,10 @@ def _celular_verificado(datos):
         raise ValueError("La verificación expiró. Verifica tu celular nuevamente.") from None
     except BadSignature:
         raise ValueError("La verificación del celular no es válida.") from None
+    if verificacion.get("proposito", "reserva") != proposito:
+        raise ValueError("Verifica tu celular para esta operación.")
+    if proposito != "reserva" and verificacion.get("codigo_turno") != codigo_turno:
+        raise ValueError("La verificación no corresponde a este turno.")
     return verificacion.get("celular")
 
 
@@ -122,6 +149,7 @@ def solicitar_turno_publico():
         "mensaje": "Tu turno fue reservado correctamente.",
         "turno": turno_publico_response(turno),
         "espera": estimar_espera(turno),
+        "token_consulta": _token_verificacion(celular, "consulta", turno.codigo),
     }, 201
 
 
@@ -142,7 +170,12 @@ def _turno_publico(datos):
 @limitar("LIMITE_OTP_POR_MINUTO")
 def consultar_turno_publico():
     try:
-        turno = _turno_publico(request.get_json(silent=True) or {})
+        datos = request.get_json(silent=True) or {}
+        codigo = str(datos.get("codigo", "")).strip().upper()
+        celular = normalizar_celular(datos.get("celular"))
+        if _celular_verificado(datos, "consulta", codigo) != celular:
+            raise ValueError("El celular verificado no coincide con el de la consulta.")
+        turno = _turno_publico(datos)
     except ValueError as error:
         return {"error": str(error)}, 400
     except LookupError as error:
@@ -156,7 +189,12 @@ def consultar_turno_publico():
 @limitar("LIMITE_OTP_POR_MINUTO")
 def cancelar_publico():
     try:
-        turno = _turno_publico(request.get_json(silent=True) or {})
+        datos = request.get_json(silent=True) or {}
+        codigo = str(datos.get("codigo", "")).strip().upper()
+        celular = normalizar_celular(datos.get("celular"))
+        if _celular_verificado(datos, "cancelacion", codigo) != celular:
+            raise ValueError("El celular verificado no coincide con el de la cancelación.")
+        turno = _turno_publico(datos)
         turno = cancelar_turno_publico(turno)
     except ValueError as error:
         return {"error": str(error)}, 400

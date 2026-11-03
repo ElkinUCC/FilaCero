@@ -6,12 +6,12 @@ Con el backend en `:5000` (datos de `simulacion.py --cargar`) y `npm run dev` en
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
-| 1.1 | Abrir `/` | Una sola pantalla sin scroll en el portátil; horario "Todos los días, 08:00 a 18:00" | |
+| 1.1 | Abrir `/` | Una sola pantalla sin scroll en el portátil; horario "Todos los días, 00:00 a 23:59" | |
 | 1.2 | Elegir sede y servicio | Se cargan las horas sin botón; cada una muestra sus cupos | |
 | 1.3 | Escribir el celular → Verificar | Aparece el código de prueba; al escribirlo queda "Verificado" | |
 | 1.4 | Confirmar turno | Código grande `XXXXXX`; la ficha de la izquierda se completa | |
-| 1.5 | Ver estado → Escuchar | Personas antes, espera estimada; lectura en voz alta | |
-| 1.6 | Cancelar turno | Estado "Cancelado" | |
+| 1.5 | Ver estado → Escuchar | Personas antes, espera estimada; lectura en voz alta. Una consulta manual solicita verificación SMS. | |
+| 1.6 | Cancelar turno | Solicita y verifica un OTP nuevo; luego muestra estado "Cancelado" | |
 
 ## 2. Rutas y guardas
 

@@ -27,7 +27,7 @@ def consultar_disponibilidad():
     """Franjas reservables por sede, trámite y fecha (YYYY-MM-DD).
 
     Si la sede/trámite no tiene franjas ese día, se generan automáticamente
-    según el horario configurado (por defecto todos los días 08:00-18:00).
+    según el horario configurado (por defecto todos los días, 24 horas).
     """
     sede_id = request.args.get("sede_id", type=int)
     tramite_id = request.args.get("tramite_id", type=int)

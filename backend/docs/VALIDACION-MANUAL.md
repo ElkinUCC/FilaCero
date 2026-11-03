@@ -25,8 +25,8 @@ En Postman, importa `docs/postman/FilaCero.postman_collection.json` y el entorno
 
 | # | Acción | Resultado esperado | ✓ |
 |---|---|---|---|
-| 2.1 | Listar sedes y trámites | 5 sedes y 5 servicios de TecniVisión | |
-| 2.2 | Franjas disponibles para mañana | Franjas de 30 min entre 8:00 y 18:00; `capacidad` = 3 × asesores de la sede | |
+| 2.1 | Listar sedes y trámites | 4 sedes y 5 servicios de TecniVisión | |
+| 2.2 | Franjas disponibles para mañana | Franjas de 30 min entre 00:00 y 23:59; `capacidad` = 3 × asesores de la sede | |
 | 2.3 | Solicitar código con celular `3001234567` | 200; en desarrollo trae `codigo_prueba` | |
 | 2.4 | Verificar con un código errado | 400 · "Código incorrecto…" | |
 | 2.5 | Verificar con el código correcto | 200 · `token_verificacion` | |

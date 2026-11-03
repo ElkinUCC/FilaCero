@@ -9,7 +9,7 @@ import secrets
 import threading
 import time
 
-from flask import current_app
+from flask import current_app, request
 
 _codigos = {}
 _candado = threading.Lock()
@@ -21,6 +21,11 @@ def _enviar_sms(celular, codigo):  # pragma: no cover - integración futura
 
 def generar_codigo(celular):
     config = current_app.config
+    modo_prueba = (
+        config.get("OTP_TEST_MODE")
+        and not config.get("PRODUCCION")
+        and request.remote_addr in ("127.0.0.1", "::1")
+    )
     codigo = f"{secrets.randbelow(1_000_000):06d}"
     with _candado:
         _codigos[celular] = {
@@ -29,7 +34,7 @@ def generar_codigo(celular):
             "intentos": 0,
         }
 
-    if not config.get("OTP_TEST_MODE"):
+    if not modo_prueba:
         _enviar_sms(celular, codigo)
         return None
     return codigo

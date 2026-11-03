@@ -28,9 +28,9 @@
 | `listarSedes()` · `listarTramites()` | `GET /sedes/` · `GET /tramites/` | `puntos[]` · `tramites[]` |
 | `franjasDisponibles({sedeId, tramiteId, fecha})` | `GET /franjas/disponibles?sede_id&tramite_id&fecha` | `franjas[]: {franja_id, hora_inicio, hora_fin, disponibles, capacidad}` |
 | `solicitarCodigo(celular)` | `POST /turnos/publico/solicitar-codigo` `{celular}` | `codigo_prueba` (solo en desarrollo) |
-| `verificarCodigo(celular, codigo)` | `POST /turnos/publico/verificar-codigo` | `token_verificacion` |
-| `reservarTurno(datos)` | `POST /turnos/publico` `{nombre, celular, token_verificacion, punto_id, tramite_id, franja_id}` | 201 `turno`, `espera` |
-| `consultarTurno(codigo, celular)` · `cancelarTurno(...)` | `POST /turnos/publico/consultar` · `/cancelar` | `turno`, `espera` |
+| `verificarCodigo(celular, codigo, proposito, codigoTurno)` | `POST /turnos/publico/verificar-codigo` | `token_verificacion` ligado al propósito y, para consulta/cancelación, al código del turno |
+| `reservarTurno(datos)` | `POST /turnos/publico` `{nombre, celular, token_verificacion, punto_id, tramite_id, franja_id}` | 201 `turno`, `espera`, permiso temporal `token_consulta` |
+| `consultarTurno(codigo, celular, token)` · `cancelarTurno(codigo, celular, token)` | `POST /turnos/publico/consultar` · `/cancelar` | `turno`, `espera`; ambos requieren permiso OTP |
 | `pantallaSala(sedeId)` | `GET /turnos/publico/sala?sede_id` | `sede`, `sedes[]`, `llamados[]`, `siguientes[]`, `horario` (sin datos personales) |
 
 ### Acceso del personal (`auth.api.js`)

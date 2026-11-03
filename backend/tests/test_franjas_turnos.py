@@ -526,9 +526,10 @@ def test_cliente_no_puede_consultar_metricas(app_prueba, datos):
 def test_admin_historial_paginado(app_prueba, datos):
     reservar(datos)
     token = token_usuario(app_prueba, crear_admin().id, rol="ADMIN")
+    hasta = (date.today() + timedelta(days=2)).isoformat()
 
     respuesta = app_prueba.test_client().get(
-        "/api/v1/admin/agentes/historial?pagina=1&por_pagina=10",
+        f"/api/v1/admin/agentes/historial?pagina=1&por_pagina=10&hasta={hasta}",
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -537,6 +538,25 @@ def test_admin_historial_paginado(app_prueba, datos):
     assert resultado["total"] == 1
     assert resultado["pagina"] == 1
     assert len(resultado["turnos"]) == 1
+
+
+def test_historial_excluye_reservas_futuras_si_no_hay_filtro_de_fecha(app_prueba, datos):
+    reservar(datos)
+    token = token_usuario(app_prueba, crear_admin().id, rol="ADMIN")
+    cliente = app_prueba.test_client()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    historial = cliente.get("/api/v1/admin/agentes/historial", headers=headers)
+    assert historial.status_code == 200
+    assert historial.get_json()["total"] == 0
+
+    hasta = (date.today() + timedelta(days=2)).isoformat()
+    historial_con_fechas = cliente.get(
+        f"/api/v1/admin/agentes/historial?hasta={hasta}",
+        headers=headers,
+    )
+    assert historial_con_fechas.status_code == 200
+    assert historial_con_fechas.get_json()["total"] == 1
 
 
 def test_historial_rechaza_paginacion_invalida(app_prueba, datos):

@@ -46,7 +46,7 @@ export default function Historial({ titulo }) {
 
   return (
     <section className="adm__seccion">
-      <Encabezado titulo={titulo} detalle="Todos los turnos con su resultado, quién atendió y si se cumplió la franja." actualizado={actualizado} error={error} />
+      <Encabezado titulo={titulo} detalle="Turnos de hoy y días anteriores. Para consultar reservas futuras, usa los filtros de fecha." actualizado={actualizado} error={error} />
 
       <article className="panel panel--tabla">
         <div className="barra-tabla barra-tabla--filtros">

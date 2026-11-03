@@ -121,11 +121,11 @@ def test_disponibilidad_refleja_cupo_de_la_sede(app, base):
     f1 = db.session.get(Franja, franjas[0]["franja_id"])
     reservar(base, f1, base["t1"], "3000000001")
     reservar(base, f1, base["t1"], "3000000002")
-    # El otro trámite ve solo 1 cupo a las 08:00 porque la sede ya tiene 2.
+    # El otro trámite ve solo 1 cupo a medianoche porque la sede ya tiene 2.
     otras = cliente.get(
         "/api/v1/franjas/disponibles", query_string={**q, "tramite_id": base["t2"].id}
     ).get_json()["franjas"]
-    assert otras[0]["hora_inicio"] == "08:00" and otras[0]["disponibles"] == 1
+    assert otras[0]["hora_inicio"] == "00:00" and otras[0]["disponibles"] == 1
 
 
 # ---------------------------------------------------------------- despacho

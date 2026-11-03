@@ -27,7 +27,7 @@ backend/
 │   ├── config.py               # Config desde .env + validación para producción
 │   ├── errores.py              # Excepciones de dominio + manejador global
 │   ├── seguridad.py            # requiere_rol, limitar, contraseñas, celular
-│   ├── horario.py              # Horario 8–18, franjas automáticas, CUPO POR SEDE
+│   ├── horario.py              # Horario demo 24/7, franjas automáticas, CUPO POR SEDE
 │   └── dominios/
 │       ├── usuarios/           # login, cuenta propia, admin de usuarios y permisos
 │       ├── sedes/ · tramites/  # catálogo
@@ -92,7 +92,7 @@ pip install -r requirements-dev.txt
 copy .env.example .env ; python scripts\generate_secret.py
 python scripts\create_db.py
 flask db upgrade
-python simulacion.py --cargar          # escribe BORRAR
+python simulacion.py --cargar          # escribe BORRAR; en BD remota exige confirmación extra
 python app.py                          # http://127.0.0.1:5000/health
 ```
 
@@ -106,8 +106,10 @@ python app.py                          # http://127.0.0.1:5000/health
 | `ruff check .` · `black .` | Estilo y formato (100 columnas) |
 | `pip-audit -r requirements.txt` | Vulnerabilidades en dependencias |
 | `python simulacion.py` | 50 verificaciones de punta a punta en memoria |
-| `python simulacion.py --cargar [--si] [--desde AAAA-MM-DD --hasta AAAA-MM-DD]` | Borra y carga una semana de TecniVisión |
+| `python simulacion.py --cargar [--si] [--desde AAAA-MM-DD --hasta AAAA-MM-DD]` | Borra y carga datos demo; base remota requiere `--permitir-borrar-remoto` |
 | `python simulacion.py --borrar` | Solo borra los datos |
+| `python simulacion.py --en-vivo --cada 10 --por-ciclo 3` | Crea y atiende automáticamente hasta 3 reservas demo cada 10 segundos; no toma turnos ajenos |
+| `python simulacion.py --en-vivo --solo-reservas` | Crea reservas sin atención automática |
 | `python simulacion.py --carga --url http://127.0.0.1:5000` | Prueba de carga y de sobrecupo |
 | `python scripts/promover_admin.py correo@x.co [ADMIN\|SUPERVISOR\|AGENTE]` | Recupera el acceso de administrador |
 | `flask db upgrade` · `flask db history` | Migraciones |
@@ -121,13 +123,13 @@ python app.py                          # http://127.0.0.1:5000/health
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/health` · `/health/listo` | Proceso vivo · base de datos lista |
-| GET | `/api/v1/horario` | Horario, días y reglas de cupo |
+| GET | `/api/v1/horario` | Horario demo 24/7, días y reglas de cupo |
 | GET | `/api/v1/sedes/` · `/api/v1/tramites/` | Catálogo activo (`?todos=1` para el panel) |
 | GET | `/api/v1/franjas/disponibles?sede_id&tramite_id&fecha` | Franjas con cupo de la sede |
 | POST | `/api/v1/turnos/publico/solicitar-codigo` | Envía el OTP al celular |
-| POST | `/api/v1/turnos/publico/verificar-codigo` | Valida el OTP y devuelve `token_verificacion` |
-| POST | `/api/v1/turnos/publico` | Reserva el turno (candado por sede, sin sobrecupo) |
-| POST | `/api/v1/turnos/publico/consultar` · `/cancelar` | Consulta o cancela con código + celular |
+| POST | `/api/v1/turnos/publico/verificar-codigo` | Valida el OTP; `proposito` (`reserva`, `consulta`, `cancelacion`) y `codigo_turno` vinculan el permiso a la operación |
+| POST | `/api/v1/turnos/publico` | Reserva el turno y devuelve un permiso temporal de consulta para ese turno |
+| POST | `/api/v1/turnos/publico/consultar` · `/cancelar` | Requiere código, celular y permiso OTP reciente del propósito/código correspondiente |
 | GET | `/api/v1/turnos/publico/sala?sede_id` | Pantalla de sala, sin datos personales |
 
 **Cuenta propia** (`Authorization: Bearer <token>`)

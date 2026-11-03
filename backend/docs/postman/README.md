@@ -2,7 +2,7 @@
 
 ## Archivos
 
-- `FilaCero.postman_collection.json`: 64 peticiones en 9 carpetas, que cubren las **54 rutas** de la API, con aserciones.
+- `FilaCero.postman_collection.json`: peticiones en 9 carpetas que cubren las rutas de la API, con aserciones.
 - `FilaCero.local.postman_environment.json`: entorno local. Las claves van **vacías**: complétalas tú.
 
 ## Preparación
@@ -17,7 +17,7 @@
 | Carpeta | Qué demuestra |
 |---|---|
 | 01 Salud | API y base de datos vivas |
-| 02 Portal del ciudadano | OTP → reserva → consulta → cancelación → sala |
+| 02 Portal del ciudadano | OTP → reserva → consulta autorizada → OTP nuevo para cancelar → sala |
 | 03 Autenticación | Login de administrador y asesor; 401 con una clave errada |
 | 04 Consola del asesor | Ciclo de atención completo; 403 al intentar entrar a admin |
 | 05 Catálogo | CRUD; **409** con un nombre repetido |

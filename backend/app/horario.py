@@ -23,11 +23,11 @@ def hoy_local():
 
 
 def apertura():
-    return time(int(current_app.config.get("HORA_APERTURA", 8)), 0)
+    return time(int(current_app.config.get("HORA_APERTURA", 0)), 0)
 
 
 def cierre():
-    hora = int(current_app.config.get("HORA_CIERRE", 18))
+    hora = int(current_app.config.get("HORA_CIERRE", 24))
     return time(23, 59) if hora >= 24 else time(hora, 0)
 
 
@@ -136,19 +136,20 @@ def asegurar_franjas(punto, tramite, fecha):
     limite = datetime.combine(fecha, cierre())
     creadas = 0
 
-    while actual + duracion <= limite:
+    while actual < limite:
+        fin = min(actual + duracion, limite)
         db.session.add(
             Franja(
                 punto_id=punto.id,
                 tramite_id=tramite.id,
                 fecha=fecha,
                 hora_inicio=actual.time(),
-                hora_fin=(actual + duracion).time(),
+                hora_fin=fin.time(),
                 capacidad=capacidad,
                 activa=True,
             )
         )
-        actual += duracion
+        actual = fin
         creadas += 1
 
     try:

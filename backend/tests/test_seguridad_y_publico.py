@@ -66,13 +66,16 @@ def token(usuario):
     }
 
 
-def verificar_celular(cliente, celular=CELULAR):
+def verificar_celular(cliente, celular=CELULAR, proposito="reserva", codigo_turno=None):
     r = cliente.post("/api/v1/turnos/publico/solicitar-codigo", json={"celular": celular})
     assert r.status_code == 200
     codigo = r.get_json()["codigo_prueba"]
     assert len(codigo) == 6 and codigo.isdigit()
+    datos = {"celular": celular, "codigo": codigo, "proposito": proposito}
+    if codigo_turno:
+        datos["codigo_turno"] = codigo_turno
     r = cliente.post(
-        "/api/v1/turnos/publico/verificar-codigo", json={"celular": celular, "codigo": codigo}
+        "/api/v1/turnos/publico/verificar-codigo", json=datos
     )
     assert r.status_code == 200
     return r.get_json()["token_verificacion"]
@@ -91,14 +94,15 @@ def primera_franja(cliente, base, dias=1):
 # ---------------------------------------------------------------- horario
 
 
-def test_franjas_automaticas_todos_los_dias_8_a_18(app, base):
+def test_franjas_automaticas_todos_los_dias_24_horas(app, base):
     cliente = app.test_client()
     for dias in range(1, 8):  # una semana completa, incluye sábado y domingo
         franjas = primera_franja(cliente, base, dias)
         assert franjas, f"Sin franjas a {dias} días"
-        assert franjas[0]["hora_inicio"] == "08:00"
-        assert franjas[-1]["hora_fin"] == "18:00"
-        assert len(franjas) == 20  # 10 horas en franjas de 30 minutos
+        assert franjas[0]["hora_inicio"] == "00:00"
+        assert franjas[-1]["hora_inicio"] == "23:30"
+        assert franjas[-1]["hora_fin"] == "23:59"
+        assert len(franjas) == 48
 
 
 def test_no_permite_fechas_pasadas_ni_muy_lejanas(app, base):
@@ -117,8 +121,8 @@ def test_no_permite_fechas_pasadas_ni_muy_lejanas(app, base):
 
 def test_endpoint_horario_publico(app):
     datos = app.test_client().get("/api/v1/horario").get_json()
-    assert datos["hora_apertura"] == "08:00"
-    assert datos["hora_cierre"] == "18:00"
+    assert datos["hora_apertura"] == "00:00"
+    assert datos["hora_cierre"] == "23:59"
     assert datos["todos_los_dias"] is True
 
 
@@ -184,9 +188,53 @@ def test_reserva_consulta_y_cancelacion_publica(app, base):
     turno = r.get_json()["turno"]
     assert turno["celular"] == "300****567"  # enmascarado
     assert "usuario_id" not in turno
+    token_consulta_reserva = r.get_json()["token_consulta"]
 
     r = cliente.post(
         "/api/v1/turnos/publico/consultar", json={"codigo": turno["codigo"], "celular": CELULAR}
+    )
+    assert r.status_code == 400
+
+    r = cliente.post(
+        "/api/v1/turnos/publico/consultar",
+        json={
+            "codigo": turno["codigo"],
+            "celular": CELULAR,
+            "token_verificacion": verificacion,
+        },
+    )
+    assert r.status_code == 400  # reserva no autoriza consulta de información personal
+
+    r = cliente.post(
+        "/api/v1/turnos/publico/consultar",
+        json={
+            "codigo": turno["codigo"],
+            "celular": CELULAR,
+            "token_verificacion": token_consulta_reserva,
+        },
+    )
+    assert r.status_code == 200
+
+    r = cliente.post(
+        "/api/v1/turnos/publico/consultar",
+        json={
+            "codigo": "FC-20260101-ABCDEF",
+            "celular": CELULAR,
+            "token_verificacion": token_consulta_reserva,
+        },
+    )
+    assert r.status_code == 400  # la autorización está ligada al código reservado
+
+    token_consulta = verificar_celular(
+        cliente, CELULAR, proposito="consulta", codigo_turno=turno["codigo"]
+    )
+    r = cliente.post(
+        "/api/v1/turnos/publico/consultar",
+        json={
+            "codigo": turno["codigo"],
+            "celular": CELULAR,
+            "token_verificacion": token_consulta,
+        },
     )
     assert r.status_code == 200
     assert r.get_json()["turno"]["estado"] == "ESPERANDO"
@@ -200,6 +248,29 @@ def test_reserva_consulta_y_cancelacion_publica(app, base):
 
     r = cliente.post(
         "/api/v1/turnos/publico/cancelar", json={"codigo": turno["codigo"], "celular": CELULAR}
+    )
+    assert r.status_code == 400
+
+    r = cliente.post(
+        "/api/v1/turnos/publico/cancelar",
+        json={
+            "codigo": turno["codigo"],
+            "celular": CELULAR,
+            "token_verificacion": token_consulta,
+        },
+    )
+    assert r.status_code == 400  # consulta no autoriza cancelar
+
+    token_cancelacion = verificar_celular(
+        cliente, CELULAR, proposito="cancelacion", codigo_turno=turno["codigo"]
+    )
+    r = cliente.post(
+        "/api/v1/turnos/publico/cancelar",
+        json={
+            "codigo": turno["codigo"],
+            "celular": CELULAR,
+            "token_verificacion": token_cancelacion,
+        },
     )
     assert r.status_code == 200
     assert r.get_json()["turno"]["estado"] == "CANCELADO"

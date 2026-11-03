@@ -110,12 +110,12 @@ class Config:
     MAX_CONTENT_LENGTH = 64 * 1024
 
     # ------------------------------------------------------------------
-    # Horario de atención (todos los días por defecto, 08:00 a 18:00)
+    # Horario de atención (todos los días por defecto, 24 horas)
     # DIAS_ATENCION: 0=lunes ... 6=domingo
     # ------------------------------------------------------------------
     ZONA_HORARIA = os.getenv("ZONA_HORARIA", "America/Bogota")
-    HORA_APERTURA = _int("HORA_APERTURA", 8)
-    HORA_CIERRE = _int("HORA_CIERRE", 18)
+    HORA_APERTURA = _int("HORA_APERTURA", 0)
+    HORA_CIERRE = _int("HORA_CIERRE", 24)
     DIAS_ATENCION = [
         int(d)
         for d in os.getenv("DIAS_ATENCION", "0,1,2,3,4,5,6").split(",")
@@ -144,9 +144,6 @@ class Config:
     # En modo prueba el código se devuelve en la respuesta (NO producción).
     # ------------------------------------------------------------------
     OTP_TEST_MODE = _bool("FILACERO_OTP_TEST_MODE", not PRODUCCION)
-    # Demostración pública (servidor gratuito, sin proveedor de SMS): permite
-    # mostrar el código de verificación en pantalla aunque sea producción.
-    DEMO_PUBLICA = _bool("DEMO_PUBLICA", False)
     OTP_VIGENCIA_SEG = _int("OTP_VIGENCIA_SEG", 300)
     OTP_MAX_INTENTOS = _int("OTP_MAX_INTENTOS", 5)
 
@@ -194,10 +191,9 @@ def validar_configuracion(app):
         if len(valor) < 32 or valor.startswith("solo-desarrollo"):
             problemas.append(f"{clave} debe tener al menos 32 caracteres aleatorios.")
 
-    if app.config.get("OTP_TEST_MODE") and not app.config.get("DEMO_PUBLICA"):
+    if app.config.get("OTP_TEST_MODE"):
         problemas.append(
-            "FILACERO_OTP_TEST_MODE no puede estar activo en producción "
-            "(salvo una demostración pública con DEMO_PUBLICA=true)."
+            "FILACERO_OTP_TEST_MODE no puede estar activo en producción."
         )
 
     if app.config.get("DEBUG"):

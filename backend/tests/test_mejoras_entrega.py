@@ -166,7 +166,27 @@ def test_consulta_y_cancelacion_publica_exigen_celular_correcto(app_cola_libre):
         "/api/v1/turnos/publico/consultar", json=incorrecto
     ).status_code == 400
 
-    consulta = cliente.post("/api/v1/turnos/publico/consultar", json=correcto)
+    assert cliente.post(
+        "/api/v1/turnos/publico/consultar", json=correcto
+    ).status_code == 400
+    solicitud = cliente.post(
+        "/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR_A}
+    )
+    assert solicitud.status_code == 200
+    verificacion = cliente.post(
+        "/api/v1/turnos/publico/verificar-codigo",
+        json={
+            "celular": CELULAR_A,
+            "codigo": solicitud.get_json()["codigo_prueba"],
+            "proposito": "consulta",
+            "codigo_turno": turno.codigo,
+        },
+    )
+    assert verificacion.status_code == 200
+    consulta = cliente.post(
+        "/api/v1/turnos/publico/consultar",
+        json={**correcto, "token_verificacion": verificacion.get_json()["token_verificacion"]},
+    )
     assert consulta.status_code == 200
     assert consulta.get_json()["turno"]["codigo"] == turno.codigo
     assert "espera" in consulta.get_json()
@@ -175,7 +195,24 @@ def test_consulta_y_cancelacion_publica_exigen_celular_correcto(app_cola_libre):
         "/api/v1/turnos/publico/cancelar", json=incorrecto
     ).status_code == 400
 
-    cancelado = cliente.post("/api/v1/turnos/publico/cancelar", json=correcto)
+    solicitud = cliente.post(
+        "/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR_A}
+    )
+    assert solicitud.status_code == 200
+    verificacion = cliente.post(
+        "/api/v1/turnos/publico/verificar-codigo",
+        json={
+            "celular": CELULAR_A,
+            "codigo": solicitud.get_json()["codigo_prueba"],
+            "proposito": "cancelacion",
+            "codigo_turno": turno.codigo,
+        },
+    )
+    assert verificacion.status_code == 200
+    cancelado = cliente.post(
+        "/api/v1/turnos/publico/cancelar",
+        json={**correcto, "token_verificacion": verificacion.get_json()["token_verificacion"]},
+    )
     assert cancelado.status_code == 200
     assert cancelado.get_json()["turno"]["estado"] == "CANCELADO"
 

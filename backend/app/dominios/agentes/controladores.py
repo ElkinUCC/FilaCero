@@ -374,6 +374,7 @@ def actualizar_agente(usuario_id):
 
     datos = request.get_json(silent=True) or {}
     try:
+        revocar_sesiones = False
         if "nombre" in datos:
             nombre = " ".join(str(datos["nombre"]).split())
             if len(nombre) < 3 or len(nombre) > 100:
@@ -385,9 +386,13 @@ def actualizar_agente(usuario_id):
             if agente.protegida and not datos["activo"]:
                 raise ValueError("Cuenta protegida: no se puede desactivar.")
             agente.activo = bool(datos["activo"])
+            revocar_sesiones = not agente.activo
         if datos.get("password"):
             validar_password_segura(datos["password"])
             agente.password_hash = encriptar_password(datos["password"])
+            revocar_sesiones = True
+        if revocar_sesiones:
+            agente.revocar_sesiones()
         db.session.commit()
     except ValueError as error:
         db.session.rollback()
@@ -497,6 +502,15 @@ def historial_turnos():
         consulta = _consulta_turnos_admin()
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
+
+    if not request.args.get("desde") and not request.args.get("hasta"):
+        ahora = ahora_local()
+        consulta = consulta.filter(
+            db.or_(
+                Franja.fecha < ahora.date(),
+                db.and_(Franja.fecha == ahora.date(), Franja.hora_inicio <= ahora.time()),
+            )
+        )
 
     total = consulta.count()
     turnos = (

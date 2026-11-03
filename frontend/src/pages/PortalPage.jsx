@@ -27,12 +27,16 @@ export default function PortalPage({ onIngresar }) {
 
   const alResumir = useCallback((r) => setResumen(r), []);
 
-  function alConfirmar(turno, celular) {
-    setConfirmado({ turno, celular });
+  function alConfirmar(turno, celular, espera, tokenConsulta) {
+    setConfirmado({ turno, celular, espera, tokenConsulta });
   }
 
   function verEstado() {
-    setConsultaInicial({ codigo: confirmado.turno.codigo, celular: confirmado.celular });
+    setConsultaInicial({
+      codigo: confirmado.turno.codigo,
+      celular: confirmado.celular,
+      token_verificacion: confirmado.tokenConsulta,
+    });
     setConfirmado(null);
     setVista("consultar");
   }

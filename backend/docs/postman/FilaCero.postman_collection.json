@@ -236,14 +236,15 @@
                 "exec": [
                   "const r = pm.response.json();",
                   "pm.test('201 creado', () => pm.response.to.have.status(201));",
-                  "if (r.turno) pm.environment.set('codigo_turno', r.turno.codigo);"
+                  "if (r.turno) pm.environment.set('codigo_turno', r.turno.codigo);",
+                  "if (r.token_consulta) pm.environment.set('token_consulta', r.token_consulta);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Consultar mi turno (código + celular)",
+          "name": "Consultar mi turno (verificación de celular)",
           "request": {
             "method": "POST",
             "header": [
@@ -259,7 +260,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"{{codigo_turno}}\",\n  \"celular\": \"{{celular}}\"\n}"
+              "raw": "{\n  \"codigo\": \"{{codigo_turno}}\",\n  \"celular\": \"{{celular}}\",\n  \"token_verificacion\": \"{{token_consulta}}\"\n}"
             }
           },
           "event": [
@@ -269,6 +270,73 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('success = true', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitar OTP para cancelar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/solicitar-codigo",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"celular\": \"{{celular}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.codigo_prueba) pm.environment.set('codigo_otp_cancelacion', r.codigo_prueba);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar OTP para cancelar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "",
+            "url": "{{base_url}}/api/v1/turnos/publico/verificar-codigo",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"celular\": \"{{celular}}\",\n  \"codigo\": \"{{codigo_otp_cancelacion}}\",\n  \"proposito\": \"cancelacion\",\n  \"codigo_turno\": \"{{codigo_turno}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('OTP de cancelación verificado', () => pm.expect(r.success).to.eql(true));",
+                  "if (r.token_verificacion) pm.environment.set('token_cancelacion', r.token_verificacion);"
                 ]
               }
             }
@@ -291,7 +359,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"{{codigo_turno}}\",\n  \"celular\": \"{{celular}}\"\n}"
+              "raw": "{\n  \"codigo\": \"{{codigo_turno}}\",\n  \"celular\": \"{{celular}}\",\n  \"token_verificacion\": \"{{token_cancelacion}}\"\n}"
             }
           }
         },

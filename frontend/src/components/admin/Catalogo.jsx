@@ -58,7 +58,7 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
   return (
     <Modal
       titulo={editando ? `Editar ${c.singular}` : c.nuevo}
-      descripcion={editando ? inicial.nombre : undefined}
+      descripcion={c.detalle}
       onCerrar={onCerrar}
       pie={
         <>
@@ -72,25 +72,41 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
       <form id="form-catalogo" className="formulario" onSubmit={guardar}>
         <label>
           <span className="etiqueta">Nombre</span>
-          <span className="campo"><input value={form.nombre} onChange={cambiar("nombre")} maxLength={100} placeholder={tipo === "sedes" ? "Ej. Sede Centro" : "Ej. Soporte técnico"} /></span>
+          <span className="campo"><input required value={form.nombre} onChange={cambiar("nombre")} maxLength={100} placeholder={tipo === "sedes" ? "Ej. Sede Centro" : "Ej. Soporte técnico"} /></span>
         </label>
         {tipo === "sedes" ? (
           <label>
             <span className="etiqueta">Dirección</span>
             <span className="campo"><Icon name="pin" size={17} /><input value={form.direccion || ""} onChange={cambiar("direccion")} maxLength={200} placeholder="Calle, barrio, ciudad" /></span>
+            <small className="formulario__ayuda">{(form.direccion || "").length}/200 · Se mostrará al elegir la sede.</small>
           </label>
         ) : (
           <>
             <label>
               <span className="etiqueta">Descripción</span>
               <span className="campo"><textarea value={form.descripcion || ""} onChange={cambiar("descripcion")} maxLength={1000} rows={3} placeholder="Qué incluye el servicio" /></span>
+              <small className="formulario__ayuda">{(form.descripcion || "").length}/1000 · Describe brevemente qué debe esperar el ciudadano.</small>
             </label>
             <label>
               <span className="etiqueta">Duración estimada (minutos)</span>
               <span className="campo"><Icon name="reloj" size={17} /><input type="number" min={1} max={10} value={form.tiempo_estimado} onChange={cambiar("tiempo_estimado")} /></span>
+              <small className="formulario__ayuda">La operación reserva franjas de 30 minutos y limita cada atención a 10 minutos.</small>
             </label>
           </>
         )}
+        <aside className="catalogo-vista" aria-live="polite">
+          <span className="etiqueta">Vista previa de reserva</span>
+          <div className="catalogo-vista__titulo">
+            <Icon name={tipo === "sedes" ? "pin" : "reloj"} size={18} />
+            <strong>{form.nombre.trim() || (tipo === "sedes" ? "Nombre de la sede" : "Nombre del trámite")}</strong>
+          </div>
+          <p>
+            {tipo === "sedes"
+              ? String(form.direccion || "").trim() || "La dirección aparecerá aquí."
+              : String(form.descripcion || "").trim() || "La descripción del servicio aparecerá aquí."}
+          </p>
+          {tipo === "tramites" && <span className="chip">{form.tiempo_estimado || "—"} min estimados</span>}
+        </aside>
         {error && <p className="rv__error" role="alert"><Icon name="alerta" size={16} /> {error}</p>}
       </form>
     </Modal>

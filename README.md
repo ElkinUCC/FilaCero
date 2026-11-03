@@ -15,7 +15,7 @@
 
 Los sistemas de turnos comunes ordenan la fila, pero no dicen **cuándo** te van a atender. FilaCero sí lo promete: **si reservas de 4:00 a 4:30 p. m., te atienden en ese intervalo.** Para cumplirlo, cada sede solo acepta las reservas que realmente puede atender.
 
-El proyecto se desarrolla sobre el caso de **TecniVisión**, un centro de reparación de televisores con 5 sedes, 2 administradores y 8 asesores, que atiende todos los días de 8:00 a 18:00.
+El proyecto se desarrolla sobre el caso de **TecniVisión**, un centro de reparación de televisores con 4 sedes, 2 administradores, 1 supervisor y 8 asesores. Para la demo, atiende todos los días, las 24 horas.
 
 ---
 
