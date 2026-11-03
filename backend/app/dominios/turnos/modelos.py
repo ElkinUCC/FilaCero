@@ -1,9 +1,10 @@
-﻿from datetime import UTC, datetime
+from datetime import UTC, datetime
 
 from app import db
+from app.tenancy import TenantScoped
 
 
-class Turno(db.Model):
+class Turno(TenantScoped, db.Model):
     __tablename__ = "turnos"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -16,6 +17,8 @@ class Turno(db.Model):
     )
 
     estado = db.Column(db.String(30), nullable=False, default="ESPERANDO")
+    detalle_necesidad = db.Column(db.Text)
+    respuestas_solicitud = db.Column(db.JSON)
 
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False, index=True)
 

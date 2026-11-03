@@ -1,12 +1,15 @@
-﻿from app import db
+from app import db
+from app.tenancy import TenantScoped
 
 
-class Tramite(db.Model):
+class Tramite(TenantScoped, db.Model):
     __tablename__ = "tramites"
 
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text)
+    instrucciones_preparacion = db.Column(db.Text)
+    campos_solicitud = db.Column(db.JSON, nullable=True, default=list)
     tiempo_estimado = db.Column(db.Integer, nullable=False, default=15)
     activo = db.Column(db.Boolean, default=True)
 

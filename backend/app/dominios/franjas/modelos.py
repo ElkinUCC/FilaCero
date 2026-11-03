@@ -1,7 +1,8 @@
-﻿from app import db
+from app import db
+from app.tenancy import TenantScoped
 
 
-class Franja(db.Model):
+class Franja(TenantScoped, db.Model):
     __tablename__ = "franjas"
 
     __table_args__ = (

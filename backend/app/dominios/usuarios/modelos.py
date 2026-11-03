@@ -1,12 +1,15 @@
 from datetime import UTC, datetime
 
 from app import db
+from app.tenancy import TenantScoped
 
 
-class Usuario(db.Model):
+class Usuario(TenantScoped, db.Model):
     __tablename__ = "usuarios"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    organizacion = db.relationship("Organizacion", back_populates="usuarios")
 
     celular = db.Column(db.String(20), nullable=True, index=True)
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   cancelarTurno,
   consultarTurno,
+  consultarTurnosPorCelular,
   solicitarCodigo,
   verificarCodigo,
 } from "../../api/publico.api";
@@ -19,6 +20,8 @@ const MENSAJES = {
 };
 
 export default function ConsultarTurno({ inicial, onResultado }) {
+  const [modoConsulta, setModoConsulta] = useState("codigo");
+  const [turnosEncontrados, setTurnosEncontrados] = useState([]);
   const [codigo, setCodigo] = useState(inicial?.codigo || "");
   const [celular, setCelular] = useState(inicial?.celular || "");
   const [resultado, setResultado] = useState(null);
@@ -39,8 +42,8 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     cel = celular,
     token = tokenConsulta
   ) => {
-    if (!c.trim() || !/^3\d{9}$/.test(cel)) {
-      if (!silencioso) setError("Escribe el código del turno y el celular con el que reservaste.");
+    if ((modoConsulta === "codigo" && !c.trim()) || !/^3\d{9}$/.test(cel)) {
+      if (!silencioso) setError(modoConsulta === "codigo" ? "Escribe el código del turno y el celular con el que reservaste." : "Escribe el celular de la reserva.");
       return;
     }
     if (!token) {
@@ -79,7 +82,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     } finally {
       if (!silencioso) setCargando(false);
     }
-  }, [codigo, celular, tokenConsulta, consultaEnviada, onResultado]);
+  }, [codigo, celular, tokenConsulta, consultaEnviada, onResultado, modoConsulta]);
 
   // Consulta inmediata cuando viene de una reserva recién hecha.
   useEffect(() => {
@@ -108,6 +111,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setConsultaEnviada(false);
     setCodigoConsulta("");
     setResultado(null);
+    setTurnosEncontrados([]);
     onResultado?.(null);
   }
 
@@ -117,6 +121,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setConsultaEnviada(false);
     setCodigoConsulta("");
     setResultado(null);
+    setTurnosEncontrados([]);
     onResultado?.(null);
   }
 
@@ -127,16 +132,25 @@ export default function ConsultarTurno({ inicial, onResultado }) {
       const verificacion = await verificarCodigo(
         celular,
         codigoConsulta,
-        "consulta",
-        codigo.trim()
+        modoConsulta === "codigo" ? "consulta" : "consulta_celular",
+        modoConsulta === "codigo" ? codigo.trim() : undefined
       );
       const token = verificacion.token_verificacion;
-      setTokenConsulta(token);
       setConsultaEnviada(false);
       setCodigoConsulta("");
-      const r = await consultarTurno(codigo.trim(), celular, token);
-      setResultado(r);
-      onResultado?.(r.turno);
+      if (modoConsulta === "celular") {
+        const r = await consultarTurnosPorCelular(celular, token);
+        setTurnosEncontrados(r.turnos || []);
+        setResultado(null);
+        setTokenConsulta("");
+        onResultado?.(null);
+        if (!r.turnos?.length) setError("No encontramos turnos asociados a ese celular.");
+      } else {
+        setTokenConsulta(token);
+        const r = await consultarTurno(codigo.trim(), celular, token);
+        setResultado(r);
+        onResultado?.(r.turno);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -202,8 +216,12 @@ export default function ConsultarTurno({ inicial, onResultado }) {
 
   return (
     <div className="ct">
+      <div className="ct__modos" role="group" aria-label="Método de consulta">
+        <button type="button" className={`btn ${modoConsulta === "codigo" ? "btn--primario" : "btn--suave"}`} onClick={() => { setModoConsulta("codigo"); setTokenConsulta(""); setConsultaEnviada(false); setCodigoConsulta(""); setError(""); setTurnosEncontrados([]); setResultado(null); }}>Por código</button>
+        <button type="button" className={`btn ${modoConsulta === "celular" ? "btn--primario" : "btn--suave"}`} onClick={() => { setModoConsulta("celular"); setTokenConsulta(""); setConsultaEnviada(false); setCodigoConsulta(""); setError(""); setTurnosEncontrados([]); setResultado(null); }}>Por celular</button>
+      </div>
       <form className="rv__fila ct__form" onSubmit={(e) => { e.preventDefault(); consultar(); }}>
-        <label className="campo">
+        {modoConsulta === "codigo" && <label className="campo">
           <Icon name="ficha" size={17} />
           <input
             value={codigo}
@@ -211,7 +229,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
             placeholder="Código del turno (FC-…)"
             aria-label="Código del turno"
           />
-        </label>
+        </label>}
         <label className="campo">
           <Icon name="celular" size={17} />
           <input
@@ -260,9 +278,21 @@ export default function ConsultarTurno({ inicial, onResultado }) {
 
       {error && <p className="rv__error" role="alert"><Icon name="alerta" size={16} /> {error}</p>}
 
-      {!turno && !error && (
+      {turnosEncontrados.length > 0 && (
+        <section className="ct__lista-turnos" aria-label="Turnos encontrados">
+          <h3>Turnos asociados a tu celular</h3>
+          {turnosEncontrados.map((item) => (
+            <button type="button" className="ct__turno-encontrado" key={item.turno.codigo} onClick={() => { setCodigo(item.turno.codigo); setResultado(item); setTokenConsulta(""); onResultado?.(item.turno); }}>
+              <span><strong>{item.turno.codigo}</strong><small>{item.turno.fecha} · {item.turno.hora_inicio} · {item.turno.sede}</small></span>
+              <span>{ESTADOS[item.turno.estado]?.texto || item.turno.estado}</span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {!turno && !error && turnosEncontrados.length === 0 && (
         <p className="ct__ayuda">
-          El código aparece en la confirmación de tu reserva. Solo se muestra el turno si el celular coincide.
+          {modoConsulta === "codigo" ? "Ingresa el código y el celular registrado. Te enviaremos un SMS para verificar tu identidad." : "Ingresa tu celular registrado. Te enviaremos un SMS y mostraremos los turnos asociados después de verificarlo."}
         </p>
       )}
 

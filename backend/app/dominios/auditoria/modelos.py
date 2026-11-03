@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 
 from app import db
+from app.tenancy import TenantScoped
 
 
-class Auditoria(db.Model):
+class Auditoria(TenantScoped, db.Model):
     """Registro de acciones sensibles: quién hizo qué y cuándo."""
 
     __tablename__ = "auditoria"

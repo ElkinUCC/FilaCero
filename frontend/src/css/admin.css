@@ -245,6 +245,15 @@
 .formulario { display: flex; flex-direction: column; gap: 14px; }
 .formulario label { display: block; }
 .formulario__ayuda { display: block; margin-top: 5px; color: var(--tinta-3); font-size: 12px; line-height: 1.45; }
+.preguntas-solicitud { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--linea); border-radius: var(--radio-m); }
+.preguntas-solicitud__encabezado, .pregunta-solicitud__barra { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.preguntas-solicitud__encabezado > div { display: grid; gap: 3px; }
+.preguntas-solicitud__encabezado small { color: var(--tinta-3); font-size: 12px; }
+.pregunta-solicitud { display: grid; gap: 10px; padding: 12px; border-radius: var(--radio-m); background: var(--menta); }
+.pregunta-solicitud__barra > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.pregunta-solicitud__barra .btn { min-height: 30px; padding: 0 8px; font-size: 12px; }
+.pregunta-solicitud__obligatoria { display: flex !important; align-items: center; gap: 8px; font-size: 13px; }
+.pregunta-solicitud__obligatoria input { width: 16px; height: 16px; accent-color: var(--petroleo); }
 .ficha-asesor {
   display: grid;
   gap: 12px;
@@ -407,4 +416,97 @@
   font-size: 11.5px;
   font-weight: 600;
   vertical-align: middle;
+}
+
+/* =========================================
+   FASE 2.3 · SISTEMA VISUAL ADMINISTRATIVO
+   ========================================= */
+.adm {
+  grid-template-columns: 258px minmax(0, 1fr);
+  background:
+    radial-gradient(ellipse at 92% 0%, rgb(19 94 99 / 7%), transparent 34rem),
+    #f2f6f5;
+}
+.adm__lado {
+  gap: 30px;
+  padding: 22px 16px 18px;
+  background: linear-gradient(180deg, #102c30 0%, #0b2226 100%);
+  box-shadow: 8px 0 28px rgb(15 42 46 / 8%);
+}
+.adm__lado .marca { padding: 4px 10px 18px; border-bottom: 1px solid rgb(195 213 210 / 12%); }
+.adm__lado .marca__logo { width: 38px; height: 38px; border-radius: 12px; box-shadow: 0 5px 14px rgb(240 180 41 / 18%); }
+.adm__lado .marca__nombre { font-size: 19px; letter-spacing: -.45px; }
+.adm__nav { gap: 5px; }
+.adm__nav a { height: 44px; padding: 0 12px; border-radius: 10px; color: #a9c0bd; font-size: 13.5px; transition: background .18s ease, color .18s ease, transform .18s ease; }
+.adm__nav a:hover { background: rgb(255 255 255 / 7%); transform: translateX(2px); }
+.adm__nav a.activo { background: linear-gradient(100deg, rgb(33 91 94 / 90%), rgb(25 65 69 / 90%)); color: #fff; box-shadow: inset 3px 0 0 #f0b429, 0 5px 14px rgb(0 0 0 / 10%); }
+.adm__nav-grupo { margin: 20px 12px 7px; color: #789693; font-size: 10px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; }
+.adm__cuenta { padding: 16px 5px 4px; border-color: rgb(195 213 210 / 14%); }
+.adm__avatar { width: 38px; height: 38px; border: 2px solid rgb(255 255 255 / 15%); background: linear-gradient(145deg, #26777a, #135e63); }
+.adm__principal { padding: 30px clamp(20px, 3vw, 44px) 48px; }
+.adm__seccion { max-width: 1480px; gap: 20px; }
+.adm__cabeza { align-items: center; margin-bottom: 2px; }
+.adm__cabeza h1 { font-size: clamp(27px, 2.3vw, 34px); letter-spacing: -1.15px; }
+.adm__cabeza p { max-width: 70ch; margin-top: 7px; color: #607477; font-size: 13.5px; }
+.en-vivo { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border: 1px solid #cce5d6; border-radius: 999px; background: #eff9f2; color: #21633f; font-size: 11.5px; font-weight: 750; letter-spacing: .1px; }
+.en-vivo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #25a45a; box-shadow: 0 0 0 3px rgb(37 164 90 / 12%); }
+.en-vivo--error { border-color: #f0d0d0; background: #fff3f3; color: #a32930; }
+.en-vivo--error::before { background: #c63d45; box-shadow: 0 0 0 3px rgb(198 61 69 / 12%); }
+.segmentos { padding: 4px; border: 1px solid #dce7e4; border-radius: 11px; background: #e8efed; }
+.segmentos button { height: 34px; min-width: 66px; border-radius: 8px; font-size: 12.5px; }
+.segmentos button.activo { color: #0d4a4f; box-shadow: 0 2px 6px rgb(15 42 46 / 9%); }
+.kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border: 0; border-radius: 16px; background: transparent; overflow: visible; }
+.kpi { position: relative; min-height: 126px; justify-content: center; gap: 7px; margin: 0 6px; padding: 18px 17px; border: 1px solid #e0e9e6; border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgb(20 55 55 / 4%); transition: transform .2s ease, box-shadow .2s ease; }
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 9px 22px rgb(20 55 55 / 8%); }
+.kpi + .kpi { border-left: 1px solid #e0e9e6; }
+.kpi > span { color: #607477; font-size: 11.5px; font-weight: 750; letter-spacing: .25px; text-transform: uppercase; }
+.kpi small { color: #7b8e90; font-size: 11.5px; }
+.kpi__valor { color: #173c40; font-size: 31px; letter-spacing: -1.1px; }
+.kpi--destacado { background: linear-gradient(145deg, #124e53, #0d3338); border-color: #124e53; }
+.kpi--destacado > span { color: #c5dbd7; }
+.kpi--destacado small { color: #9cbab5; }
+.kpi--destacado .kpi__valor { font-size: 36px; }
+.kpi--destacado .kpi__valor--ok { color: #8ce0b1; }
+.kpi--destacado .kpi__valor--medio { color: #ffd16a; }
+.kpi--destacado .kpi__valor--bajo { color: #ffaaaa; }
+.panel { padding: 19px 20px; border-color: #e0e9e6; border-radius: 15px; background: #fff; box-shadow: 0 4px 18px rgb(20 55 55 / 3%); }
+.panel__cabeza { align-items: center; margin-bottom: 15px; }
+.panel__cabeza h2 { color: #183b3f; font-size: 14px; letter-spacing: -.1px; }
+.panel__nota { color: #819294; font-size: 11.5px; }
+.tabla th { background: #f5f8f7; color: #647a7c; font-size: 10.5px; letter-spacing: .45px; text-transform: uppercase; }
+.tabla td { color: #405b5e; font-size: 12.5px; }
+.tabla tbody tr:hover td { background: #f6faf8; }
+.rejilla-vivo { gap: 16px; }
+.rejilla-vivo > .panel:first-child { min-width: 0; }
+.recientes__lista li { padding: 11px 0; border-bottom: 1px solid #edf2f0; }
+.recientes__lista li:last-child { border-bottom: 0; }
+.barras { gap: 13px; }
+.barras li { font-size: 12.5px; }
+.barras__pista { height: 7px; background: #edf3f1; }
+.barras__pista span { background: linear-gradient(90deg, #135e63, #3a9991); }
+.apilada { height: 11px; border-radius: 99px; background: #edf3f1; }
+.leyenda { gap: 10px; color: #536b6e; font-size: 12px; }
+.leyenda i { width: 9px; height: 9px; border-radius: 50%; }
+@media (max-width: 1250px) {
+  .adm { grid-template-columns: 238px minmax(0, 1fr); }
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+  .kpi { margin: 0; }
+  .kpi--destacado { grid-column: span 1; }
+}
+@media (max-width: 860px) {
+  .adm { grid-template-columns: 1fr; }
+  .adm__lado { width: 270px; }
+  .adm__principal { padding: 18px 14px 32px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi--destacado { grid-column: span 2; }
+  .kpi + .kpi { border-left: 1px solid #e0e9e6; }
+}
+@media (max-width: 520px) {
+  .adm__cabeza { align-items: flex-start; }
+  .adm__cabeza-der { width: 100%; justify-content: space-between; gap: 8px; }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .kpi { min-height: 112px; padding: 14px 12px; }
+  .kpi__valor { font-size: 27px; }
+  .rejilla-vivo, .rejilla-3 { gap: 12px; }
+  .panel { padding: 15px 13px; }
 }

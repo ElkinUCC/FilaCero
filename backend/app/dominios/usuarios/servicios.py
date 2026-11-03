@@ -42,7 +42,12 @@ CuentaBloqueada = CuentaBloqueadaError
 def emitir_token(usuario):
     return create_access_token(
         identity=str(usuario.id),
-        additional_claims={"rol": usuario.rol, "ver": usuario.version_sesion or 0},
+        additional_claims={
+            "rol": usuario.rol,
+            "ver": usuario.version_sesion or 0,
+            # El tenant queda firmado en el JWT; nunca se toma del body del cliente.
+            "org_id": usuario.organizacion_id,
+        },
     )
 
 

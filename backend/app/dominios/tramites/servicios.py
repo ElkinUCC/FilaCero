@@ -1,3 +1,5 @@
+import re
+
 from app import db
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 
@@ -43,6 +45,65 @@ def _tiempo(valor):
     return tiempo
 
 
+def _campos_solicitud(valor):
+    if valor is None:
+        return []
+    if not isinstance(valor, list) or len(valor) > 3:
+        raise DatosInvalidosError("Cada trámite puede tener máximo 3 preguntas.")
+
+    campos = []
+    identificadores = set()
+    tipos = {"texto", "parrafo", "seleccion", "si_no"}
+    for campo in valor:
+        if not isinstance(campo, dict):
+            raise DatosInvalidosError("La configuración de preguntas no es válida.")
+        identificador = campo.get("id")
+        etiqueta = campo.get("etiqueta")
+        tipo = campo.get("tipo")
+        obligatorio = campo.get("obligatorio", False)
+        if (
+            not isinstance(identificador, str)
+            or not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", identificador)
+            or identificador in identificadores
+        ):
+            raise DatosInvalidosError("Cada pregunta debe tener un identificador único.")
+        if not isinstance(etiqueta, str) or not etiqueta.strip() or len(etiqueta.strip()) > 120:
+            raise DatosInvalidosError("Cada pregunta debe tener un título de hasta 120 caracteres.")
+        if not isinstance(tipo, str) or tipo not in tipos:
+            raise DatosInvalidosError("El tipo de pregunta no es válido.")
+        if not isinstance(obligatorio, bool):
+            raise DatosInvalidosError("La opción obligatoria de cada pregunta debe ser booleana.")
+
+        opciones = campo.get("opciones", [])
+        if tipo == "seleccion":
+            if (
+                not isinstance(opciones, list)
+                or not 2 <= len(opciones) <= 8
+                or any(not isinstance(opcion, str) or not opcion.strip() for opcion in opciones)
+                or any(len(opcion.strip()) > 100 for opcion in opciones)
+            ):
+                raise DatosInvalidosError(
+                    "Cada pregunta de selección debe tener entre 2 y 8 opciones válidas."
+                )
+            opciones = [opcion.strip() for opcion in opciones]
+            if len({opcion.casefold() for opcion in opciones}) != len(opciones):
+                raise DatosInvalidosError("Las opciones de una pregunta no pueden repetirse.")
+        else:
+            opciones = []
+
+        identificadores.add(identificador)
+        campos.append(
+            {
+                "id": identificador,
+                "etiqueta": etiqueta.strip(),
+                "tipo": tipo,
+                "obligatorio": obligatorio,
+                "opciones": opciones,
+            }
+        )
+    return campos
+
+
 def _nombre_duplicado(nombre, excluir_id=None):
     consulta = Tramite.query.filter(db.func.lower(Tramite.nombre) == nombre.lower())
     if excluir_id:
@@ -62,6 +123,10 @@ def crear_tramite(datos):
     tramite = Tramite(
         nombre=nombre,
         descripcion=_texto(datos.get("descripcion"), "descripción", 1000),
+        instrucciones_preparacion=_texto(
+            datos.get("instrucciones_preparacion"), "instrucciones", 1000
+        ),
+        campos_solicitud=_campos_solicitud(datos.get("campos_solicitud")),
         tiempo_estimado=_tiempo(datos.get("tiempo_estimado", 15)),
         activo=bool(datos.get("activo", True)),
     )
@@ -82,6 +147,12 @@ def actualizar_tramite(tramite_id, datos):
         tramite.nombre = nombre
     if "descripcion" in datos:
         tramite.descripcion = _texto(datos["descripcion"], "descripción", 1000)
+    if "instrucciones_preparacion" in datos:
+        tramite.instrucciones_preparacion = _texto(
+            datos["instrucciones_preparacion"], "instrucciones", 1000
+        )
+    if "campos_solicitud" in datos:
+        tramite.campos_solicitud = _campos_solicitud(datos["campos_solicitud"])
     if "tiempo_estimado" in datos:
         tramite.tiempo_estimado = _tiempo(datos["tiempo_estimado"])
     if "activo" in datos:

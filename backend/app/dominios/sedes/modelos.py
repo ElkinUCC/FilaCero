@@ -1,7 +1,8 @@
-﻿from app import db
+from app import db
+from app.tenancy import TenantScoped
 
 
-class Punto(db.Model):
+class Punto(TenantScoped, db.Model):
     __tablename__ = "puntos"
 
     id = db.Column(db.Integer, primary_key=True)

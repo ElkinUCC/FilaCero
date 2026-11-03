@@ -61,11 +61,18 @@ def create_app(test_config=None):
     migrate.init_app(app, db)
     jwt.init_app(app)
 
+    # El aislamiento se aplica en el ORM, no depende de que cada controlador
+    # recuerde agregar manualmente el filtro por organización.
+    from app.tenancy import instalar_aislamiento_multiempresa, resolver_organizacion_peticion
+
+    instalar_aislamiento_multiempresa()
+    resolver_organizacion_peticion(app)
+
     # CORS restringido a los orígenes configurados y solo a la API.
     CORS(
         app,
         resources={r"/api/*": {"origins": app.config["CORS_ALLOWED_ORIGINS"]}},
-        allow_headers=["Content-Type", "Authorization"],
+        allow_headers=["Content-Type", "Authorization", "X-Organization-Slug"],
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         max_age=600,
     )
@@ -73,6 +80,7 @@ def create_app(test_config=None):
     # Modelos: registrar todos antes de usar migraciones.
     from app.dominios.agentes.controladores import admin_agentes_bp, agentes_bp
     from app.dominios.auditoria.modelos import Auditoria  # noqa: F401
+    from app.dominios.organizaciones.modelos import Organizacion  # noqa: F401
     from app.dominios.franjas.admin_controladores import admin_franjas_bp
     from app.dominios.franjas.controladores import franjas_bp
     from app.dominios.franjas.disponibilidad import disponibilidad_bp
@@ -87,6 +95,7 @@ def create_app(test_config=None):
     from app.dominios.usuarios.admin_controladores import admin_usuarios_bp
     from app.dominios.usuarios.controladores import usuarios_bp
     from app.dominios.usuarios.modelos import Usuario  # noqa: F401
+    from app.dominios.organizaciones.controladores import organizaciones_bp
 
     app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
     app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
@@ -99,6 +108,7 @@ def create_app(test_config=None):
     app.register_blueprint(prediccion_bp, url_prefix="/api/v1/turnos")
     app.register_blueprint(disponibilidad_bp, url_prefix="/api/v1/franjas")
     app.register_blueprint(admin_usuarios_bp, url_prefix="/api/v1/admin/usuarios")
+    app.register_blueprint(organizaciones_bp, url_prefix="/api/v1/organizacion")
 
     _registrar_manejadores(app)
 
@@ -210,6 +220,15 @@ def _registrar_manejadores(app):
         except (KeyError, TypeError, ValueError):
             return None
         # Token emitido antes de un cambio de credenciales / rol / logout.
+        # Los JWT heredados pueden no incluir org_id. En ese caso, la
+        # organización se deriva del usuario en resolver_organizacion_peticion;
+        # si el claim sí existe, debe coincidir exactamente con la BD.
+        if usuario and "org_id" in payload:
+            try:
+                if int(payload["org_id"]) != int(usuario.organizacion_id):
+                    return None
+            except (TypeError, ValueError):
+                return None
         if usuario and not usuario.token_vigente(payload):
             return None
         return usuario
@@ -224,6 +243,15 @@ def _registrar_manejadores(app):
             return False
         if usuario is None or not usuario.activo:
             return False
+        # Compatibilidad con tokens anteriores a multiempresa: la ausencia
+        # del claim no autoriza elegir un tenant; el middleware lo resuelve
+        # desde la cuenta autenticada. Un claim presente y falso sí se rechaza.
+        if "org_id" in payload:
+            try:
+                if int(payload["org_id"]) != int(usuario.organizacion_id):
+                    return False
+            except (TypeError, ValueError):
+                return False
         return usuario.token_vigente(payload)
 
     @jwt.token_verification_failed_loader

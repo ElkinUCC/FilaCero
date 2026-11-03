@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)](https://flask.palletsprojects.com/)
-[![Tests](https://img.shields.io/badge/Tests-87%20passing-brightgreen.svg)](tests)
+[![Tests](https://img.shields.io/badge/Tests-117%20reported%20passing-brightgreen.svg)](tests)
 [![Code style](https://img.shields.io/badge/code%20style-black%20%2B%20ruff-000000.svg)](pyproject.toml)
 
 ---
@@ -15,7 +15,7 @@ La API está organizada **por dominios**. Cada dominio tiene sus propias capas, 
 
 ```
 backend/
-├── app.py                      # Punto de entrada en desarrollo: python app.py
+├── run.py                      # Punto de entrada: python run.py
 ├── wsgi.py                     # Producción: waitress-serve wsgi:app
 ├── simulacion.py               # Verificación, carga de datos demo y prueba de carga
 ├── requirements.txt            # Dependencias con versión fija
@@ -29,6 +29,7 @@ backend/
 │   ├── seguridad.py            # requiere_rol, limitar, contraseñas, celular
 │   ├── horario.py              # Horario demo 24/7, franjas automáticas, CUPO POR SEDE
 │   └── dominios/
+│       ├── organizaciones/     # contexto multiempresa, configuración y aislamiento
 │       ├── usuarios/           # login, cuenta propia, admin de usuarios y permisos
 │       ├── sedes/ · tramites/  # catálogo
 │       ├── franjas/            # franjas y disponibilidad
@@ -40,7 +41,7 @@ backend/
 │           ├── servicios.py       # Reglas de negocio + excepciones del dominio
 │           ├── repositorios.py    # Consultas a la base de datos
 │           └── modelos.py         # Tablas (SQLAlchemy)
-├── migrations/versions/        # 8 migraciones Alembic
+├── migrations/versions/        # 9 migraciones Alembic
 ├── scripts/                    # create_db.py · generate_secret.py · promover_admin.py
 ├── tests/                      # conftest.py (fixtures) + pruebas por tema
 └── docs/                       # conceptos, validación manual, postman, roadmap, sprints
@@ -93,21 +94,60 @@ copy .env.example .env ; python scripts\generate_secret.py
 python scripts\create_db.py
 flask db upgrade
 python simulacion.py --cargar          # escribe BORRAR; en BD remota exige confirmación extra
-python app.py                          # http://127.0.0.1:5000/health
+python run.py                          # http://127.0.0.1:5000
 ```
+
+En una SQLite local nueva, la simulación crea el esquema inicial. Para bases
+existentes (incluida SQLite) y MySQL, ejecuta `flask db upgrade` antes de usar
+`--cargar` o `--en-vivo`; ambos modos operan sobre la organización configurada en
+`DEFAULT_ORGANIZATION_SLUG`.
+
+## Núcleo multiempresa (primera entrega)
+
+- Cada registro operativo pertenece a una organización mediante `organizacion_id`.
+- El contexto se obtiene del claim firmado `org_id` del JWT para usuarios autenticados.
+- Las rutas públicas reciben `X-Organization-Slug`; si no se envía, usan `DEFAULT_ORGANIZATION_SLUG`.
+- El ORM aplica filtros de organización automáticamente a consultas y operaciones masivas, y valida las escrituras.
+- El slug del frontend se configura con `VITE_ORGANIZATION_SLUG`.
+- La migración `f6b8c0d2e4a6` crea `organizaciones`, registra `filacero-demo` y asigna los datos existentes a esa organización.
+- Las sesiones anteriores a esta versión deben renovarse porque los JWT ahora incluyen `org_id`.
+
+### Migrar y crear una organización
+
+```powershell
+flask db upgrade
+python scripts\crear_organizacion.py --nombre "Cooperativa Norte" --slug cooperativa-norte --industria cooperativa --pais CO --zona-horaria America/Bogota --idioma es --moneda COP
+python scripts\crear_cuenta.py admin@cooperativa.com ADMIN "Admin Cooperativa" --organizacion-id 2
+```
+
+El segundo comando crea la cuenta administradora en el tenant indicado; reemplaza `2` por el ID que informó el primer comando. Configura el despliegue frontend de esa organización con:
+
+```env
+VITE_ORGANIZATION_SLUG=cooperativa-norte
+```
+
+`CUENTAS_PROTEGIDAS` evita que la simulación cambie o elimine esas cuentas, pero
+no asigna una contraseña inicial ni recupera una contraseña desconocida. Para
+establecer una contraseña nueva, vuelve a ejecutar `scripts\crear_cuenta.py`
+con el mismo correo, rol y `--organizacion-id`; el script solicita la contraseña
+de forma interactiva y actualiza la cuenta existente.
+
+`X-Organization-Slug` selecciona el tenant en rutas públicas; en sesiones autenticadas el servidor siempre prioriza el `org_id` firmado en el JWT y rechaza un slug distinto. No se deben enviar secretos en `configuracion` de la organización: las credenciales de integraciones requieren un almacén de secretos.
+
+**Límite conocido de esta entrega:** cada cuenta de usuario pertenece a una sola organización. La membresía de un mismo usuario en varias organizaciones, los roles por organización, la provisión self-service, los dominios personalizados y el aislamiento reforzado mediante claves foráneas compuestas quedan para la siguiente fase. No se debe anunciar esta versión como certificada ni como lista para datos regulados sin una auditoría de seguridad y pruebas de integración MySQL.
 
 ## Comandos útiles
 
 | Comando | Qué hace |
 |---|---|
-| `python app.py` | Levanta la API en desarrollo |
-| `python -m pytest` | 87 pruebas en SQLite en memoria (no toca tu MySQL) |
+| `python run.py` | Levanta la API en desarrollo |
+| `python -m pytest tests/ -v` | Ejecuta la suite automatizada (117 aprobadas en la última ejecución reportada) |
 | `python -m pytest tests/test_contrato_y_errores.py -v` | Pruebas de un solo tema |
 | `ruff check .` · `black .` | Estilo y formato (100 columnas) |
 | `pip-audit -r requirements.txt` | Vulnerabilidades en dependencias |
 | `python simulacion.py` | 50 verificaciones de punta a punta en memoria |
-| `python simulacion.py --cargar [--si] [--desde AAAA-MM-DD --hasta AAAA-MM-DD]` | Borra y carga datos demo; base remota requiere `--permitir-borrar-remoto` |
-| `python simulacion.py --borrar` | Solo borra los datos |
+| `python simulacion.py --cargar [--si] [--desde AAAA-MM-DD --hasta AAAA-MM-DD]` | Reemplaza datos operativos del tenant y carga datos demo |
+| `python simulacion.py --borrar` | Solo borra los datos operativos del tenant |
 | `python simulacion.py --en-vivo --cada 10 --por-ciclo 3` | Crea y atiende automáticamente hasta 3 reservas demo cada 10 segundos; no toma turnos ajenos |
 | `python simulacion.py --en-vivo --solo-reservas` | Crea reservas sin atención automática |
 | `python simulacion.py --carga --url http://127.0.0.1:5000` | Prueba de carga y de sobrecupo |

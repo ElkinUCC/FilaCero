@@ -109,6 +109,13 @@
 }
 .puesto__turno h2 { font-size: 24px; letter-spacing: -0.5px; }
 .puesto__turno p { margin-top: 3px; color: var(--tinta-2); }
+.puesto__necesidad { padding: 12px 14px; border-radius: var(--radio-m); background: var(--menta); }
+.puesto__necesidad strong { font-size: 13px; }
+.puesto__necesidad p { margin-top: 4px; color: var(--tinta-2); font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.puesto__necesidad dl { display: grid; gap: 7px; margin: 8px 0 0; }
+.puesto__necesidad dl div { display: grid; grid-template-columns: minmax(110px, 0.4fr) 1fr; gap: 10px; }
+.puesto__necesidad dt { color: var(--tinta-3); font-size: 13px; }
+.puesto__necesidad dd { margin: 0; color: var(--tinta-2); font-size: 14px; overflow-wrap: anywhere; }
 .puesto__acciones { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn--grande { min-height: 48px; padding: 0 22px; font-size: 15.5px; }
 .btn--fantasma { background: transparent; color: var(--tinta-2); }
@@ -206,6 +213,7 @@
 .cola__info { display: flex; flex-direction: column; min-width: 0; }
 .cola__info strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .cola__info small { overflow: hidden; color: var(--tinta-3); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.cola__info .cola__necesidad { color: var(--petroleo); }
 
 .punt { padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 650; white-space: nowrap; }
 .punt--ok { background: var(--verde-claro); color: var(--verde); }
@@ -371,4 +379,38 @@
   .puesto__contenido, .puesto__cierre, .cola__item--nuevo,
   .etapas__paso--actual .etapas__icono::after, .crono--rojo .crono__cifras strong { animation: none; }
   .sello__circulo, .sello__check { animation: none; stroke-dashoffset: 0; }
+}
+
+/* =========================================
+   FASE 2.3 · CONSOLA DE ATENCIÓN REFINADA
+   ========================================= */
+.ag { background: radial-gradient(ellipse at 50% -15%, rgb(19 94 99 / 8%), transparent 38rem), #f1f6f4; }
+.ag__barra { height: 70px; padding: 0 clamp(16px, 2.6vw, 34px); background: linear-gradient(100deg, #102b2f, #123a3e); box-shadow: 0 5px 20px rgb(9 35 38 / 14%); }
+.ag__barra .marca__logo { width: 37px; height: 37px; border-radius: 11px; }
+.ag__barra .marca__nombre { font-size: 18px; }
+.ag__franja-chip { border: 1px solid rgb(255 255 255 / 8%); border-radius: 11px; background: rgb(255 255 255 / 7%); }
+.ag__reloj { font-size: 29px; letter-spacing: -.8px; }
+.ag__cuerpo { max-width: 1520px; gap: 22px; padding: 24px clamp(16px, 2.5vw, 34px) 34px; }
+.ag__principal { gap: 18px; }
+.asistente { border: 1px solid #d9e8e2; border-radius: 16px; box-shadow: 0 5px 18px rgb(20 55 55 / 4%); }
+.asistente__tag { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.asistente h2 { letter-spacing: -.45px; }
+.puesto { border: 1px solid #dce8e4; border-radius: 20px; background: #fff; box-shadow: 0 9px 28px rgb(20 55 55 / 6%); }
+.puesto__codigo { border-radius: 14px; box-shadow: 0 5px 15px rgb(240 180 41 / 17%); }
+.puesto__acciones .btn--grande { min-height: 50px; border-radius: 11px; }
+.ag__dia { gap: 9px; border: 0; background: transparent; }
+.ag__dia > div { border: 1px solid #e0eae6; border-radius: 13px; background: #fff; box-shadow: 0 3px 12px rgb(20 55 55 / 3%); }
+.ag__dia span { color: #6c8182; font-size: 10.5px; font-weight: 750; letter-spacing: .45px; text-transform: uppercase; }
+.ag__dia strong { color: #163d40; font-size: 25px; letter-spacing: -.7px; }
+.ag__recientes, .ag__cola { border: 1px solid #e0e9e6; border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgb(20 55 55 / 3%); }
+.cola__grupo h3 { color: #496467; font-size: 11px; letter-spacing: .6px; text-transform: uppercase; }
+.cola__item { padding: 11px 8px; border-radius: 10px; }
+.cola__item:hover { background: #f4f8f6; }
+.cola__item--rec { background: #fff7e2; }
+.cola__info strong { color: #183b3f; font-size: 13.5px; }
+.punt { padding: 4px 9px; font-size: 10.5px; }
+@media (max-width: 760px) {
+  .ag__barra { flex-wrap: wrap; height: auto; min-height: 64px; gap: 10px; padding: 10px 14px; }
+  .ag__reloj { margin-left: auto; font-size: 23px; }
+  .ag__cuerpo { padding: 14px 12px 24px; }
 }

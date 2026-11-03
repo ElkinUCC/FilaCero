@@ -35,12 +35,85 @@ def _generar_codigo(ahora):
     raise ValueError("No se pudo generar el código del turno. Intenta de nuevo.")
 
 
-def crear_turno(usuario_id, tramite_id, punto_id, franja_id):
+def _validar_solicitud(tramite, detalle_necesidad, valores):
+    if detalle_necesidad is None:
+        detalle_necesidad = ""
+    if not isinstance(detalle_necesidad, str):
+        raise ValueError("El detalle de la necesidad debe ser texto.")
+    detalle_necesidad = detalle_necesidad.strip()
+    if len(detalle_necesidad) > 1000:
+        raise ValueError("El detalle de la necesidad no puede superar 1000 caracteres.")
+    if valores is None:
+        valores = {}
+    if not isinstance(valores, dict):
+        raise ValueError("Las respuestas del formulario no son válidas.")
+    campos = tramite.campos_solicitud or []
+    permitidos = {campo["id"] for campo in campos}
+    if set(valores) - permitidos:
+        raise ValueError("El formulario cambió. Actualiza la página e intenta de nuevo.")
+
+    respuestas = []
+    for campo in campos:
+        valor = valores.get(campo["id"])
+        if campo["tipo"] == "si_no":
+            if valor is not None and not isinstance(valor, bool):
+                raise ValueError(f"Responde Sí o No en: {campo['etiqueta']}.")
+            vacio = valor is None
+        else:
+            if valor is not None and not isinstance(valor, str):
+                raise ValueError(f"La respuesta de {campo['etiqueta']} no es válida.")
+            valor = valor.strip() if isinstance(valor, str) else ""
+            limite = 1000 if campo["tipo"] == "parrafo" else 150
+            if len(valor) > limite:
+                raise ValueError(
+                    f"La respuesta de {campo['etiqueta']} supera {limite} caracteres."
+                )
+            if campo["tipo"] == "seleccion" and valor and valor not in campo["opciones"]:
+                raise ValueError(f"Selecciona una opción válida en: {campo['etiqueta']}.")
+            vacio = not valor
+
+        if vacio:
+            if campo["obligatorio"]:
+                raise ValueError(f"Completa la pregunta: {campo['etiqueta']}.")
+            continue
+        respuestas.append(
+            {
+                "id": campo["id"],
+                "etiqueta": campo["etiqueta"],
+                "tipo": campo["tipo"],
+                "valor": valor,
+            }
+        )
+    return detalle_necesidad or None, respuestas or None
+
+
+def crear_turno(
+    usuario_id,
+    tramite_id,
+    punto_id,
+    franja_id,
+    detalle_necesidad=None,
+    respuestas_solicitud=None,
+):
     with _candado_de(punto_id):
-        return _crear_turno(usuario_id, tramite_id, punto_id, franja_id)
+        return _crear_turno(
+            usuario_id,
+            tramite_id,
+            punto_id,
+            franja_id,
+            detalle_necesidad,
+            respuestas_solicitud,
+        )
 
 
-def _crear_turno(usuario_id, tramite_id, punto_id, franja_id):
+def _crear_turno(
+    usuario_id,
+    tramite_id,
+    punto_id,
+    franja_id,
+    detalle_necesidad=None,
+    respuestas_solicitud=None,
+):
     try:
         usuario = db.session.get(Usuario, usuario_id)
         tramite = db.session.get(Tramite, tramite_id)
@@ -52,6 +125,9 @@ def _crear_turno(usuario_id, tramite_id, punto_id, franja_id):
             raise ValueError("El usuario no existe o está inactivo.")
         if not tramite or not tramite.activo:
             raise ValueError("El trámite no existe o está inactivo.")
+        detalle_necesidad, respuestas_solicitud = _validar_solicitud(
+            tramite, detalle_necesidad, respuestas_solicitud
+        )
         if not punto or not punto.activo:
             raise ValueError("La sede no existe o está inactiva.")
 
@@ -101,6 +177,8 @@ def _crear_turno(usuario_id, tramite_id, punto_id, franja_id):
             tramite_id=tramite_id,
             punto_id=punto_id,
             franja_id=franja.id,
+            detalle_necesidad=detalle_necesidad,
+            respuestas_solicitud=respuestas_solicitud,
             estado="ESPERANDO",
         )
         return guardar(turno)

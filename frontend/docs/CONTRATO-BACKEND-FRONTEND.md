@@ -25,11 +25,11 @@
 | Función | Petición | Respuesta usada |
 |---|---|---|
 | `obtenerHorario()` | `GET /horario` | `hora_apertura`, `hora_cierre`, `todos_los_dias` |
-| `listarSedes()` · `listarTramites()` | `GET /sedes/` · `GET /tramites/` | `puntos[]` · `tramites[]` |
+| `listarSedes()` · `listarTramites()` | `GET /sedes/` · `GET /tramites/` | `puntos[]` · `tramites[]`; cada trámite incluye instrucciones opcionales y hasta 3 preguntas configuradas (`texto`, `parrafo`, `seleccion`, `si_no`) |
 | `franjasDisponibles({sedeId, tramiteId, fecha})` | `GET /franjas/disponibles?sede_id&tramite_id&fecha` | `franjas[]: {franja_id, hora_inicio, hora_fin, disponibles, capacidad}` |
 | `solicitarCodigo(celular)` | `POST /turnos/publico/solicitar-codigo` `{celular}` | `codigo_prueba` (solo en desarrollo) |
 | `verificarCodigo(celular, codigo, proposito, codigoTurno)` | `POST /turnos/publico/verificar-codigo` | `token_verificacion` ligado al propósito y, para consulta/cancelación, al código del turno |
-| `reservarTurno(datos)` | `POST /turnos/publico` `{nombre, celular, token_verificacion, punto_id, tramite_id, franja_id}` | 201 `turno`, `espera`, permiso temporal `token_consulta` |
+| `reservarTurno(datos)` | `POST /turnos/publico` `{nombre, celular, token_verificacion, punto_id, tramite_id, franja_id, detalle_necesidad?, respuestas_solicitud?}` | 201 `turno`, `espera`, permiso temporal `token_consulta`; las preguntas opcionales no se solicitan hasta elegir horario. El servidor valida preguntas obligatorias y opciones de selección; las respuestas no se incluyen en el turno público |
 | `consultarTurno(codigo, celular, token)` · `cancelarTurno(codigo, celular, token)` | `POST /turnos/publico/consultar` · `/cancelar` | `turno`, `espera`; ambos requieren permiso OTP |
 | `pantallaSala(sedeId)` | `GET /turnos/publico/sala?sede_id` | `sede`, `sedes[]`, `llamados[]`, `siguientes[]`, `horario` (sin datos personales) |
 
@@ -45,7 +45,7 @@
 
 | Función | Petición |
 |---|---|
-| `obtenerPanel()` | `GET /agente/panel`: `agente`, `actual`, `cola[]`, `franja_actual`, `recomendacion`, `resumen`, `recientes[]`, `en_horario`, `ahora` |
+| `obtenerPanel()` | `GET /agente/panel`: `agente`, `actual`, `cola[]` (incluyen respuestas configuradas), `franja_actual`, `recomendacion`, `resumen`, `recientes[]`, `en_horario`, `ahora` |
 | `llamarSiguiente()` | `POST /agente/llamar-siguiente` |
 | `llamar(id)` · `iniciar(id)` · `finalizar(id)` · `noAsistio(id)` · `devolver(id)` | `POST /agente/turnos/<id>/<acción>` |
 

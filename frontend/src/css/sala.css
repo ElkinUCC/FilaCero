@@ -67,3 +67,11 @@
   .sala__barra { flex-wrap: wrap; padding: 14px 16px; }
   .sala__actual { padding: 24px; }
 }
+
+/* FASE 2.3 · SALA DE ESPERA PARA PANTALLAS GRANDES */
+.sala { background: radial-gradient(ellipse at 50% -20%, #1b5053, transparent 48rem), #0b2226; }
+.sala__barra { border-color: rgb(255 255 255 / 10%); }
+.sala__actual { border: 1px solid rgb(255 255 255 / 8%); background: linear-gradient(145deg, #173f43, #123236); box-shadow: 0 18px 50px rgb(0 0 0 / 15%); }
+.sala__actual--llamando { border-color: rgb(240 180 41 / 60%); }
+.sala__codigo { border-radius: 20px; box-shadow: 0 10px 30px rgb(240 180 41 / 15%); }
+.sala__lado li { border-color: rgb(255 255 255 / 10%); }

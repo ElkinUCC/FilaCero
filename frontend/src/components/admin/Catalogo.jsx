@@ -18,17 +18,64 @@ const CONFIG = {
     singular: "trámite",
     nuevo: "Nuevo trámite",
     detalle: "Servicios que se pueden reservar. La atención se limita a 10 minutos.",
-    vacio: { nombre: "", descripcion: "", tiempo_estimado: 10 },
+    vacio: {
+      nombre: "",
+      descripcion: "",
+      instrucciones_preparacion: "",
+      campos_solicitud: [],
+      tiempo_estimado: 10,
+    },
   },
 };
 
 function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
   const c = CONFIG[tipo];
-  const [form, setForm] = useState({ ...c.vacio, ...inicial });
+  const [form, setForm] = useState({
+    ...c.vacio,
+    ...inicial,
+    campos_solicitud: inicial?.campos_solicitud || [],
+  });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const editando = Boolean(inicial?.id);
   const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }));
+
+  function cambiarCampo(indice, cambios) {
+    setForm((actual) => ({
+      ...actual,
+      campos_solicitud: actual.campos_solicitud.map((campo, i) =>
+        i === indice ? { ...campo, ...cambios } : campo
+      ),
+    }));
+  }
+
+  function agregarCampo() {
+    const id = globalThis.crypto?.randomUUID?.()
+      || `pregunta-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setForm((actual) => ({
+      ...actual,
+      campos_solicitud: [
+        ...actual.campos_solicitud,
+        { id, etiqueta: "", tipo: "texto", obligatorio: false, opciones: [] },
+      ],
+    }));
+  }
+
+  function moverCampo(indice, direccion) {
+    setForm((actual) => {
+      const campos = [...actual.campos_solicitud];
+      const destino = indice + direccion;
+      [campos[indice], campos[destino]] = [campos[destino], campos[indice]];
+      return { ...actual, campos_solicitud: campos };
+    });
+  }
+
+  function eliminarCampo(indice) {
+    setForm((actual) => ({
+      ...actual,
+      campos_solicitud: actual.campos_solicitud.filter((_, i) => i !== indice),
+    }));
+  }
 
   async function guardar(e) {
     e.preventDefault();
@@ -36,6 +83,8 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
     if (tipo === "sedes") cuerpo.direccion = (form.direccion || "").trim();
     else {
       cuerpo.descripcion = (form.descripcion || "").trim();
+      cuerpo.instrucciones_preparacion = (form.instrucciones_preparacion || "").trim();
+      cuerpo.campos_solicitud = form.campos_solicitud;
       cuerpo.tiempo_estimado = Number(form.tiempo_estimado);
     }
     if (cuerpo.nombre.length < 2) return setError("Escribe un nombre de al menos 2 caracteres.");
@@ -87,6 +136,89 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
               <span className="campo"><textarea value={form.descripcion || ""} onChange={cambiar("descripcion")} maxLength={1000} rows={3} placeholder="Qué incluye el servicio" /></span>
               <small className="formulario__ayuda">{(form.descripcion || "").length}/1000 · Describe brevemente qué debe esperar el ciudadano.</small>
             </label>
+            <label>
+              <span className="etiqueta">Ayuda para reservar (opcional)</span>
+              <span className="campo"><textarea value={form.instrucciones_preparacion || ""} onChange={cambiar("instrucciones_preparacion")} maxLength={1000} rows={2} placeholder="Ej. Ten a mano tu número de cliente." /></span>
+            </label>
+            <section className="preguntas-solicitud" aria-label="Preguntas del trámite">
+              <div className="preguntas-solicitud__encabezado">
+                <div>
+                  <strong>Preguntas adicionales</strong>
+                  <small>Máximo 3. Son opcionales, salvo que marques alguna como obligatoria.</small>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn--suave"
+                  onClick={agregarCampo}
+                  disabled={form.campos_solicitud.length >= 3}
+                >
+                  Agregar
+                </button>
+              </div>
+              {form.campos_solicitud.map((campo, indice) => (
+                <div className="pregunta-solicitud" key={campo.id}>
+                  <div className="pregunta-solicitud__barra">
+                    <strong>Pregunta {indice + 1}</strong>
+                    <div>
+                      <button type="button" className="btn btn--suave" onClick={() => moverCampo(indice, -1)} disabled={indice === 0}>Subir</button>
+                      <button type="button" className="btn btn--suave" onClick={() => moverCampo(indice, 1)} disabled={indice === form.campos_solicitud.length - 1}>Bajar</button>
+                      <button type="button" className="btn btn--suave" onClick={() => eliminarCampo(indice)}>Quitar</button>
+                    </div>
+                  </div>
+                  <label>
+                    <span className="etiqueta">Pregunta</span>
+                    <span className="campo">
+                      <input
+                        value={campo.etiqueta}
+                        onChange={(e) => cambiarCampo(indice, { etiqueta: e.target.value })}
+                        maxLength={120}
+                        placeholder="Ej. ¿Cuál es tu número de cliente?"
+                      />
+                    </span>
+                  </label>
+                  <label>
+                    <span className="etiqueta">Respuesta</span>
+                    <span className="campo">
+                      <select
+                        value={campo.tipo}
+                        onChange={(e) => cambiarCampo(indice, {
+                          tipo: e.target.value,
+                          opciones: e.target.value === "seleccion" ? campo.opciones : [],
+                        })}
+                      >
+                        <option value="texto">Texto corto</option>
+                        <option value="parrafo">Respuesta larga</option>
+                        <option value="seleccion">Elegir una opción</option>
+                        <option value="si_no">Sí / No</option>
+                      </select>
+                    </span>
+                  </label>
+                  {campo.tipo === "seleccion" && (
+                    <label>
+                      <span className="etiqueta">Opciones (una por línea, entre 2 y 8)</span>
+                      <span className="campo">
+                        <textarea
+                          value={(campo.opciones || []).join("\n")}
+                          onChange={(e) => cambiarCampo(indice, {
+                            opciones: e.target.value.split("\n").slice(0, 8),
+                          })}
+                          rows={3}
+                          placeholder={"Presencial\nVirtual"}
+                        />
+                      </span>
+                    </label>
+                  )}
+                  <label className="pregunta-solicitud__obligatoria">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(campo.obligatorio)}
+                      onChange={(e) => cambiarCampo(indice, { obligatorio: e.target.checked })}
+                    />
+                    Obligatoria
+                  </label>
+                </div>
+              ))}
+            </section>
             <label>
               <span className="etiqueta">Duración estimada (minutos)</span>
               <span className="campo"><Icon name="reloj" size={17} /><input type="number" min={1} max={10} value={form.tiempo_estimado} onChange={cambiar("tiempo_estimado")} /></span>

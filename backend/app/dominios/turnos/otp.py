@@ -19,7 +19,7 @@ def _enviar_sms(celular, codigo):  # pragma: no cover - integración futura
     raise RuntimeError("Proveedor SMS no configurado.")
 
 
-def generar_codigo(celular):
+def generar_codigo(celular, organizacion_id=1):
     config = current_app.config
     modo_prueba = (
         config.get("OTP_TEST_MODE")
@@ -28,7 +28,7 @@ def generar_codigo(celular):
     )
     codigo = f"{secrets.randbelow(1_000_000):06d}"
     with _candado:
-        _codigos[celular] = {
+        _codigos[(int(organizacion_id), celular)] = {
             "codigo": codigo,
             "expira": time.monotonic() + int(config.get("OTP_VIGENCIA_SEG", 300)),
             "intentos": 0,
@@ -40,17 +40,18 @@ def generar_codigo(celular):
     return codigo
 
 
-def verificar_codigo(celular, codigo):
+def verificar_codigo(celular, codigo, organizacion_id=1):
     maximo = int(current_app.config.get("OTP_MAX_INTENTOS", 5))
     with _candado:
-        registro = _codigos.get(celular)
+        clave = (int(organizacion_id), celular)
+        registro = _codigos.get(clave)
         if not registro:
             raise ValueError("Solicita un código de verificación primero.")
         if time.monotonic() > registro["expira"]:
-            _codigos.pop(celular, None)
+            _codigos.pop(clave, None)
             raise ValueError("El código expiró. Solicita uno nuevo.")
         if registro["intentos"] >= maximo:
-            _codigos.pop(celular, None)
+            _codigos.pop(clave, None)
             raise ValueError("Superaste el número de intentos. Solicita un código nuevo.")
 
         registro["intentos"] += 1
@@ -58,7 +59,7 @@ def verificar_codigo(celular, codigo):
             restantes = maximo - registro["intentos"]
             raise ValueError(f"Código incorrecto. Te quedan {restantes} intento(s).")
 
-        _codigos.pop(celular, None)
+        _codigos.pop(clave, None)
         return True
 
 

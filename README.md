@@ -1,180 +1,157 @@
 # FilaCero
 
-> Plataforma de turnos presenciales que garantiza la atención dentro de la franja reservada.
+**Plataforma web de gestión y orquestación de turnos presenciales**, con portal ciudadano, consola de asesores, sala de atención y panel administrativo. Esta entrega integra el frontend React con el backend Flask y el núcleo multiempresa validado por la suite automatizada del proyecto.
 
-[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)](https://flask.palletsprojects.com/)
-[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
-[![MySQL](https://img.shields.io/badge/MySQL-8-orange.svg)](https://www.mysql.com/)
+## Qué incluye
 
----
+- Portal público para reservar, consultar y cancelar turnos con verificación OTP.
+- Consola del asesor para llamar, iniciar y finalizar atenciones.
+- Vista de sala para mostrar turnos llamados.
+- Panel administrativo con resumen operativo, sedes, trámites, asesores, usuarios, historial y actividad.
+- Backend organizado por dominios: organizaciones, usuarios, sedes, trámites, franjas, turnos, agentes y auditoría.
+- Aislamiento multiempresa a nivel de contexto HTTP y consultas/escrituras ORM.
+- Migraciones Alembic y scripts de provisión de organizaciones y cuentas.
 
-## ¿Qué es FilaCero?
+## Tecnologías
 
-**FilaCero** es una aplicación web para gestionar turnos de atención presencial. El ciudadano reserva su turno desde el celular, sin crear una cuenta, y el personal lo atiende desde una consola en la sede.
+- Backend: Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow.
+- Frontend: React 19 y Vite.
+- Base de datos: MySQL 8 (SQLite está disponible para pruebas automatizadas).
+- Pruebas: pytest.
 
-Los sistemas de turnos comunes ordenan la fila, pero no dicen **cuándo** te van a atender. FilaCero sí lo promete: **si reservas de 4:00 a 4:30 p. m., te atienden en ese intervalo.** Para cumplirlo, cada sede solo acepta las reservas que realmente puede atender.
+## Estructura
 
-El proyecto se desarrolla sobre el caso de **TecniVisión**, un centro de reparación de televisores con 4 sedes, 2 administradores, 1 supervisor y 8 asesores. Para la demo, atiende todos los días, las 24 horas.
-
----
-
-## ¿Cómo funciona?
-
-- La atención se organiza en **franjas de 30 minutos**.
-- Cada persona se atiende en **máximo 10 minutos**, así que un asesor puede atender **3 personas por franja**.
-- El cupo de una sede es **3 × asesores activos**. Cuando se llena, la franja deja de aparecer disponible.
-- Un **asistente de despacho** le indica al asesor a quién llamar primero para que nadie se salga de su franja.
-
----
-
-## Roles
-
-| Rol | Qué hace |
-|---|---|
-| **Ciudadano** | Elige sede, servicio y hora; verifica su celular con un código; consulta o cancela su turno. No necesita cuenta. |
-| **Asesor** | Llama, atiende y finaliza los turnos de su sede desde la consola de atención. |
-| **Supervisor** | Consulta el panel y las métricas, sin poder modificar. |
-| **Administrador** | Gestiona sedes, servicios, asesores, usuarios y permisos; ve la operación en vivo y el historial. |
-
----
-
-## Stack tecnológico
-
-- **Python 3.12+** — Lenguaje del backend
-- **Flask 3.x** — API REST
-- **Flask-SQLAlchemy** — ORM
-- **Flask-Migrate (Alembic)** — Migraciones de la base de datos
-- **Flask-JWT-Extended** — Autenticación con tokens JWT
-- **Marshmallow** — Validación de datos (DTOs)
-- **MySQL 8** — Base de datos
-- **React 19 + Vite** — Frontend (SPA)
-- **pytest** — Pruebas automatizadas
-
----
-
-## Arquitectura
-
-FilaCero es un **monolito modular**: un solo backend organizado por **dominios**, donde cada dominio tiene sus propias capas. El frontend es una aplicación aparte que consume la API.
-
-```
-┌─────────────────────────┐        HTTP + JSON        ┌─────────────────────────┐        ┌─────────┐
-│  Frontend (React)       │  ───────────────────────► │  Backend (Flask API)    │ ─────► │  MySQL  │
-│  Ciudadano · Asesor ·   │  ◄─────────────────────── │  /api/v1                │        │         │
-│  Administrador · Sala   │       Token JWT           │  Dominios por capas     │        │         │
-└─────────────────────────┘                           └─────────────────────────┘        └─────────┘
+```text
+FilaCero/
+├── backend/
+│   ├── app/
+│   ├── migrations/
+│   ├── scripts/
+│   ├── tests/
+│   ├── .env.example
+│   └── run.py
+└── frontend/
+    ├── src/
+    ├── public/
+    ├── .env.example
+    └── package.json
 ```
 
-### Backend
+## Requisitos
 
-```
-backend/
-├── run.py                          # Punto de entrada
-├── requirements.txt                # Dependencias
-├── pytest.ini
-├── .env.example                    # Plantilla de variables de entorno
-├── app/
-│   ├── __init__.py                 # Factory: crear_app()
-│   ├── config.py                   # Configuración desde .env
-│   ├── seguridad.py                # Roles, contraseñas y protección de rutas
-│   ├── errores.py                  # Errores de dominio y respuestas de error
-│   ├── horario.py                  # Horario, franjas y cupo por sede
-│   └── dominios/
-│       ├── usuarios/               # Acceso, usuarios y permisos
-│       ├── sedes/                  # Puntos de atención
-│       ├── tramites/               # Servicios que se pueden reservar
-│       ├── franjas/                # Franjas de 30 min y disponibilidad
-│       ├── turnos/                 # Reserva, consulta y cancelación
-│       ├── agentes/                # Consola del asesor y métricas
-│       └── auditoria/              # Registro de actividad
-│           ├── controladores.py    # Endpoints (Blueprints)
-│           ├── servicios.py        # Lógica de negocio
-│           ├── repositorios.py     # Acceso a datos
-│           ├── modelos.py          # Modelos SQLAlchemy
-│           └── dtos.py             # Validación y serialización
-├── migrations/                     # Migraciones de Alembic
-├── scripts/                        # Scripts de utilidad
-└── tests/                          # Pruebas automatizadas
-```
+- Python 3.12 o superior (el proyecto también se ha probado localmente con Python 3.14.3).
+- Node.js 22 LTS o compatible con Vite 8.
+- MySQL 8 para persistencia local. Para pruebas automatizadas se usa SQLite en memoria.
 
-### Frontend
+## Instalación en Windows (PowerShell)
 
-```
-frontend-react/src/
-├── main.jsx · App.jsx              # Arranque de la aplicación
-├── api/                            # Comunicación con la API (un archivo por recurso)
-├── auth/                           # Sesión y permisos por rol
-├── router/                         # Rutas y guardas de acceso
-├── pages/                          # Portal, Administración, Asesor, Sala
-├── components/                     # Componentes reutilizables
-├── hooks/                          # Lógica compartida (actualización automática, avisos)
-├── utils/                          # Formatos y utilidades
-└── css/                            # Estilos
-```
+### 1. Backend
 
-### Flujo de una petición
-
-```
-Frontend (React)
-    │
-    ▼  api/http.js agrega el token JWT
-Blueprint (controlador)
-    │
-    ▼  valida la entrada con DTO (Marshmallow) y el rol del usuario
-Servicio (lógica de negocio)
-    │
-    ▼  aplica las reglas: cupo por sede, estados del turno
-Repositorio (acceso a datos)
-    │
-    ▼
-Base de datos (MySQL)
-    │
-    ▼
-Respuesta JSON  →  {"success": true, ...}  o  {"success": false, "error": "..."}
-```
-
-### Base de datos
-
-```
-sedes ── 1:N ── franjas ── N:1 ── tramites
-  │                │
-  │               1:N
-  │                │
-  └──── 1:N ──── turnos ── N:1 ── usuarios (ciudadano)
-                   │
-                   └── N:1 ── usuarios (asesor que atiende)
-
-usuarios ── 1:N ── auditoria
-```
-
----
-
-## Ejecutar en local
-
-```bash
-# Backend
+```powershell
 cd backend
 python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env          # completar los datos de MySQL
-flask --app run db upgrade
-python run.py                   # http://127.0.0.1:5000
-
-# Frontend
-cd frontend-react
-npm install
-npm run dev                     # http://localhost:5173
+.\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements-dev.txt
+Copy-Item .env.example .env
 ```
 
----
+Edita `backend/.env` y configura `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` y `DB_NAME`. Genera secretos nuevos para tu entorno; no reutilices claves de ejemplo ni compartas el `.env`.
 
-## Documentación
+```powershell
+python scripts/generate_secret.py
+flask --app run db upgrade
+python run.py
+```
 
-- [`backend/README.md`](backend/README.md) — Detalle de la API
-- [`backend/docs/`](backend/docs/) — Sprints, historias de usuario y colección de Postman
-- [`frontend-react/README.md`](frontend-react/README.md) — Detalle del frontend
+La API queda disponible en `http://127.0.0.1:5000`.
 
----
+> Si ya tienes una base de datos de FilaCero con las migraciones aplicadas, conserva tu `.env` y ejecuta `flask --app run db upgrade` para aplicar únicamente migraciones pendientes. No borres la base de datos.
 
-**FilaCero** · Proyecto final · Arquitectura de Software y Computacional · 2026
+### 2. Organización y cuenta administrativa
+
+La migración inicial crea la organización demo `filacero-demo`. Para crear otra organización:
+
+```powershell
+python scripts/crear_organizacion.py --nombre "Mi Empresa" --slug mi-empresa --industria general --pais CO --zona-horaria America/Bogota --idioma es --moneda COP
+```
+
+El comando informa el ID asignado. Usa ese ID para crear el administrador:
+
+```powershell
+python scripts/crear_cuenta.py admin@miempresa.com ADMIN "Administrador" --organizacion-id 2
+```
+
+Cambia `2` por el ID real que devolvió el primer comando. La contraseña se solicita de forma interactiva y no se guarda en texto plano.
+
+Si ya creaste tu organización y cuenta en tu base de datos local, **no repitas estos comandos**.
+
+### 3. Frontend
+
+Abre otra terminal:
+
+```powershell
+cd frontend
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+La interfaz queda disponible en `http://localhost:5173`.
+
+En `frontend/.env`, configura:
+
+```env
+VITE_API_URL=http://127.0.0.1:5000/api/v1
+VITE_ORGANIZATION_SLUG=filacero-demo
+```
+
+`VITE_ORGANIZATION_SLUG` debe coincidir con el slug de la organización que atenderá las solicitudes públicas de ese despliegue. El frontend envía ese encabezado únicamente cuando no hay una sesión autenticada. En sesiones autenticadas, el backend resuelve la organización desde el `org_id` firmado en el JWT.
+
+## Ejecutar las pruebas
+
+Desde `backend/`, con el entorno virtual activo:
+
+```powershell
+python -m pytest tests/ -v
+```
+
+La última ejecución reportada por el equipo para esta entrega fue **117 passed**. Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+
+## Simulación de operación
+
+Desde `backend/`:
+
+```powershell
+python simulacion.py
+```
+
+Consulta las opciones disponibles antes de cargar datos:
+
+```powershell
+python simulacion.py --help
+```
+
+Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en una base de pruebas y revisa las opciones de confirmación antes de ejecutarlos.
+
+## Roles principales
+
+| Rol | Capacidades |
+|---|---|
+| Ciudadano | Reservar, consultar y cancelar su turno sin crear cuenta. |
+| Agente/asesor | Gestionar la cola y ejecutar el ciclo de atención. |
+| Supervisor | Consultar operación e indicadores según permisos. |
+| Administrador | Gestionar catálogo, personal, permisos e historial de su organización. |
+
+## Seguridad y configuración
+
+- No subir `backend/.env` ni `frontend/.env` al repositorio.
+- `FILACERO_OTP_TEST_MODE=true` es únicamente para desarrollo/pruebas; producción debe usar un proveedor SMS real y desactivar el modo de prueba.
+- En producción, configura HTTPS, secretos únicos, CORS restrictivo, base de datos administrada, copias de seguridad y monitoreo.
+- No conectar un agente de IA directamente a la base de datos. Las futuras integraciones deben pasar por servicios y herramientas autorizadas con permisos y auditoría.
+
+## Estado y alcance
+
+Esta entrega es una **versión funcional de desarrollo/demo**, no una certificación de seguridad ni una declaración de preparación para producción. La suite de 117 pruebas fue ejecutada en el entorno local del proyecto según el reporte recibido; no se debe interpretar como sustituto de pruebas de integración contra MySQL, pruebas de carga, revisión de dependencias o pentest.
+
+Antes de operar con datos reales se recomienda completar: pruebas de aislamiento multiempresa con MySQL, claves foráneas compuestas para integridad entre tenants, revisión de permisos por endpoint, integración real de SMS, despliegue HTTPS y auditoría de seguridad independiente.

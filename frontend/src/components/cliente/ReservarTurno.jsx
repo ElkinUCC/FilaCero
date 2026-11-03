@@ -25,6 +25,8 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
   const [cargandoFranjas, setCargandoFranjas] = useState(false);
 
   const [nombre, setNombre] = useState("");
+  const [detalleNecesidad, setDetalleNecesidad] = useState("");
+  const [respuestasSolicitud, setRespuestasSolicitud] = useState({});
   const [celular, setCelular] = useState("");
   const [codigo, setCodigo] = useState("");
   const [codigoEnviado, setCodigoEnviado] = useState(false);
@@ -80,6 +82,17 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
   const sedeSel = sedes.find((s) => String(s.id) === String(sede));
   const tramiteSel = tramites.find((t) => String(t.id) === String(tramite));
   const franjaSel = franjas.find((f) => String(f.franja_id) === String(franja));
+  const camposSolicitud = tramiteSel?.campos_solicitud || [];
+  const requiereDetalle = Boolean(tramiteSel?.instrucciones_preparacion?.trim());
+
+  function respuestaObligatoriaCompleta(campo) {
+    const valor = respuestasSolicitud[campo.id];
+    return campo.tipo === "si_no" ? typeof valor === "boolean" : Boolean(String(valor || "").trim());
+  }
+  const respuestasObligatoriasCompletas = camposSolicitud
+    .filter((campo) => campo.obligatorio)
+    .every(respuestaObligatoriaCompleta);
+  const camposOpcionales = camposSolicitud.filter((campo) => !campo.obligatorio);
 
   useEffect(() => {
     onResumen?.({
@@ -163,7 +176,8 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
 
   // ---------------------------------------------------------- reservar
   const nombreValido = nombre.trim().split(/\s+/).join(" ").length >= 3;
-  const listo = sedeSel && tramiteSel && franjaSel && nombreValido && verificacion;
+  const listo = sedeSel && tramiteSel && franjaSel && nombreValido && verificacion
+    && respuestasObligatoriasCompletas;
 
   async function confirmar(e) {
     e.preventDefault();
@@ -178,10 +192,13 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
         punto_id: Number(sede),
         tramite_id: Number(tramite),
         franja_id: Number(franja),
+        detalle_necesidad: detalleNecesidad.trim(),
+        respuestas_solicitud: respuestasSolicitud,
       });
       onConfirmado?.(r.turno, celular, r.espera, r.token_consulta);
       setSede(""); setTramite(""); setFranja(""); setFecha(hoyISO()); setInicioDias(0);
-      setNombre(""); setCelular(""); setVerificacion(""); setCodigo("");
+      setNombre(""); setDetalleNecesidad(""); setRespuestasSolicitud({});
+      setCelular(""); setVerificacion(""); setCodigo("");
     } catch (e) {
       setError(e.message);
       if (/cupo|comenzaron/i.test(e.message)) setRecarga((n) => n + 1); // refresca horarios
@@ -193,7 +210,8 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
   const faltante = !sedeSel ? "Elige una sede"
     : !tramiteSel ? "Elige un servicio"
       : !franjaSel ? "Elige un horario"
-        : !nombreValido ? "Escribe tu nombre"
+        : !respuestasObligatoriasCompletas ? "Responde las preguntas obligatorias"
+      : !nombreValido ? "Escribe tu nombre"
           : !verificacion ? "Verifica tu celular" : null;
 
   return (
@@ -214,7 +232,12 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
           icon="servicio"
           value={tramite}
           options={opcionesTramite}
-          onChange={(v) => { setTramite(String(v)); setError(""); }}
+          onChange={(v) => {
+            setTramite(String(v));
+            setDetalleNecesidad("");
+            setRespuestasSolicitud({});
+            setError("");
+          }}
           placeholder="¿Qué necesitas?"
           loading={cargandoCatalogo}
           emptyText="No hay servicios disponibles"
@@ -275,6 +298,107 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
         />
         {aviso && !cargandoFranjas && <p className="rv__nota">{aviso}</p>}
       </fieldset>
+
+      {franjaSel && (requiereDetalle || camposSolicitud.length > 0) && (
+        <fieldset className="rv__bloque">
+          <legend className="rv__label">Información para el asesor</legend>
+          {camposSolicitud.filter((campo) => campo.obligatorio).map((campo) => {
+            const valor = respuestasSolicitud[campo.id];
+            const actualizar = (respuesta) =>
+              setRespuestasSolicitud((actual) => ({ ...actual, [campo.id]: respuesta }));
+            return (
+              <label key={campo.id}>
+                <span className="etiqueta">
+                  {campo.etiqueta} *
+                </span>
+                <span className="campo">
+                  {campo.tipo === "parrafo" ? (
+                    <textarea
+                      value={valor || ""}
+                      onChange={(e) => actualizar(e.target.value)}
+                      maxLength={1000}
+                      rows={2}
+                    />
+                  ) : campo.tipo === "seleccion" ? (
+                    <select value={valor || ""} onChange={(e) => actualizar(e.target.value)}>
+                      <option value="">Elige una opción</option>
+                      {campo.opciones.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
+                    </select>
+                  ) : campo.tipo === "si_no" ? (
+                    <select
+                      value={typeof valor === "boolean" ? String(valor) : ""}
+                      onChange={(e) => actualizar(e.target.value === "" ? null : e.target.value === "true")}
+                    >
+                      <option value="">Elige una opción</option>
+                      <option value="true">Sí</option>
+                      <option value="false">No</option>
+                    </select>
+                  ) : (
+                    <input
+                      value={valor || ""}
+                      onChange={(e) => actualizar(e.target.value)}
+                      maxLength={150}
+                    />
+                  )}
+                </span>
+              </label>
+            );
+          })}
+          {(requiereDetalle || camposOpcionales.length > 0) && (
+            <details className="rv__opcionales">
+              <summary>Agregar información opcional</summary>
+              {requiereDetalle && (
+                <>
+                  <p className="rv__nota">{tramiteSel.instrucciones_preparacion}</p>
+                  <label>
+                    <span className="etiqueta">Cuéntanos brevemente qué necesitas</span>
+                    <span className="campo">
+                      <textarea
+                        value={detalleNecesidad}
+                        onChange={(e) => setDetalleNecesidad(e.target.value)}
+                        maxLength={1000}
+                        rows={2}
+                        placeholder="Así el asesor puede prepararse para atenderte."
+                      />
+                    </span>
+                  </label>
+                </>
+              )}
+              {camposOpcionales.map((campo) => {
+                const valor = respuestasSolicitud[campo.id];
+                const actualizar = (respuesta) =>
+                  setRespuestasSolicitud((actual) => ({ ...actual, [campo.id]: respuesta }));
+                return (
+                  <label key={campo.id}>
+                    <span className="etiqueta">{campo.etiqueta} (opcional)</span>
+                    <span className="campo">
+                      {campo.tipo === "parrafo" ? (
+                        <textarea value={valor || ""} onChange={(e) => actualizar(e.target.value)} maxLength={1000} rows={2} />
+                      ) : campo.tipo === "seleccion" ? (
+                        <select value={valor || ""} onChange={(e) => actualizar(e.target.value)}>
+                          <option value="">Elige una opción</option>
+                          {campo.opciones.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
+                        </select>
+                      ) : campo.tipo === "si_no" ? (
+                        <select
+                          value={typeof valor === "boolean" ? String(valor) : ""}
+                          onChange={(e) => actualizar(e.target.value === "" ? null : e.target.value === "true")}
+                        >
+                          <option value="">Elige una opción</option>
+                          <option value="true">Sí</option>
+                          <option value="false">No</option>
+                        </select>
+                      ) : (
+                        <input value={valor || ""} onChange={(e) => actualizar(e.target.value)} maxLength={150} />
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+            </details>
+          )}
+        </fieldset>
+      )}
 
       <fieldset className={`rv__bloque ${franjaSel ? "" : "rv__bloque--espera"}`} disabled={!franjaSel}>
         <legend className="rv__label">Tus datos</legend>

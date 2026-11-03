@@ -11,6 +11,8 @@ def turno_response(turno):
         "hora_fin": turno.franja.hora_fin.strftime("%H:%M"),
         "hora_solicitud": a_iso_utc(turno.hora_solicitud),
         "estado": turno.estado,
+        "detalle_necesidad": turno.detalle_necesidad,
+        "respuestas_solicitud": turno.respuestas_solicitud or [],
         "usuario_id": turno.usuario_id,
         "usuario_nombre": turno.usuario.nombre if turno.usuario else None,
         "usuario_celular": turno.usuario.celular if turno.usuario else None,

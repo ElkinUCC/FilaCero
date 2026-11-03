@@ -543,3 +543,29 @@ def test_pantalla_de_sala_no_expone_datos_personales(app, base):
     assert llamado["nombre"] == "Cliente D."  # solo nombre e inicial
     assert "celular" not in str(r) and CELULAR not in str(r)
     assert app.test_client().get("/api/v1/turnos/publico/sala").get_json()["sede"] is None
+
+
+def test_consulta_por_celular_exige_otp_y_devuelve_lista(client, base):
+    # Un celular verificado para consulta general puede listar sus turnos,
+    # pero no puede usar el token de reserva para consultar información.
+    token_consulta = verificar_celular(
+        client, CELULAR, proposito="consulta_celular"
+    )
+    respuesta = client.post(
+        "/api/v1/turnos/publico/consultar-por-celular",
+        json={"celular": CELULAR},
+    )
+    assert respuesta.status_code == 400
+
+    respuesta = client.post(
+        "/api/v1/turnos/publico/consultar-por-celular",
+        json={"celular": CELULAR, "token_verificacion": token_consulta},
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["turnos"] == []
+
+    respuesta = client.post(
+        "/api/v1/turnos/publico/consultar-por-celular",
+        json={"celular": "3110000000", "token_verificacion": token_consulta},
+    )
+    assert respuesta.status_code == 400

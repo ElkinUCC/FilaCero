@@ -96,6 +96,7 @@ class Config:
     DB_PORT = os.getenv("DB_PORT", "3307")
     DB_NAME = os.getenv("DB_NAME", "filacero_db")
     DB_CHARSET = os.getenv("DB_CHARSET", "utf8mb4")
+    DEFAULT_ORGANIZATION_SLUG = os.getenv("DEFAULT_ORGANIZATION_SLUG", "filacero-demo").strip().lower()
 
     SQLALCHEMY_DATABASE_URI = _URL_BD or (
         f"mysql+pymysql://"

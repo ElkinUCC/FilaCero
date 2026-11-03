@@ -1,6 +1,6 @@
 from datetime import UTC
 
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app, g, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
@@ -10,13 +10,13 @@ from app.seguridad import limitar, normalizar_celular
 from . import otp
 from .dtos import turno_publico_response, turno_response
 from .prediccion import estimar_espera
-from .repositorios import obtener_por_codigo
+from .repositorios import obtener_por_codigo, obtener_por_celular
 from .servicios import cancelar_turno, cancelar_turno_publico, crear_turno, mis_turnos
 
 turnos_bp = Blueprint("turnos", __name__)
 
 VIGENCIA_VERIFICACION_SEG = 15 * 60
-PROPOSITOS_VERIFICACION = {"reserva", "consulta", "cancelacion"}
+PROPOSITOS_VERIFICACION = {"reserva", "consulta", "consulta_celular", "cancelacion"}
 
 
 def _serializador_verificacion():
@@ -31,6 +31,7 @@ def _token_verificacion(celular, proposito="reserva", codigo_turno=None):
             "celular": celular,
             "proposito": proposito,
             "codigo_turno": codigo_turno,
+            "org_id": getattr(g, "organizacion_id", 1),
         }
     )
 
@@ -60,7 +61,7 @@ def solicitar_codigo_celular():
         return {"error": str(error)}, 400
 
     try:
-        codigo = otp.generar_codigo(celular)
+        codigo = otp.generar_codigo(celular, getattr(g, "organizacion_id", 1))
     except RuntimeError:
         return {"error": "La verificación por SMS no está disponible en este momento."}, 503
 
@@ -89,18 +90,18 @@ def verificar_codigo_celular():
         if proposito not in PROPOSITOS_VERIFICACION:
             raise ValueError("El propósito de verificación no es válido.")
         codigo_turno = str(datos.get("codigo_turno", "")).strip().upper()
-        if proposito != "reserva" and not codigo_turno:
+        if proposito in {"consulta", "cancelacion"} and not codigo_turno:
             raise ValueError("Ingresa el código del turno que deseas verificar.")
         if len(codigo_turno) > 30:
             raise ValueError("El código del turno no es válido.")
-        otp.verificar_codigo(celular, codigo)
+        otp.verificar_codigo(celular, codigo, getattr(g, "organizacion_id", 1))
     except ValueError as error:
         return {"error": str(error)}, 400
 
     token = _token_verificacion(
         celular,
         proposito=proposito,
-        codigo_turno=codigo_turno if proposito != "reserva" else None,
+        codigo_turno=codigo_turno if proposito in {"consulta", "cancelacion"} else None,
     )
     return {"mensaje": "Celular verificado correctamente.", "token_verificacion": token}, 200
 
@@ -115,6 +116,8 @@ def _celular_verificado(datos, proposito="reserva", codigo_turno=None):
         raise ValueError("La verificación expiró. Verifica tu celular nuevamente.") from None
     except BadSignature:
         raise ValueError("La verificación del celular no es válida.") from None
+    if verificacion.get("org_id") != getattr(g, "organizacion_id", 1):
+        raise ValueError("La verificación no corresponde a esta organización.")
     if verificacion.get("proposito", "reserva") != proposito:
         raise ValueError("Verifica tu celular para esta operación.")
     if proposito != "reserva" and verificacion.get("codigo_turno") != codigo_turno:
@@ -141,7 +144,14 @@ def solicitar_turno_publico():
         franja_id = _entero(datos, "franja_id")
 
         usuario = registrar_cliente_publico(datos.get("nombre"), celular)
-        turno = crear_turno(usuario.id, tramite_id, punto_id, franja_id)
+        turno = crear_turno(
+            usuario.id,
+            tramite_id,
+            punto_id,
+            franja_id,
+            datos.get("detalle_necesidad"),
+            datos.get("respuestas_solicitud"),
+        )
     except ValueError as error:
         return {"error": str(error)}, 400
 
@@ -183,6 +193,42 @@ def consultar_turno_publico():
         return {"error": str(error)}, 400
 
     return {"turno": turno_publico_response(turno), "espera": estimar_espera(turno)}, 200
+
+
+@turnos_bp.post("/publico/consultar-por-celular")
+@limitar("LIMITE_OTP_POR_MINUTO")
+def consultar_turnos_por_celular():
+    """Lista turnos del celular únicamente después de verificar el OTP."""
+    try:
+        datos = request.get_json(silent=True) or {}
+        celular = normalizar_celular(datos.get("celular"))
+        token = str(datos.get("token_verificacion", "")).strip()
+        if not token:
+            raise ValueError("Debes verificar tu celular antes de consultar.")
+        try:
+            verificacion = _serializador_verificacion().loads(
+                token, max_age=VIGENCIA_VERIFICACION_SEG
+            )
+        except SignatureExpired:
+            raise ValueError("La verificación expiró. Verifica tu celular nuevamente.") from None
+        except BadSignature:
+            raise ValueError("La verificación del celular no es válida.") from None
+        if verificacion.get("org_id") != getattr(g, "organizacion_id", 1):
+            raise ValueError("La verificación no corresponde a esta organización.")
+        if verificacion.get("proposito") != "consulta_celular":
+            raise ValueError("Verifica tu celular para consultar tus turnos.")
+        if verificacion.get("celular") != celular:
+            raise ValueError("El celular verificado no coincide con la consulta.")
+        turnos = obtener_por_celular(celular, limite=10)
+    except ValueError as error:
+        return {"error": str(error)}, 400
+
+    return {
+        "turnos": [
+            {"turno": turno_publico_response(turno), "espera": estimar_espera(turno)}
+            for turno in turnos
+        ]
+    }, 200
 
 
 @turnos_bp.post("/publico/cancelar")
@@ -299,6 +345,8 @@ def solicitar_turno():
             _entero(datos, "tramite_id"),
             _entero(datos, "punto_id"),
             _entero(datos, "franja_id"),
+            datos.get("detalle_necesidad"),
+            datos.get("respuestas_solicitud"),
         )
         return turno_response(turno), 201
     except ValueError as error:

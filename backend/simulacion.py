@@ -2,7 +2,7 @@
 
 Un solo archivo para todo lo que necesitas antes de la demo:
 
-  1) CARGAR DATOS DEMO (borra la base de datos y la llena con una semana real)
+  1) CARGAR DATOS DEMO (reemplaza solo los datos operativos del tenant seleccionado)
        python simulacion.py --cargar
        python simulacion.py --cargar --si                       # sin preguntar
        python simulacion.py --cargar --desde 2026-10-25 --hasta 2026-10-30
@@ -258,25 +258,55 @@ DEMANDA_DIA = {0: 1.0, 1: 0.9, 2: 0.9, 3: 0.95, 4: 1.0, 5: 0.8, 6: 0.5}
 # ======================================================================
 
 
-def borrar_todo(db):
-    """Vacía todas las tablas de la aplicación (no toca alembic_version)."""
-    # Cierra la transacción de la sesión ORM: en MySQL, una consulta previa sin
-    # cerrar retiene un bloqueo de metadatos y TRUNCATE se quedaría esperando.
+def borrar_todo(db, organizacion_id=None):
+    """Elimina SOLO datos operativos del tenant indicado; nunca organizaciones.
+
+    La versión anterior truncaba todas las tablas, incluida `organizaciones`,
+    y además borraba datos de otros tenants. Esta versión usa DELETE filtrado
+    por organizacion_id y conserva intacto el catálogo multiempresa.
+    """
+    from flask import g, has_app_context
+
+    tenant_id = organizacion_id or (getattr(g, "organizacion_id", None) if has_app_context() else None) or 1
     db.session.rollback()
-    db.session.close()
-    tablas = list(reversed(db.metadata.sorted_tables))
-    motor = db.engine.dialect.name
+    tablas = [
+        tabla for tabla in reversed(db.metadata.sorted_tables)
+        if tabla.name != "organizaciones" and "organizacion_id" in tabla.c
+    ]
     with db.engine.begin() as con:
-        if motor == "mysql":
-            con.exec_driver_sql("SET FOREIGN_KEY_CHECKS = 0")
-            for tabla in tablas:
-                con.exec_driver_sql(f"TRUNCATE TABLE `{tabla.name}`")  # reinicia los IDs
-            con.exec_driver_sql("SET FOREIGN_KEY_CHECKS = 1")
-        else:
-            for tabla in tablas:
-                con.execute(tabla.delete())
+        for tabla in tablas:
+            con.execute(tabla.delete().where(tabla.c.organizacion_id == int(tenant_id)))
     db.session.expire_all()
     return [t.name for t in tablas]
+
+
+def _asegurar_organizacion_simulacion(app, db):
+    """Resuelve el tenant configurado o lo crea si fue borrado por una versión anterior."""
+    from app.dominios.organizaciones.modelos import Organizacion
+
+    slug = (app.config.get("DEFAULT_ORGANIZATION_SLUG") or "filacero-demo").strip().lower()
+    organizacion = Organizacion.query.filter_by(slug=slug).first()
+    if organizacion is None:
+        # Recuperación del catálogo tenant tras el truncado accidental de la
+        # versión anterior. No se inventa una organización si hay un slug ya
+        # ocupado ni se modifica ninguna organización existente.
+        organizacion = Organizacion(
+            nombre=app.config.get("DEFAULT_ORGANIZATION_NAME", "FilaCero Demo"),
+            slug=slug,
+            industria="general",
+            pais="CO",
+            zona_horaria="America/Bogota",
+            idioma="es",
+            moneda="COP",
+            plan="essential",
+            estado="activa",
+            configuracion={},
+        )
+        db.session.add(organizacion)
+        db.session.commit()
+    if not organizacion.activa:
+        raise RuntimeError(f"La organización '{slug}' está inactiva; no se ejecutó la simulación.")
+    return organizacion
 
 
 def crear_catalogo(db):
@@ -701,6 +731,20 @@ def _base_es_remota(url):
     return bool(host and host.lower() not in {"localhost", "127.0.0.1", "::1"})
 
 
+def _preparar_organizacion_simulacion(app, db):
+    """Prepara el esquema local y devuelve el tenant configurado para la simulación."""
+    from sqlalchemy import inspect
+
+    if db.engine.dialect.name == "sqlite":
+        db.create_all()
+    elif not inspect(db.engine).has_table("organizaciones"):
+        raise RuntimeError(
+            "No existe el esquema de organizaciones. Ejecuta `flask db upgrade` "
+            "desde la carpeta backend."
+        )
+    return _asegurar_organizacion_simulacion(app, db)
+
+
 def comando_cargar(args, solo_borrar=False):
     from app import create_app, db
 
@@ -713,13 +757,21 @@ def comando_cargar(args, solo_borrar=False):
         base_remota = _base_es_remota(db.engine.url)
         if base_remota and not args.permitir_borrar_remoto:
             print(
-                f"{ROJO}Se canceló: --cargar/--borrar vacía la base de datos "
-                f"y el destino parece remoto ({host}).{FIN}\n"
-                "Para poblar una base remota, confirma primero con "
-                "--permitir-borrar-remoto y escribe BORRAR. "
-                "Para añadir reservas sin borrar, usa --en-vivo."
+                f"{ROJO}Se canceló: --cargar/--borrar modifica datos y el destino "
+                f"parece remoto ({host}).{FIN}\n"
+                "No ejecutes esta simulación contra una base remota. "
+                "Usa una base local aislada para los datos demo."
             )
             return 1
+        from flask import g
+
+        try:
+            organizacion = _preparar_organizacion_simulacion(app, db)
+        except RuntimeError as error:
+            print(f"{ROJO}No se pudo preparar la simulación: {error}{FIN}")
+            return 1
+        g.organizacion_id = organizacion.id
+        g.organizacion = organizacion
         if not solo_borrar:
             from app.horario import hoy_local
 
@@ -742,19 +794,20 @@ def comando_cargar(args, solo_borrar=False):
         print(f"Base de datos: {NEGRITA}{_descripcion_bd(app)}{FIN}")
         if not args.si or base_remota:
             print(
-                f"{AMBAR}Se borrarán TODOS los registros "
-                f"(sedes, trámites, usuarios, turnos, actividad).{FIN}"
+                f"{AMBAR}Se reemplazarán los datos operativos de la organización "
+                f"'{organizacion.nombre}' (no se borran organizaciones ni otros tenants).{FIN}"
             )
             if input("Escribe BORRAR para continuar: ").strip() != "BORRAR":
                 print("Cancelado. No se modificó nada.")
                 return 1
 
+        nombre_organizacion = organizacion.nombre
         protegidas = _guardar_protegidas(app)
-        if db.engine.dialect.name == "sqlite":
-            db.drop_all()  # SQLite (demo): esquema siempre al día con los modelos
-            db.create_all()
-        tablas = borrar_todo(db)
-        print(f"{VERDE}✓{FIN} Base de datos vacía ({len(tablas)} tablas)")
+        tablas = borrar_todo(db, organizacion.id)
+        print(
+            f"{VERDE}✓{FIN} Datos operativos de '{nombre_organizacion}' limpiados "
+            f"({len(tablas)} tablas; organizaciones y otros tenants conservados)"
+        )
         if solo_borrar:
             _restaurar_protegidas(db, protegidas)
             return 0
@@ -982,6 +1035,15 @@ def comando_en_vivo(args):
         if app.config.get("PRODUCCION"):
             print(f"{ROJO}El modo en vivo no se ejecuta con FLASK_ENV=production.{FIN}")
             return 1
+        from flask import g
+
+        try:
+            organizacion = _preparar_organizacion_simulacion(app, db)
+        except RuntimeError as error:
+            print(f"{ROJO}No se pudo preparar la simulación: {error}{FIN}")
+            return 1
+        g.organizacion_id = organizacion.id
+        g.organizacion = organizacion
         sedes = Punto.query.filter_by(activo=True).all()
         servicios = Tramite.query.filter_by(activo=True).all()
         if not sedes or not servicios:
@@ -1277,10 +1339,20 @@ def escenario_ciudadano(api, celular):
         turno.get("celular", ""),
     )
 
+    s_otp, d_otp, _ = api(
+        "POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular}
+    )
+    otp_consulta = d_otp.get("codigo_prueba")
+    _, d_otp, _ = api(
+        "POST", "/api/v1/turnos/publico/verificar-codigo",
+        {"celular": celular, "codigo": otp_consulta, "proposito": "consulta",
+         "codigo_turno": turno.get("codigo")},
+    ) if otp_consulta else (0, {}, {})
     s, d, _ = api(
         "POST",
         "/api/v1/turnos/publico/consultar",
-        {"codigo": turno.get("codigo"), "celular": celular},
+        {"codigo": turno.get("codigo"), "celular": celular,
+         "token_verificacion": d_otp.get("token_verificacion")},
     )
     paso(
         "Consulta su turno con código + celular",
@@ -1296,10 +1368,20 @@ def escenario_ciudadano(api, celular):
     )
     paso("Otro celular NO puede ver el turno", s == 400)
 
+    _, d_otp, _ = api(
+        "POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular}
+    )
+    otp_cancelacion = d_otp.get("codigo_prueba")
+    _, d_otp, _ = api(
+        "POST", "/api/v1/turnos/publico/verificar-codigo",
+        {"celular": celular, "codigo": otp_cancelacion, "proposito": "cancelacion",
+         "codigo_turno": turno.get("codigo")},
+    ) if otp_cancelacion else (0, {}, {})
     s, d, _ = api(
         "POST",
         "/api/v1/turnos/publico/cancelar",
-        {"codigo": turno.get("codigo"), "celular": celular},
+        {"codigo": turno.get("codigo"), "celular": celular,
+         "token_verificacion": d_otp.get("token_verificacion")},
     )
     paso("Cancela su turno", s == 200 and d.get("turno", {}).get("estado") == "CANCELADO")
 
@@ -1718,9 +1800,11 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "--cargar", action="store_true", help="Borra la BD y carga la semana simulada"
+        "--cargar",
+        action="store_true",
+        help="Reemplaza los datos del tenant y carga la semana demo",
     )
-    parser.add_argument("--borrar", action="store_true", help="Solo borra todos los registros")
+    parser.add_argument("--borrar", action="store_true", help="Solo borra los datos del tenant")
     parser.add_argument("--si", action="store_true", help="No pedir confirmación al borrar")
     parser.add_argument(
         "--permitir-borrar-remoto",

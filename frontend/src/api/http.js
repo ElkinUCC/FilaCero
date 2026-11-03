@@ -13,6 +13,9 @@ import { clearSession, getToken } from "../auth/session.service";
 import { formatApiError, MENSAJE_SIN_CONEXION } from "../utils/errorMessages";
 
 export const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api/v1").replace(/\/+$/, "");
+// En despliegues multiempresa, las peticiones públicas identifican el tenant
+// por slug. Las sesiones autenticadas usan exclusivamente el org_id firmado.
+export const ORGANIZATION_SLUG = (import.meta.env.VITE_ORGANIZATION_SLUG || "filacero-demo").trim().toLowerCase();
 
 export const EVENTO_SESION_EXPIRADA = "filacero:sesion-expirada";
 export const EVENTO_SERVIDOR_LENTO = "filacero:servidor-lento";
@@ -50,6 +53,7 @@ export async function request(path, options = {}) {
     headers.set("Content-Type", "application/json");
   }
   if (token && !sinToken) headers.set("Authorization", `Bearer ${token}`);
+  else if (ORGANIZATION_SLUG) headers.set("X-Organization-Slug", ORGANIZATION_SLUG);
 
   // Servidores gratuitos se "duermen": si la respuesta tarda, se avisa en pantalla.
   let avisoActivo = false;

@@ -1,6 +1,62 @@
 """Comportamiento seguro y catálogos de la simulación TecniVisión."""
 
 
+def test_simulacion_prepara_sqlite_vacia_antes_de_resolver_tenant():
+    from app import create_app, db
+    from app.dominios.organizaciones.modelos import Organizacion
+    from simulacion import _preparar_organizacion_simulacion
+
+    app_sin_esquema = create_app({"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+    with app_sin_esquema.app_context():
+        organizacion = _preparar_organizacion_simulacion(app_sin_esquema, db)
+
+        assert organizacion.slug == "filacero-demo"
+        assert Organizacion.query.filter_by(slug="filacero-demo").one()
+
+
+def test_en_vivo_usa_el_tenant_configurado(app, db, monkeypatch):
+    from types import SimpleNamespace
+
+    import app as app_module
+    from app.dominios.organizaciones.modelos import Organizacion
+    from app.dominios.turnos.modelos import Turno
+    from app.tenancy import contexto_organizacion
+    from simulacion import comando_en_vivo, crear_catalogo
+
+    app.config["DEFAULT_ORGANIZATION_SLUG"] = "demo-secundaria"
+    with app.app_context():
+        organizacion = Organizacion(
+            nombre="Demo secundaria",
+            slug="demo-secundaria",
+            industria="general",
+            pais="CO",
+            zona_horaria="America/Bogota",
+            idioma="es",
+            moneda="COP",
+            plan="essential",
+            estado="activa",
+            configuracion={},
+        )
+        db.session.add(organizacion)
+        db.session.commit()
+        organizacion_id = organizacion.id
+        with contexto_organizacion(organizacion_id):
+            crear_catalogo(db)
+
+    monkeypatch.setattr(app_module, "create_app", lambda: app)
+    args = SimpleNamespace(
+        solo_reservas=True,
+        por_ciclo=1,
+        cada=1,
+        duracion=1,
+        tablero_cada=5,
+    )
+    assert comando_en_vivo(args) == 0
+
+    with app.app_context(), contexto_organizacion(organizacion_id):
+        assert Turno.query.filter_by(organizacion_id=organizacion_id).count() > 0
+
+
 def test_carga_valida_fechas_antes_de_borrar(app, crear_personal, monkeypatch):
     from types import SimpleNamespace
 
@@ -21,6 +77,48 @@ def test_carga_valida_fechas_antes_de_borrar(app, crear_personal, monkeypatch):
 
         assert comando_cargar(args) == 1
         assert Usuario.query.filter_by(correo=admin.correo).one()
+
+
+def test_cuenta_protegida_conserva_contrasena_y_acceso_despues_de_cargar(
+    app, crear_personal, monkeypatch
+):
+    from types import SimpleNamespace
+
+    import app as app_module
+    from app.dominios.usuarios.modelos import Usuario
+    from simulacion import comando_cargar
+
+    admin = crear_personal("ADMIN")
+    app.config["CUENTAS_PROTEGIDAS"] = [admin.correo]
+    monkeypatch.setattr(app_module, "create_app", lambda: app)
+    args = SimpleNamespace(
+        permitir_borrar_remoto=False,
+        dias=1,
+        desde=None,
+        hasta=None,
+        si=True,
+        semilla=1,
+        turnos=5,
+    )
+
+    assert (
+        app.test_client()
+        .post(
+            "/api/v1/usuarios/login",
+            json={"correo": admin.correo, "password": "Prueba12345"},
+        )
+        .status_code
+        == 200
+    )
+    assert comando_cargar(args) == 0
+
+    usuario = Usuario.query.filter_by(correo=admin.correo).one()
+    assert usuario.protegida is True
+    respuesta = app.test_client().post(
+        "/api/v1/usuarios/login",
+        json={"correo": admin.correo, "password": "Prueba12345"},
+    )
+    assert respuesta.status_code == 200, respuesta.get_json()
 
 
 def test_catalogo_incluye_supervisor_demo_y_no_duplica_cuentas(app, db):

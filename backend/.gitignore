@@ -10,3 +10,26 @@ venv/
 
 # Python
 .ruff_cache/
+.env.*
+!.env.example
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Local databases and logs
+*.db
+*.sqlite
+*.log

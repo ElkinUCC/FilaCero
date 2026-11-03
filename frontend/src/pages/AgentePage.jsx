@@ -274,6 +274,12 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
               <div className="cola__info">
                 <strong>{t.usuario_nombre}</strong>
                 <small>{t.codigo.slice(-6)} · {t.tramite_nombre} · ~{Math.round(t.duracion_estimada_seg / 60)} min</small>
+                {t.respuestas_solicitud?.length > 0 && (
+                  <small className="cola__necesidad">
+                    {t.respuestas_solicitud.map((respuesta) => `${respuesta.etiqueta}: ${respuesta.valor === true ? "Sí" : respuesta.valor === false ? "No" : respuesta.valor}`).join(" · ")}
+                  </small>
+                )}
+                {t.detalle_necesidad && <small className="cola__necesidad" title={t.detalle_necesidad}>{t.detalle_necesidad}</small>}
               </div>
               <span className={`punt punt--${pu.tono}`}>{pu.texto}</span>
               <button className="icono-btn" title="Llamar a esta persona" aria-label={`Llamar a ${t.usuario_nombre}`} disabled={Boolean(actual) || ocupado} onClick={() => llamar(t.id)}>
@@ -407,6 +413,25 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                     <p>{actual.tramite_nombre} · {actual.usuario_celular}</p>
                   </div>
                 </div>
+                {actual.detalle_necesidad && (
+                  <section className="puesto__necesidad" aria-label="Necesidad reportada por el ciudadano">
+                    <strong>Necesidad reportada</strong>
+                    <p>{actual.detalle_necesidad}</p>
+                  </section>
+                )}
+                {actual.respuestas_solicitud?.length > 0 && (
+                  <section className="puesto__necesidad" aria-label="Respuestas del ciudadano">
+                    <strong>Respuestas</strong>
+                    <dl>
+                      {actual.respuestas_solicitud.map((respuesta) => (
+                        <div key={respuesta.id}>
+                          <dt>{respuesta.etiqueta}</dt>
+                          <dd>{respuesta.valor === true ? "Sí" : respuesta.valor === false ? "No" : respuesta.valor}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
                 {actual.estado === "EN_ATENCION" ? (
                   <Cronometro desde={actual.fecha_inicio} limite={maxSeg} etiqueta="Atendiendo" ahora={ahora} />
                 ) : (

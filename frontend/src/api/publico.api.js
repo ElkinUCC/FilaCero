@@ -26,6 +26,13 @@ export const verificarCodigo = (celular, codigo, proposito = "reserva", codigoTu
 
 export const reservarTurno = (datos) => http.post("/turnos/publico", datos, publico);
 
+export const consultarTurnosPorCelular = (celular, tokenVerificacion) =>
+  http.post(
+    "/turnos/publico/consultar-por-celular",
+    { celular, token_verificacion: tokenVerificacion },
+    publico
+  );
+
 export const consultarTurno = (codigo, celular, tokenVerificacion) =>
   http.post(
     "/turnos/publico/consultar",

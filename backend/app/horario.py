@@ -3,15 +3,55 @@
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from flask import current_app
+from flask import current_app, g
 from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.errores import DatosInvalidosError
 
 
+def _organizacion_actual():
+    organizacion = getattr(g, "organizacion", None)
+    if organizacion is not None:
+        return organizacion
+    try:
+        from app.dominios.organizaciones.modelos import Organizacion
+        from app.tenancy import organizacion_actual_id
+
+        return db.session.get(Organizacion, organizacion_actual_id())
+    except Exception:
+        return None
+
+
+def _config_operativa(clave, defecto=None):
+    """Lee primero la configuración del tenant y conserva fallback legacy .env."""
+    organizacion = _organizacion_actual()
+    configuracion = (organizacion.configuracion or {}) if organizacion else {}
+    horario = configuracion.get("horario", {}) if isinstance(configuracion, dict) else {}
+    claves = {
+        "HORA_APERTURA": "apertura",
+        "HORA_CIERRE": "cierre",
+        "DIAS_ATENCION": "dias_atencion",
+        "DURACION_FRANJA_MIN": "duracion_franja_min",
+        "DIAS_MAX_RESERVA": "dias_max_reserva",
+        "DURACION_MAX_ATENCION_MIN": "duracion_max_atencion_min",
+        "CUPOS_POR_ASESOR_FRANJA": "cupos_por_asesor_franja",
+        "FRANJAS_AUTOMATICAS": "franjas_automaticas",
+        "RESTRINGIR_ATENCION_HORARIO": "restringir_atencion_horario",
+        "COLA_SOLO_HOY": "cola_solo_hoy",
+    }
+    clave_tenant = claves.get(clave)
+    if clave_tenant and clave_tenant in horario:
+        return horario[clave_tenant]
+    return current_app.config.get(clave, defecto)
+
+
 def zona():
-    return ZoneInfo(current_app.config.get("ZONA_HORARIA", "America/Bogota"))
+    organizacion = _organizacion_actual()
+    nombre_zona = organizacion.zona_horaria if organizacion else current_app.config.get(
+        "ZONA_HORARIA", "America/Bogota"
+    )
+    return ZoneInfo(nombre_zona)
 
 
 def ahora_local():
@@ -23,16 +63,16 @@ def hoy_local():
 
 
 def apertura():
-    return time(int(current_app.config.get("HORA_APERTURA", 0)), 0)
+    return time(int(_config_operativa("HORA_APERTURA", 0)), 0)
 
 
 def cierre():
-    hora = int(current_app.config.get("HORA_CIERRE", 24))
+    hora = int(_config_operativa("HORA_CIERRE", 24))
     return time(23, 59) if hora >= 24 else time(hora, 0)
 
 
 def dia_habil(fecha):
-    dias = current_app.config.get("DIAS_ATENCION", list(range(7)))
+    dias = _config_operativa("DIAS_ATENCION", list(range(7)))
     return fecha.weekday() in dias
 
 
@@ -42,31 +82,31 @@ def dentro_de_horario(hora_inicio, hora_fin):
 
 def info_horario():
     nombres = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-    dias = current_app.config.get("DIAS_ATENCION", list(range(7)))
+    dias = _config_operativa("DIAS_ATENCION", list(range(7)))
     return {
         "hora_apertura": apertura().strftime("%H:%M"),
         "hora_cierre": cierre().strftime("%H:%M"),
         "dias": [nombres[d] for d in sorted(dias)],
         "todos_los_dias": len(dias) == 7,
-        "duracion_franja_min": int(current_app.config.get("DURACION_FRANJA_MIN", 30)),
-        "dias_max_reserva": int(current_app.config.get("DIAS_MAX_RESERVA", 30)),
+        "duracion_franja_min": int(_config_operativa("DURACION_FRANJA_MIN", 30)),
+        "dias_max_reserva": int(_config_operativa("DIAS_MAX_RESERVA", 30)),
         "duracion_max_atencion_min": duracion_max_atencion_min(),
         "cupos_por_asesor": cupos_por_asesor(),
-        "zona_horaria": current_app.config.get("ZONA_HORARIA"),
+        "zona_horaria": zona().key,
     }
 
 
 def duracion_franja_min():
-    return int(current_app.config.get("DURACION_FRANJA_MIN", 30))
+    return int(_config_operativa("DURACION_FRANJA_MIN", 30))
 
 
 def duracion_max_atencion_min():
-    return int(current_app.config.get("DURACION_MAX_ATENCION_MIN", 10))
+    return int(_config_operativa("DURACION_MAX_ATENCION_MIN", 10))
 
 
 def cupos_por_asesor():
     """Personas que un asesor alcanza a atender en una franja (30/10 = 3)."""
-    fijo = int(current_app.config.get("CUPOS_POR_ASESOR_FRANJA", 0) or 0)
+    fijo = int(_config_operativa("CUPOS_POR_ASESOR_FRANJA", 0) or 0)
     if fijo > 0:
         return fijo
     return max(1, duracion_franja_min() // max(1, duracion_max_atencion_min()))
@@ -119,7 +159,7 @@ def asegurar_franjas(punto, tramite, fecha):
     """Crea las franjas del día si no existe ninguna para sede+trámite+fecha."""
     from app.dominios.franjas.modelos import Franja
 
-    if not current_app.config.get("FRANJAS_AUTOMATICAS", True):
+    if not _config_operativa("FRANJAS_AUTOMATICAS", True):
         return 0
     if not dia_habil(fecha):
         return 0
@@ -130,7 +170,7 @@ def asegurar_franjas(punto, tramite, fecha):
     if existentes:
         return 0
 
-    duracion = timedelta(minutes=int(current_app.config.get("DURACION_FRANJA_MIN", 30)))
+    duracion = timedelta(minutes=int(_config_operativa("DURACION_FRANJA_MIN", 30)))
     capacidad = capacidad_sede(punto.id)
     actual = datetime.combine(fecha, apertura())
     limite = datetime.combine(fecha, cierre())
@@ -165,7 +205,7 @@ def validar_fecha_reservable(fecha):
     hoy = hoy_local()
     if fecha < hoy:
         raise DatosInvalidosError("No se pueden reservar fechas pasadas.")
-    maximo = int(current_app.config.get("DIAS_MAX_RESERVA", 30))
+    maximo = int(_config_operativa("DIAS_MAX_RESERVA", 30))
     if fecha > hoy + timedelta(days=maximo):
         raise DatosInvalidosError(f"Solo puedes reservar con hasta {maximo} días de anticipación.")
     if not dia_habil(fecha):
