@@ -74,9 +74,7 @@ def verificar_celular(cliente, celular=CELULAR, proposito="reserva", codigo_turn
     datos = {"celular": celular, "codigo": codigo, "proposito": proposito}
     if codigo_turno:
         datos["codigo_turno"] = codigo_turno
-    r = cliente.post(
-        "/api/v1/turnos/publico/verificar-codigo", json=datos
-    )
+    r = cliente.post("/api/v1/turnos/publico/verificar-codigo", json=datos)
     assert r.status_code == 200
     return r.get_json()["token_verificacion"]
 
@@ -539,18 +537,34 @@ def test_pantalla_de_sala_no_expone_datos_personales(app, base):
     db.session.commit()
     r = app.test_client().get(f"/api/v1/turnos/publico/sala?sede_id={base['sede'].id}").get_json()
     llamado = r["llamados"][0]
-    assert llamado["codigo"] == turno.codigo[-6:]
-    assert llamado["nombre"] == "Cliente D."  # solo nombre e inicial
+    assert llamado["codigo"] == f"TU-{turno.codigo[-6:]}"
+    # ADR-008: la sala muestra el nombre completo de la persona llamada,
+    # pero nunca su celular ni otros datos de contacto.
+    assert llamado["nombre"] == "Cliente Demo"
     assert "celular" not in str(r) and CELULAR not in str(r)
     assert app.test_client().get("/api/v1/turnos/publico/sala").get_json()["sede"] is None
+
+
+def test_pantalla_de_sala_puede_abreviar_nombres(app, base):
+    from datetime import datetime
+
+    app.config["SALA_NOMBRE_COMPLETO"] = False
+    try:
+        turno = _reservar_directo(base)
+        turno.estado = "LLAMADO"
+        turno.agente_id = base["agente"].id
+        turno.fecha_llamado = datetime.now(UTC).replace(tzinfo=None)
+        db.session.commit()
+        r = app.test_client().get(f"/api/v1/turnos/publico/sala?sede_id={base['sede'].id}")
+        assert r.get_json()["llamados"][0]["nombre"] == "Cliente D."
+    finally:
+        app.config["SALA_NOMBRE_COMPLETO"] = True
 
 
 def test_consulta_por_celular_exige_otp_y_devuelve_lista(client, base):
     # Un celular verificado para consulta general puede listar sus turnos,
     # pero no puede usar el token de reserva para consultar información.
-    token_consulta = verificar_celular(
-        client, CELULAR, proposito="consulta_celular"
-    )
+    token_consulta = verificar_celular(client, CELULAR, proposito="consulta_celular")
     respuesta = client.post(
         "/api/v1/turnos/publico/consultar-por-celular",
         json={"celular": CELULAR},

@@ -11,6 +11,7 @@ from app.dominios.usuarios.modelos import Usuario
 from app.horario import ahora_local, capacidad_sede, ocupacion_sede, zona
 
 from .modelos import Turno
+from .preparacion import estado_inicial
 from .repositorios import ESTADOS_ACTIVOS, guardar, obtener_por_id, obtener_por_usuario
 
 MAX_TURNOS_ACTIVOS_POR_CLIENTE = 3
@@ -65,9 +66,7 @@ def _validar_solicitud(tramite, detalle_necesidad, valores):
             valor = valor.strip() if isinstance(valor, str) else ""
             limite = 1000 if campo["tipo"] == "parrafo" else 150
             if len(valor) > limite:
-                raise ValueError(
-                    f"La respuesta de {campo['etiqueta']} supera {limite} caracteres."
-                )
+                raise ValueError(f"La respuesta de {campo['etiqueta']} supera {limite} caracteres.")
             if campo["tipo"] == "seleccion" and valor and valor not in campo["opciones"]:
                 raise ValueError(f"Selecciona una opción válida en: {campo['etiqueta']}.")
             vacio = not valor
@@ -180,6 +179,7 @@ def _crear_turno(
             detalle_necesidad=detalle_necesidad,
             respuestas_solicitud=respuestas_solicitud,
             estado="ESPERANDO",
+            estado_preparacion=estado_inicial(tramite),
         )
         return guardar(turno)
 

@@ -1,16 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { pantallaSala } from "../api/publico.api";
 import Marca from "../components/layout/Marca";
-import { MenuAccesibilidad } from "../components/ui/Accesibilidad";
-import { hablar, usePreferencias } from "../hooks/useAccesibilidad";
 import usePolling from "../hooks/usePolling";
+import { articuloModulo } from "../hooks/useLlamadoPorVoz";
 import { ZONA } from "../utils/formatters";
 import "../css/sala.css";
-
-/** Deletrea el código para que la voz lo lea claro: "F 1 1 5 2 3". */
-function deletrear(codigo) {
-  return String(codigo).split("").join(" ");
-}
 
 function reloj() {
   return new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: ZONA })
@@ -19,16 +13,14 @@ function reloj() {
 
 /**
  * Pantalla para el televisor de la sala de espera: /sala?sede=ID
- * Muestra el turno llamado. Si en Accesibilidad está activo "Leer avisos en
- * voz alta", además lo anuncia (una sola opción de voz para toda la app).
+ * Muestra el turno llamado, el módulo y los próximos turnos. La voz del
+ * llamado la emite la consola del asesor (ADR-009).
  */
 /** Pantalla de la sala de espera (TV de cada sede), pública. Ruta: /sala?sede=<id> */
 export default function SalaPage() {
   const params = new URLSearchParams(window.location.search);
   const [sedeId, setSedeId] = useState(params.get("sede") || "");
-  const { voz: sonido } = usePreferencias();
   const [hora, setHora] = useState(reloj);
-  const anunciados = useRef(null);
 
   const { datos, error } = usePolling(
     () => pantallaSala(sedeId),
@@ -41,24 +33,8 @@ export default function SalaPage() {
     return () => window.clearInterval(t);
   }, []);
 
-  // Anuncia por voz cada turno nuevo en estado LLAMADO.
-  useEffect(() => {
-    const llamados = (datos?.llamados || []).filter((t) => t.estado === "LLAMADO");
-    if (anunciados.current === null) {
-      anunciados.current = new Set(llamados.map((t) => t.id)); // no repetir lo que ya estaba
-      return;
-    }
-    llamados.filter((t) => !anunciados.current.has(t.id)).reverse().forEach((t) => {
-      anunciados.current.add(t.id);
-      if (sonido) {
-        hablar(`Turno ${deletrear(t.codigo)}. ${t.nombre}, por favor acérquese con ${t.asesor}.`);
-      }
-    });
-  }, [datos?.llamados, sonido]);
-
   function elegirSede(id) {
     setSedeId(id);
-    anunciados.current = null;
     const url = new URL(window.location.href);
     url.searchParams.set("sede", id);
     window.history.replaceState(null, "", url);
@@ -88,7 +64,6 @@ export default function SalaPage() {
       <header className="sala__barra">
         <Marca />
         <h1 className="sala__sede">{datos?.sede?.nombre || "Cargando…"}</h1>
-        <MenuAccesibilidad />
         <time className="sala__hora">{hora}</time>
       </header>
 
@@ -99,9 +74,12 @@ export default function SalaPage() {
           {actual ? (
             <>
               <span className="sala__etiqueta">{actual.estado === "LLAMADO" ? "Turno llamado" : "En atención"}</span>
-              <strong className="sala__codigo" key={actual.id}>{actual.codigo}</strong>
+              <strong className="sala__codigo" key={actual.id}><Codigo c={actual.codigo} /></strong>
               <p className="sala__nombre">{actual.nombre}</p>
-              <p className="sala__destino">Acérquese con <b>{actual.asesor}</b></p>
+              <p className="sala__destino">
+                {actual.modulo ? <>Acérquese {articuloModulo(actual.modulo)} <b>{actual.modulo}</b></> : <>Acérquese con <b>{actual.asesor}</b></>}
+              </p>
+              {actual.modulo && <p className="sala__asesor">Le atiende {actual.asesor}</p>}
             </>
           ) : (
             <>
@@ -117,7 +95,7 @@ export default function SalaPage() {
             <h2 id="sala-anteriores">Llamados recientes</h2>
             <ul>
               {anteriores.map((t) => (
-                <li key={t.id}><b>{t.codigo}</b><span>{t.nombre}</span><span>{t.asesor}</span></li>
+                <li key={t.id}><b><Codigo c={t.codigo} /></b><span className="sala__persona">{t.nombre}</span><span>{t.modulo || t.asesor}</span></li>
               ))}
               {!anteriores.length && <li className="sala__vacio">—</li>}
             </ul>
@@ -126,7 +104,7 @@ export default function SalaPage() {
             <h2 id="sala-siguientes">Próximos turnos</h2>
             <ul>
               {(datos?.siguientes || []).map((t) => (
-                <li key={t.codigo}><b>{t.codigo}</b><span>{t.nombre}</span><span>{t.hora}</span></li>
+                <li key={t.codigo}><b><Codigo c={t.codigo} /></b><span className="sala__persona">{t.nombre}</span><span>{t.hora}</span></li>
               ))}
               {!datos?.siguientes?.length && <li className="sala__vacio">No hay más turnos hoy</li>}
             </ul>
@@ -139,4 +117,11 @@ export default function SalaPage() {
       </footer>
     </main>
   );
+}
+
+/** "TU-3AB745": el prefijo va pequeño para que el código no se parta en la pantalla. */
+function Codigo({ c }) {
+  const texto = String(c || "");
+  if (!texto.startsWith("TU-")) return texto;
+  return <><small className="sala__prefijo">TU-</small>{texto.slice(3)}</>;
 }

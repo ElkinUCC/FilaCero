@@ -83,6 +83,11 @@ def cerrar_sesion():
 
     if current_user:
         current_user.revocar_sesiones()
+        if current_user.rol == "AGENTE":
+            from datetime import UTC, datetime
+
+            current_user.presencia = "AUSENTE"  # salió: queda "fuera de turno"
+            current_user.presencia_desde = datetime.now(UTC).replace(tzinfo=None)
         db.session.commit()
         registrar("logout", usuario_id=current_user.id)
     return {"mensaje": "Sesión cerrada."}, 200

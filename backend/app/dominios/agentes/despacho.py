@@ -194,6 +194,18 @@ def proyectar_cola(punto_id, ahora=None, cache=None):
 # ----------------------------------------------------------------------
 
 
+def corto(turno):
+    """Código visible del turno: los 6 caracteres finales (igual que en la sala)."""
+    return turno.codigo_corto if turno else None
+
+
+def nombre_de(turno, completo=True):
+    if not turno or not turno.usuario:
+        return "la persona"
+    nombre = turno.usuario.nombre
+    return nombre if completo else nombre.split()[0]
+
+
 def _rec(accion, titulo, motivo, nivel="normal", turno=None, pausa_seg=0):
     return {
         "accion": accion,
@@ -202,6 +214,8 @@ def _rec(accion, titulo, motivo, nivel="normal", turno=None, pausa_seg=0):
         "nivel": nivel,
         "turno_id": turno.id if turno else None,
         "turno_codigo": turno.codigo if turno else None,
+        "turno_corto": corto(turno),
+        "turno_nombre": nombre_de(turno),
         "pausa_seg": pausa_seg,
     }
 
@@ -296,8 +310,9 @@ def recomendar(agente, activo, proyeccion, ahora):
     if primero["puntualidad"] in ("atrasado", "en_riesgo"):
         return _rec(
             "llamar",
-            f"Llama ya a {turno.codigo}",
-            f"Su franja {primero['franja_inicio']:%H:%M}–{primero['franja_fin']:%H:%M} "
+            f"Llama ya a {nombre_de(turno)}",
+            f"Turno {corto(turno)} · su franja "
+            f"{primero['franja_inicio']:%H:%M}–{primero['franja_fin']:%H:%M} "
             + ("ya terminó." if primero["puntualidad"] == "atrasado" else "está por vencerse.")
             + (f" Hay {len(en_riesgo)} turnos en riesgo." if len(en_riesgo) > 1 else ""),
             "urgente",
@@ -306,12 +321,31 @@ def recomendar(agente, activo, proyeccion, ahora):
 
     if primero["puntualidad"] == "proxima":
         faltan = int((primero["franja_inicio"] - ahora).total_seconds())
+        # Tiempo libre antes de la siguiente franja: primero se alistan los
+        # pedidos pendientes para que esas personas lleguen y se vayan rápido.
+        por_preparar = [
+            p["turno"]
+            for p in proyeccion
+            if p["turno"].estado_preparacion in ("PENDIENTE", "EN_PREPARACION")
+            and p["turno"].franja.fecha == ahora.date()
+        ]
+        if por_preparar and faltan >= 3 * 60:
+            siguiente = por_preparar[0]
+            return _rec(
+                "preparar",
+                f"Alista lo de {nombre_de(siguiente)}",
+                f"La siguiente franja empieza en {max(1, faltan // 60)} min y hay "
+                f"{len(por_preparar)} pedido(s) por preparar. Empieza por "
+                f"{siguiente.tramite.nombre if siguiente.tramite else 'el trámite'} "
+                f"(turno {corto(siguiente)}).",
+                turno=siguiente,
+            )
         return _rec(
             "adelantar",
             f"Siguiente franja en {max(1, faltan // 60)} min",
             f"No quedan turnos en la franja actual. Si "
             f"{turno.usuario.nombre if turno.usuario else 'la persona'} "
-            f"({turno.codigo}) ya está en sede, puedes adelantarla; si no, toma una pausa.",
+            f"(turno {corto(turno)}) ya está en sede, puedes adelantarla; si no, toma una pausa.",
             turno=turno,
             pausa_seg=min(faltan, 5 * 60),
         )
@@ -335,16 +369,22 @@ def recomendar(agente, activo, proyeccion, ahora):
             "Vas adelantado: toma una pausa activa",
             f"Tu última atención duró {int(ultima['duracion_seg'] // 60) or 1} min. "
             f"Hay margen de {margen_min // 60} min en la franja: estírate {pausa // 60 or 1} min "
-            f"y luego llama a {turno.codigo}.",
+            f"y luego llama a {nombre_de(turno, False)} (turno {corto(turno)}).",
             turno=turno,
             pausa_seg=pausa,
         )
 
+    aviso = ""
+    if turno.estado_preparacion in ("PENDIENTE", "EN_PREPARACION"):
+        aviso = " Su pedido todavía no está marcado como listo."
+    elif turno.estado_preparacion == "NOVEDAD":
+        aviso = " Su pedido tiene una novedad registrada."
     return _rec(
         "llamar",
-        f"Llama a {turno.codigo}",
-        f"Es el siguiente según su franja ({primero['franja_inicio']:%H:%M}). "
-        f"Duración estimada {primero['duracion_estimada_seg'] // 60} min.",
+        f"Llama a {nombre_de(turno)}",
+        f"Turno {corto(turno)} · {turno.tramite.nombre if turno.tramite else ''} · "
+        f"es el siguiente según su franja ({primero['franja_inicio']:%H:%M}). "
+        f"Duración estimada {primero['duracion_estimada_seg'] // 60} min." + aviso,
         turno=turno,
     )
 

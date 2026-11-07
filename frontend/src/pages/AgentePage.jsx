@@ -2,15 +2,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as agenteApi from "../api/agente.api";
 import { listarSedes } from "../api/publico.api";
 import Marca from "../components/layout/Marca";
-import { MenuAccesibilidad, SaltarAlContenido } from "../components/ui/Accesibilidad";
+import { SaltarAlContenido } from "../components/ui/Accesibilidad";
 import { anunciar } from "../hooks/useAccesibilidad";
+import Equipos from "../components/agente/Equipos";
+import FormularioEquipo from "../components/agente/FormularioEquipo";
+import Presencia from "../components/agente/Presencia";
+import PrepararTurno, { InsigniaPreparacion } from "../components/agente/PrepararTurno";
+import Reclamos from "../components/agente/Reclamos";
+import VerificarCedula from "../components/agente/VerificarCedula";
 import { CambiarMiClave } from "../components/ui/CambiarClave";
 import Dropdown from "../components/ui/Dropdown";
 import Icon from "../components/ui/Icon";
 import { Confirmar } from "../components/ui/Modal";
 import { useToast } from "../hooks/useToast";
 import usePolling from "../hooks/usePolling";
-import { duracion, fechaCorta, ZONA } from "../utils/formatters";
+import useLlamadoPorVoz, { cambiarLlamadoPorVoz, destinoHablado } from "../hooks/useLlamadoPorVoz";
+import {
+  codigoTurno, duracion, ESTADOS_EQUIPO, fechaCorta, horaDe, iniciales, PREPARACION, PRESENCIAS,
+  primerNombre, textoPreparacion, valorRespuesta, ZONA,
+} from "../utils/formatters";
 import "../css/agente.css";
 
 const LLEGADA_MAX_SEG = 180;
@@ -25,6 +35,7 @@ const PUNTUALIDAD = {
 const ICONO_ACCION = {
   llamar: "megafono", pausa: "reloj", adelantar: "derecha", iniciar: "atender",
   ausente: "ausente", finalizar: "finalizado", atendiendo: "atender", esperar: "check",
+  preparar: "paquete",
 };
 
 const ETAPAS = [
@@ -158,6 +169,57 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
   const rec = p?.recomendacion;
   const franja = p?.franja_actual;
   const maxSeg = p?.max_atencion_seg || 600;
+  const modulo = p?.agente?.modulo || "";
+
+  // Llamado por voz: anuncia y repite cada 20 s mientras el turno siga "Llamado".
+  const voz = useLlamadoPorVoz({ turno: actual, modulo, asesor: p?.agente?.nombre || usuario.nombre });
+
+  // Preparación previa del pedido (se abre desde la cola, el puesto o el asistente).
+  const [preparar, setPreparar] = useState(null);
+  // Secciones de la consola y estado de presencia del asesor.
+  const [seccion, setSeccion] = useState("atencion");
+  const [reclamosVistos, setReclamosPendientes] = useState(null);
+  const { datos: bandeja } = usePolling(() => agenteApi.bandejaReclamos(), 12000);
+  const reclamosPendientes = (reclamosVistos ?? bandeja?.pendientes ?? 0) + 0;
+  const [recibirEquipo, setRecibirEquipo] = useState(null);
+  const presencia = p?.agente?.presencia || "DISPONIBLE";
+  async function cambiarPresencia(nueva, { silencioso = false } = {}) {
+    try {
+      const r = await agenteApi.cambiarPresencia(nueva);
+      if (!silencioso) avisar(r.mensaje);
+      refrescar();
+    } catch (e) {
+      avisar(e.message, "error");
+    }
+  }
+  function iniciarPausa(segundos) {
+    setPausaHasta(ahora + segundos * 1000);
+    cambiarPresencia("PAUSA", { silencioso: true });
+  }
+  function terminarPausa() {
+    setPausaHasta(null);
+    cambiarPresencia("DISPONIBLE", { silencioso: true });
+  }
+  // Entregar o recibir un equipo exige verificar la cédula del titular.
+  const [cedula, setCedula] = useState(null);
+  async function moverEquipo(equipo, estado) {
+    if (estado === "ENTREGADO" || (estado === "RECIBIDO" && equipo.estado === "POR_RECIBIR")) {
+      setCedula({ equipo, estado });
+      return;
+    }
+    try {
+      const r = await agenteApi.cambiarEstadoEquipo(equipo.id, estado);
+      avisar(r.mensaje);
+      refrescar();
+    } catch (e) {
+      avisar(e.message, "error");
+    }
+  }
+
+  const abrirPreparar = (turnoId) => {
+    const t = [actual, ...(p?.cola || [])].find((x) => x && x.id === turnoId);
+    if (t) setPreparar(t);
+  };
 
   // Aviso cuando llega una reserva nueva para hoy (visual, lector de pantalla y voz).
   const conocidos = useRef(null);
@@ -185,6 +247,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
   useEffect(() => {
     if (pausaHasta && restantePausa <= 0) {
       setPausaHasta(null);
+      agenteApi.cambiarPresencia("DISPONIBLE").catch(() => {});
       avisar("Pausa terminada. El siguiente turno te espera.");
     }
   }, [pausaHasta, restantePausa, avisar]);
@@ -216,7 +279,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
     ejecutar(() => agenteApi.finalizar(turno.id), "Atención finalizada.", () =>
       setCierre({
         nombre: turno.usuario_nombre,
-        codigo: turno.codigo.slice(-6),
+        codigo: codigoTurno(turno),
         seg: turno.fecha_inicio ? (ahora - Date.parse(turno.fecha_inicio)) / 1000 : null,
       }),
     );
@@ -259,6 +322,58 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
   const totalProximos = proximos.reduce((n, g) => n + g.items.length, 0);
 
   const franjaRestante = franja ? franja.restante_seg - (ahora - Date.parse(p.ahora)) / 1000 : 0;
+
+  // ------------------------------------------------ alertas emergentes del asistente
+  // Avisan sin que el asesor pierda de vista la cola: fin de franja, siguiente
+  // persona atrasada según la proyección y mensajes nuevos de clientes.
+  const [alertas, setAlertas] = useState([]);
+  const avisadas = useRef(new Set());
+  const emitir = (clave, alerta) => {
+    if (avisadas.current.has(clave)) return;
+    avisadas.current.add(clave);
+    setAlertas((xs) => [...xs.slice(-2), { clave, ...alerta }]);
+    anunciar(alerta.titulo);
+  };
+  const cerrarAlerta = (clave) => setAlertas((xs) => xs.filter((x) => x.clave !== clave));
+  useEffect(() => {
+    if (!alertas.length) return undefined;
+    const t = window.setTimeout(() => setAlertas((xs) => xs.slice(1)), 12000);
+    return () => window.clearTimeout(t);
+  }, [alertas]);
+  const pendientesFranja = franja ? Math.max(0, franja.reservados - franja.atendidos) : 0;
+  useEffect(() => {
+    if (franja && franjaRestante > 0 && franjaRestante <= 300 && pendientesFranja > 0) {
+      emitir(`franja-${franja.inicio}`, {
+        tono: "riesgo", icono: "reloj",
+        titulo: `Quedan ${Math.ceil(franjaRestante / 60)} min de la franja ${franja.inicio}–${franja.fin}`,
+        detalle: `${pendientesFranja} persona(s) de esta franja aún sin atender. Prioriza a quien está en riesgo.`,
+      });
+    }
+    const siguiente = p?.cola?.find((t) => t.es_hoy);
+    if (siguiente && !actual && ["atrasado", "en_riesgo"].includes(siguiente.puntualidad)) {
+      emitir(`tarde-${siguiente.id}-${siguiente.puntualidad}`, {
+        tono: siguiente.puntualidad === "atrasado" ? "atrasado" : "riesgo", icono: "megafono",
+        titulo: `${primerNombre(siguiente.usuario_nombre)} ${siguiente.puntualidad === "atrasado" ? "ya está fuera de su franja" : "está por salirse de su franja"}`,
+        detalle: `Turno ${codigoTurno(siguiente)} · ${siguiente.tramite_nombre}. El asistente recomienda llamarle ya.`,
+        accion: { texto: `Llamar a ${primerNombre(siguiente.usuario_nombre)}`, fn: () => llamar(siguiente.id) },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Math.floor(franjaRestante / 30), p?.cola, actual]);
+  const sinLeer = bandeja?.mensajes_sin_leer || 0;
+  const previoSinLeer = useRef(null);
+  useEffect(() => {
+    if (previoSinLeer.current !== null && sinLeer > previoSinLeer.current) {
+      emitir(`chat-${Date.now()}`, {
+        tono: "info", icono: "mensaje",
+        titulo: "Nuevo mensaje de un cliente",
+        detalle: "El asistente ya le respondió lo básico. Revisa si necesita precio, fecha o diagnóstico.",
+        accion: { texto: "Abrir reclamos", fn: () => setSeccion("reclamos") },
+      });
+    }
+    previoSinLeer.current = sinLeer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sinLeer]);
   const r = p?.resumen || {};
 
   function pintarGrupo(g) {
@@ -273,14 +388,22 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
               <span className="cola__hora" title="Hora proyectada de inicio">{t.es_hoy ? t.inicio_proyectado : t.hora_inicio}</span>
               <div className="cola__info">
                 <strong>{t.usuario_nombre}</strong>
-                <small>{t.codigo.slice(-6)} · {t.tramite_nombre} · ~{Math.round(t.duracion_estimada_seg / 60)} min</small>
+                <small><span className="mono">{codigoTurno(t)}</span> · {t.tramite_nombre} · ~{Math.round(t.duracion_estimada_seg / 60)} min</small>
                 {t.respuestas_solicitud?.length > 0 && (
                   <small className="cola__necesidad">
-                    {t.respuestas_solicitud.map((respuesta) => `${respuesta.etiqueta}: ${respuesta.valor === true ? "Sí" : respuesta.valor === false ? "No" : respuesta.valor}`).join(" · ")}
+                    {t.respuestas_solicitud.map((respuesta) => `${respuesta.etiqueta}: ${valorRespuesta(respuesta.valor)}`).join(" · ")}
                   </small>
                 )}
                 {t.detalle_necesidad && <small className="cola__necesidad" title={t.detalle_necesidad}>{t.detalle_necesidad}</small>}
+                {t.equipo && <small className="cola__equipo"><Icon name="tv" size={12} /> {t.equipo.marca} {t.equipo.modelo} · <span className="mono">{t.equipo.codigo}</span> · {ESTADOS_EQUIPO[t.equipo.estado]?.texto}</small>}
+                {t.reclamo && <small className="cola__equipo"><Icon name="mensaje" size={12} /> Reclamo <span className="mono">{t.reclamo.radicado}</span> · {t.reclamo.categoria_texto}</small>}
+                {t.preparacion && <span className="cola__prep"><InsigniaPreparacion preparacion={t.preparacion} flujo={t.tramite_flujo} /></span>}
               </div>
+              {t.requiere_preparacion || t.preparacion ? (
+                <button className="icono-btn" title="Preparar antes de que llegue" aria-label={`Preparar el pedido de ${t.usuario_nombre}`} onClick={() => setPreparar(t)}>
+                  <Icon name="paquete" size={17} />
+                </button>
+              ) : <span aria-hidden="true" />}
               <span className={`punt punt--${pu.tono}`}>{pu.texto}</span>
               <button className="icono-btn" title="Llamar a esta persona" aria-label={`Llamar a ${t.usuario_nombre}`} disabled={Boolean(actual) || ocupado} onClick={() => llamar(t.id)}>
                 <Icon name="megafono" size={17} />
@@ -296,22 +419,23 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
   function botonesAsistente() {
     if (!rec || pausaHasta) return null;
     const turnoId = rec.turno_id;
-    const codigo = rec.turno_codigo?.slice(-6);
+    // Siempre por nombre: "Llamar a Juliana". El código queda en el motivo.
+    const persona = primerNombre(rec.turno_nombre) || codigoTurno(rec.turno_codigo);
     switch (rec.accion) {
       case "llamar":
-        return <button className="btn btn--primario" disabled={ocupado} onClick={() => llamar(turnoId)}><Icon name="megafono" size={17} /> Llamar {codigo}</button>;
+        return <button className="btn btn--primario" disabled={ocupado} onClick={() => llamar(turnoId)}><Icon name="megafono" size={17} /> Llamar a {persona}</button>;
       case "pausa":
         return (
           <>
-            <button className="btn btn--primario" onClick={() => setPausaHasta(ahora + rec.pausa_seg * 1000)}><Icon name="reloj" size={17} /> Tomar pausa de {mmss(rec.pausa_seg)}</button>
+            <button className="btn btn--primario" onClick={() => iniciarPausa(rec.pausa_seg)}><Icon name="reloj" size={17} /> Tomar pausa de {mmss(rec.pausa_seg)}</button>
             <button className="btn btn--borde-claro" disabled={ocupado} onClick={() => llamar(turnoId)}>Llamar ahora</button>
           </>
         );
       case "adelantar":
         return (
           <>
-            <button className="btn btn--primario" disabled={ocupado} onClick={() => llamar(turnoId)}><Icon name="derecha" size={17} /> Adelantar {codigo}</button>
-            {rec.pausa_seg > 60 && <button className="btn btn--borde-claro" onClick={() => setPausaHasta(ahora + Math.min(rec.pausa_seg, 180) * 1000)}>Pausa {mmss(Math.min(rec.pausa_seg, 180))}</button>}
+            <button className="btn btn--primario" disabled={ocupado} onClick={() => llamar(turnoId)}><Icon name="derecha" size={17} /> Adelantar a {persona}</button>
+            {rec.pausa_seg > 60 && <button className="btn btn--borde-claro" onClick={() => iniciarPausa(Math.min(rec.pausa_seg, 180))}>Pausa {mmss(Math.min(rec.pausa_seg, 180))}</button>}
           </>
         );
       case "iniciar":
@@ -325,6 +449,13 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
         );
       case "finalizar":
         return <button className="btn btn--primario" disabled={ocupado || !actual} onClick={() => finalizar(actual)}><Icon name="finalizado" size={17} /> Finalizar atención</button>;
+      case "preparar":
+        return (
+          <>
+            <button className="btn btn--primario" onClick={() => abrirPreparar(turnoId)}><Icon name="paquete" size={17} /> Alistar lo de {persona}</button>
+            <button className="btn btn--borde-claro" disabled={ocupado} onClick={() => llamar(turnoId)}>Llamar ahora</button>
+          </>
+        );
       default:
         return null;
     }
@@ -350,7 +481,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
             }}
             disabled={!sedes.length}
           />
-          <small>{usuario.nombre}</small>
+          <small>{usuario.nombre}{modulo ? ` · ${modulo}` : ""}</small>
         </div>
         <div className="ag__franja-chip">
           {franja ? (
@@ -361,7 +492,18 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           ) : <span>{p && !p.en_horario ? `Fuera de horario · ${p.horario?.hora_apertura}–${p.horario?.hora_cierre}` : "—"}</span>}
         </div>
         <time className="ag__reloj" aria-label="Hora actual">{reloj(ahora)}</time>
-        <MenuAccesibilidad />
+        <Presencia valor={presencia} desde={p?.agente?.presencia_desde} bloqueado={Boolean(actual)} onCambiar={(v) => (v === "DISPONIBLE" && pausaHasta ? terminarPausa() : cambiarPresencia(v))} />
+        <button
+          type="button"
+          className={`ag__voz ${voz.activo ? "ag__voz--on" : ""}`}
+          aria-pressed={voz.activo}
+          onClick={() => cambiarLlamadoPorVoz(!voz.activo)}
+          title={voz.soportado ? "Anunciar por voz el turno llamado (se repite cada 20 s)" : "Este navegador no permite voz"}
+          disabled={!voz.soportado}
+        >
+          <Icon name={voz.activo ? "volumen" : "silencio"} size={17} />
+          <span>Voz {voz.activo ? "activada" : "apagada"}</span>
+        </button>
         <button className="icono-btn ag__salir" onClick={() => setCambiarClave(true)} title="Cambiar mi contraseña" aria-label="Cambiar mi contraseña"><Icon name="llave" size={18} /></button>
         <button className="icono-btn ag__salir" onClick={onSalir} title="Cerrar sesión" aria-label="Cerrar sesión"><Icon name="salir" size={19} /></button>
       </header>
@@ -369,6 +511,21 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
       {error && <div className="ag__aviso"><Icon name="alerta" size={16} /> {error} Reintentando…</div>}
       {p?.error && <div className="ag__aviso"><Icon name="alerta" size={16} /> {p.error} Elige tu sede en la parte de arriba.</div>}
 
+      <nav className="ag__tabs" aria-label="Secciones de la consola">
+        {[
+          ["atencion", "Atención", "atender", p?.resumen?.en_espera_hoy],
+          ["equipos", "Equipos", "tv", null],
+          ["reclamos", "Reclamos", "mensaje", reclamosPendientes],
+        ].map(([id, texto, icono, n]) => (
+          <button key={id} type="button" className={seccion === id ? "activo" : ""} aria-current={seccion === id ? "page" : undefined} onClick={() => setSeccion(id)}>
+            <Icon name={icono} size={16} /> {texto}{n ? <small>{n}</small> : null}
+          </button>
+        ))}
+      </nav>
+
+      {seccion === "equipos" && <main className="ag__seccion" id="contenido" tabIndex={-1}><Equipos /></main>}
+      {seccion === "reclamos" && <main className="ag__seccion" id="contenido" tabIndex={-1}><Reclamos onPendientes={setReclamosPendientes} /></main>}
+      {seccion === "atencion" && (
       <main className="ag__cuerpo" id="contenido" tabIndex={-1}>
         <h1 className="sr">Consola de atención{p?.agente?.sede ? ` · ${p.agente.sede}` : ""}</h1>
         {/* ---------------- Columna principal ---------------- */}
@@ -382,7 +539,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                 <p>Levántate, estira cuello y espalda, toma agua. La franja va a tiempo.</p>
               </div>
               <div className="asistente__acciones">
-                <button className="btn btn--primario" onClick={() => setPausaHasta(null)}>Terminar pausa</button>
+                <button className="btn btn--primario" onClick={terminarPausa}>Terminar pausa</button>
               </div>
             </section>
           ) : rec ? (
@@ -407,10 +564,15 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                   <span className="puesto__franja">Reservó {actual.hora_inicio}–{actual.hora_fin}</span>
                 </div>
                 <div className="puesto__turno">
-                  <span className="puesto__codigo">{actual.codigo.slice(-6)}</span>
+                  <span className="puesto__avatar" aria-hidden="true">{iniciales(actual.usuario_nombre)}</span>
                   <div>
                     <h2>{actual.usuario_nombre}</h2>
-                    <p>{actual.tramite_nombre} · {actual.usuario_celular}</p>
+                    <p className="puesto__datos">
+                      <span>{actual.tramite_nombre}</span>
+                      <span>Turno <b className="mono">{codigoTurno(actual)}</b></span>
+                      <span><Icon name="celular" size={13} /> {actual.usuario_celular}</span>
+                      {actual.usuario_documento && <span><Icon name="ficha" size={13} /> C.C. {actual.usuario_documento}</span>}
+                    </p>
                   </div>
                 </div>
                 {actual.detalle_necesidad && (
@@ -426,11 +588,71 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                       {actual.respuestas_solicitud.map((respuesta) => (
                         <div key={respuesta.id}>
                           <dt>{respuesta.etiqueta}</dt>
-                          <dd>{respuesta.valor === true ? "Sí" : respuesta.valor === false ? "No" : respuesta.valor}</dd>
+                          <dd>{valorRespuesta(respuesta.valor)}</dd>
                         </div>
                       ))}
                     </dl>
                   </section>
+                )}
+                {actual.equipo && (
+                  <section className="puesto__equipo" aria-label="Equipo del cliente">
+                    <span className="puesto__equipo-icono"><Icon name="tv" size={20} /></span>
+                    <div>
+                      <strong>{actual.equipo.marca} {actual.equipo.modelo}</strong>
+                      <small><span className="mono">{actual.equipo.codigo}</span> · {actual.equipo.origen_texto}{actual.equipo.falla ? ` · ${actual.equipo.falla}` : ""}</small>
+                    </div>
+                    <span className={`estado estado--${ESTADOS_EQUIPO[actual.equipo.estado]?.tono}`}>{ESTADOS_EQUIPO[actual.equipo.estado]?.texto}</span>
+                    {actual.equipo.estado === "LISTO" && actual.tramite_flujo === "ENTREGA" && (
+                      <button type="button" className="btn btn--exito btn--chico" onClick={() => moverEquipo(actual.equipo, "ENTREGADO")}><Icon name="check" size={15} /> Entregar equipo</button>
+                    )}
+                    {actual.equipo.estado === "POR_RECIBIR" && (
+                      <button type="button" className="btn btn--primario btn--chico" onClick={() => moverEquipo(actual.equipo, "RECIBIDO")}><Icon name="paquete" size={15} /> Recibir equipo</button>
+                    )}
+                  </section>
+                )}
+                {actual.reclamo && (
+                  <section className="puesto__necesidad" aria-label="Reclamo del cliente">
+                    <strong>Reclamo <span className="mono">{actual.reclamo.radicado}</span> · {actual.reclamo.categoria_texto}</strong>
+                    <p>{actual.reclamo.descripcion}</p>
+                    <button type="button" className="enlace" onClick={() => setSeccion("reclamos")}>Responder en Reclamos</button>
+                  </section>
+                )}
+                {!actual.equipo && actual.estado === "EN_ATENCION" && actual.tramite_flujo === "GENERAL" && (
+                  <button type="button" className="btn btn--borde btn--chico puesto__recibir" onClick={() => setRecibirEquipo({ cliente_celular: actual.usuario_celular, cliente_nombre: actual.usuario_nombre, cliente_documento: actual.usuario_documento })}>
+                    <Icon name="tv" size={15} /> ¿Deja un equipo? Registrarlo
+                  </button>
+                )}
+                {actual.preparacion && actual.equipo?.estado !== "ENTREGADO" && (
+                  <section className={`puesto__prep puesto__prep--${PREPARACION[actual.preparacion.estado]?.tono}`} aria-label="Preparación previa">
+                    <Icon name="paquete" size={18} />
+                    <div>
+                      <strong>{textoPreparacion(actual.tramite_flujo, actual.preparacion.estado)}</strong>
+                      {actual.preparacion.nota && <p>{actual.preparacion.nota}</p>}
+                    </div>
+                    <button type="button" className="btn btn--suave btn--chico" onClick={() => setPreparar(actual)}>Actualizar</button>
+                  </section>
+                )}
+                {actual.estado === "LLAMADO" && (
+                  <div className={`llamado-voz ${voz.activo ? "" : "llamado-voz--off"}`} role="status">
+                    <Icon name={voz.activo ? "volumen" : "silencio"} size={18} />
+                    <span>
+                      {!voz.soportado
+                        ? "Este navegador no permite anunciar por voz."
+                        : voz.activo
+                          ? voz.restante != null
+                            ? <>Anunciando por voz{modulo ? ` ${destinoHablado(modulo)}` : ""} · se repite en <b>{voz.restante} s</b></>
+                            : voz.veces ? "Se completaron los anuncios por voz (3 min)." : "Preparando el anuncio por voz…"
+                          : "Voz apagada: el turno solo se muestra en la sala."}
+                    </span>
+                    {voz.soportado && (
+                      <>
+                        <button type="button" className="btn btn--suave btn--chico" onClick={voz.repetirAhora}><Icon name="megafono" size={15} /> Repetir</button>
+                        <button type="button" className="btn btn--fantasma btn--chico" onClick={() => cambiarLlamadoPorVoz(!voz.activo)}>
+                          {voz.activo ? "Silenciar" : "Activar voz"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
                 {actual.estado === "EN_ATENCION" ? (
                   <Cronometro desde={actual.fecha_inicio} limite={maxSeg} etiqueta="Atendiendo" ahora={ahora} />
@@ -457,15 +679,25 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                 </svg>
                 <div>
                   <h2>Atención finalizada</h2>
-                  <p><span className="mono">{cierre.codigo}</span> · {cierre.nombre}{cierre.seg != null ? ` · ${mmss(cierre.seg)}` : ""}</p>
+                  <p>{cierre.nombre} · <span className="mono">{cierre.codigo}</span>{cierre.seg != null ? ` · ${mmss(cierre.seg)}` : ""}</p>
                 </div>
               </div>
             ) : (
-              <div className="puesto__libre">
-                <span className="puesto__icono"><Icon name="atender" size={28} /></span>
+              <div className={`puesto__libre ${presencia !== "DISPONIBLE" && !pausaHasta ? "puesto__libre--fuera" : ""}`}>
+                <span className="puesto__icono"><Icon name={presencia !== "DISPONIBLE" && !pausaHasta ? PRESENCIAS[presencia]?.icono : "atender"} size={28} /></span>
                 <div>
-                  <h2>Puesto libre</h2>
-                  <p>{p?.cola?.length ? `${p.cola.length} persona(s) en la cola.` : "Nadie en la cola por ahora."}</p>
+                  {presencia !== "DISPONIBLE" && !pausaHasta ? (
+                    <>
+                      <h2>{PRESENCIAS[presencia]?.texto}</h2>
+                      <p>Desde las {horaDe(p?.agente?.presencia_desde)} · {p?.cola?.length || 0} persona(s) en la cola.</p>
+                      <button type="button" className="enlace" onClick={() => cambiarPresencia("DISPONIBLE")}>Volver a disponible</button>
+                    </>
+                  ) : (
+                    <>
+                      <h2>Puesto libre</h2>
+                      <p>{p?.cola?.length ? `${p.cola.length} persona(s) en la cola.` : "Nadie en la cola por ahora."}</p>
+                    </>
+                  )}
                 </div>
                 <button className="btn btn--primario btn--grande" disabled={ocupado || !p?.cola?.length || Boolean(pausaHasta)} onClick={() => llamar()}>
                   <Icon name="megafono" size={18} /> Llamar siguiente
@@ -488,8 +720,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
               <ul>
                 {p.recientes.map((t) => (
                   <li key={t.id}>
-                    <span className="mono">{t.codigo.slice(-6)}</span>
-                    <span>{t.usuario_nombre}</span>
+                    <span className="ag__reciente-quien"><strong>{t.usuario_nombre}</strong><small className="mono">{codigoTurno(t)}</small></span>
                     <span className={`estado estado--${t.estado === "ATENDIDO" ? "ok" : "ausente"}`}>{t.estado === "ATENDIDO" ? duracion((Date.parse(t.fecha_fin) - Date.parse(t.fecha_inicio)) / 1000) : "No asistió"}</span>
                   </li>
                 ))}
@@ -502,7 +733,11 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
         <aside className="cola" aria-label="Cola de turnos">
           <header className="cola__cabeza">
             <h2>Cola</h2>
-            <span>{r.en_espera_hoy ?? 0} hoy{r.en_riesgo ? <> · <b className="texto-riesgo">{r.en_riesgo} en riesgo</b></> : null}</span>
+            <span>
+              {r.en_espera_hoy ?? 0} hoy
+              {r.en_riesgo ? <> · <b className="texto-riesgo">{r.en_riesgo} en riesgo</b></> : null}
+              {r.por_preparar ? <> · <b className="texto-prep">{r.por_preparar} por preparar</b></> : null}
+            </span>
           </header>
 
           {franja && (
@@ -531,6 +766,27 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           </div>
         </aside>
       </main>
+      )}
+      <div className="alertas" aria-live="assertive">
+        {alertas.map((a) => (
+          <div key={a.clave} className={`alerta alerta--${a.tono}`} role="alert">
+            <span className="alerta__icono"><Icon name={a.icono} size={18} /></span>
+            <div>
+              <strong>{a.titulo}</strong>
+              <p>{a.detalle}</p>
+              {a.accion && <button type="button" className="btn btn--primario btn--chico" onClick={() => { a.accion.fn(); cerrarAlerta(a.clave); }}>{a.accion.texto}</button>}
+            </div>
+            <button type="button" className="icono-btn" aria-label="Cerrar aviso" onClick={() => cerrarAlerta(a.clave)}><Icon name="cerrar" size={15} /></button>
+          </div>
+        ))}
+      </div>
+      {recibirEquipo && (
+        <FormularioEquipo
+          inicial={recibirEquipo}
+          onCerrar={() => setRecibirEquipo(null)}
+          onGuardado={(r) => { setRecibirEquipo(null); avisar(r.mensaje); refrescar(); }}
+        />
+      )}
       {nuevaSede && (
         <Confirmar
           titulo="Cambiar de sede"
@@ -541,6 +797,22 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           error={cambio.error}
           onConfirmar={confirmarCambioSede}
           onCerrar={() => { setNuevaSede(null); setCambio({ ocupado: false, error: "" }); }}
+        />
+      )}
+      {cedula && (
+        <VerificarCedula
+          equipo={cedula.equipo}
+          estado={cedula.estado}
+          nombre={actual?.usuario_nombre}
+          onCerrar={() => setCedula(null)}
+          onListo={(r) => { setCedula(null); avisar(r.mensaje); refrescar(); }}
+        />
+      )}
+      {preparar && (
+        <PrepararTurno
+          turno={preparar}
+          onCerrar={() => setPreparar(null)}
+          onListo={(r) => { setPreparar(null); avisar(r.mensaje); refrescar(); }}
         />
       )}
       {cambiarClave && <CambiarMiClave onCerrar={() => setCambiarClave(false)} onListo={(u) => { onUsuario?.(u); avisar("Tu contraseña fue actualizada."); }} />}

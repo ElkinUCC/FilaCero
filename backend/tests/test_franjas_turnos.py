@@ -1,4 +1,4 @@
-﻿from datetime import date, time, timedelta
+from datetime import date, time, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest

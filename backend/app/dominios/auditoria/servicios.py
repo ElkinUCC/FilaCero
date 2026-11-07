@@ -28,6 +28,12 @@ ACCIONES = {
     "tramite_editado": "Trámite editado",
     "tramite_eliminado": "Trámite eliminado",
     "sede_cambiada": "Asesor cambió de sede",
+    "usuario_eliminado": "Cuenta eliminada",
+    "turno_preparado": "Preparación de turno",
+    "equipo_registrado": "Equipo registrado",
+    "equipo_actualizado": "Estado de equipo",
+    "reclamo_gestionado": "Reclamo gestionado",
+    "presencia_cambiada": "Estado del asesor",
 }
 
 

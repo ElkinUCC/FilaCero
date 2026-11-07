@@ -119,9 +119,7 @@ def test_solicitud_previa_se_muestra_al_asesor(client, db, admin_auth, crear_per
         },
     ]
 
-    token_agente = create_access_token(
-        identity=str(agente.id), additional_claims={"rol": "AGENTE"}
-    )
+    token_agente = create_access_token(identity=str(agente.id), additional_claims={"rol": "AGENTE"})
     panel = client.get(
         "/api/v1/agente/panel", headers={"Authorization": f"Bearer {token_agente}"}
     ).get_json()

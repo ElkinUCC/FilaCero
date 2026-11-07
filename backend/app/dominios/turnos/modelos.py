@@ -36,9 +36,29 @@ class Turno(TenantScoped, db.Model):
 
     fecha_fin = db.Column(db.DateTime, nullable=True)
 
+    # Preparación previa (back-office): el asesor alista lo que el ciudadano
+    # pidió antes de que llegue. PENDIENTE -> EN_PREPARACION -> LISTO | NOVEDAD.
+    # None = el trámite no requiere preparación.
+    estado_preparacion = db.Column(db.String(20), nullable=True)
+    nota_preparacion = db.Column(db.Text, nullable=True)
+    fecha_preparacion = db.Column(db.DateTime, nullable=True)
+    preparado_por_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
+
+    # Equipo o reclamo del cliente al que se refiere la cita (entrega, garantía, reclamo).
+    equipo_id = db.Column(db.Integer, db.ForeignKey("equipos.id"), nullable=True)
+    reclamo_id = db.Column(db.Integer, db.ForeignKey("reclamos.id"), nullable=True)
+
     usuario = db.relationship("Usuario", back_populates="turnos", foreign_keys=[usuario_id])
     tramite = db.relationship("Tramite", back_populates="turnos")
     punto = db.relationship("Punto", back_populates="turnos")
     franja = db.relationship("Franja", back_populates="turnos")
 
     agente = db.relationship("Usuario", back_populates="turnos_atendidos", foreign_keys=[agente_id])
+    preparado_por = db.relationship("Usuario", foreign_keys=[preparado_por_id])
+    equipo = db.relationship("Equipo")
+
+    @property
+    def codigo_corto(self):
+        """Código visible, con el mismo formato que equipos (EQ-) y reclamos (RC-)."""
+        return f"TU-{self.codigo[-6:]}" if self.codigo else None
+    reclamo = db.relationship("Reclamo")

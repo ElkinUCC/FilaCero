@@ -40,6 +40,19 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
+    # Consistencia de cupos (ADR-004): en MySQL/InnoDB el aislamiento por
+    # defecto (REPEATABLE READ) fija la "foto" de los datos en la primera
+    # lectura de la transacción, antes de tomar el bloqueo de la sede, y el
+    # conteo de cupos puede quedar desactualizado bajo concurrencia. Con
+    # READ COMMITTED cada consulta ve lo ya confirmado por quien liberó el
+    # bloqueo. SQLite (pruebas) no admite este nivel y se omite.
+    opciones_motor = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+    if str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).startswith("mysql"):
+        opciones_motor.setdefault("isolation_level", "READ COMMITTED")
+    else:
+        opciones_motor.pop("isolation_level", None)
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opciones_motor
+
     from app.config import validar_configuracion
 
     validar_configuracion(app)
@@ -80,6 +93,10 @@ def create_app(test_config=None):
     # Modelos: registrar todos antes de usar migraciones.
     from app.dominios.agentes.controladores import admin_agentes_bp, agentes_bp
     from app.dominios.auditoria.modelos import Auditoria  # noqa: F401
+    from app.dominios.equipos.controladores import equipos_bp
+    from app.dominios.equipos.modelos import Equipo  # noqa: F401
+    from app.dominios.reclamos.controladores import reclamos_bp
+    from app.dominios.reclamos.modelos import Reclamo  # noqa: F401
     from app.dominios.organizaciones.modelos import Organizacion  # noqa: F401
     from app.dominios.franjas.admin_controladores import admin_franjas_bp
     from app.dominios.franjas.controladores import franjas_bp
@@ -109,6 +126,8 @@ def create_app(test_config=None):
     app.register_blueprint(disponibilidad_bp, url_prefix="/api/v1/franjas")
     app.register_blueprint(admin_usuarios_bp, url_prefix="/api/v1/admin/usuarios")
     app.register_blueprint(organizaciones_bp, url_prefix="/api/v1/organizacion")
+    app.register_blueprint(equipos_bp, url_prefix="/api/v1/equipos")
+    app.register_blueprint(reclamos_bp, url_prefix="/api/v1/reclamos")
 
     _registrar_manejadores(app)
 

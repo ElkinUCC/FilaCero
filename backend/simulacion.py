@@ -103,10 +103,16 @@ SERVICIOS = [
         20,
     ),
     (
-        "Garantía y reclamos",
-        "Revisión de equipos reparados que presentan una falla nuevamente.",
+        "Garantía de televisor",
+        "Ingreso a garantía de televisores con máximo 1 año desde la compra.",
         8,
-        12,
+        10,
+    ),
+    (
+        "Reclamos",
+        "Seguimiento presencial de un reclamo radicado (también puede radicarse en línea).",
+        6,
+        3,
     ),
     ("Entrega de equipo reparado", "Prueba del televisor frente al cliente y entrega.", 5, 25),
     (
@@ -115,6 +121,65 @@ SERVICIOS = [
         5,
         13,
     ),
+]
+
+# Trámites que se alistan ANTES de que llegue el cliente (preparación previa):
+# el equipo reparado se prueba y empaca y la garantía se revisa con la factura.
+# Lo decide el tipo de atención (ENTREGA o GARANTIA), no el nombre.
+SERVICIOS_CON_PREPARACION = {
+    "Entrega de equipo reparado",
+    "Garantía de televisor",
+}
+# Cómo se reserva cada trámite (ver ADR-013): los demás son GENERAL.
+FLUJOS_SERVICIO = {
+    "Entrega de equipo reparado": "ENTREGA",
+    "Garantía de televisor": "GARANTIA",
+    "Reclamos": "RECLAMO",
+}
+MARCAS_TV = ["Samsung", "LG", "Sony", "TCL", "Hisense", "Kalley", "Challenger", "Xiaomi"]
+MODELOS_TV = ['55" 4K UHD', '43" Full HD', '50" QLED', '65" OLED', '32" Smart TV', '58" 4K']
+FALLAS_TV = [
+    "No enciende, el led parpadea",
+    "Pantalla con líneas verticales",
+    "Tiene sonido pero no imagen",
+    "Se apaga solo después de unos minutos",
+    "No conecta a WiFi",
+    "Mancha oscura en una esquina",
+]
+NOTAS_EQUIPO = {
+    "RECIBIDO": "Recibido en sede. Pasa a diagnóstico hoy.",
+    "EN_REPARACION": "Se cambia la tarjeta T-CON; esperamos el repuesto.",
+    "LISTO": "Probado durante 2 horas. Listo para entregar.",
+    "ENTREGADO": "Entregado y probado frente al cliente.",
+    "POR_RECIBIR": "Pendiente de que el cliente lo traiga a la sede.",
+}
+RECLAMOS_DEMO = [
+    (
+        "DEMORA",
+        "La reparación de mi televisor lleva más de 10 días y no me han dado fecha de entrega.",
+    ),
+    (
+        "REPARACION",
+        "Recogí el televisor la semana pasada y volvió a presentar la misma falla de imagen.",
+    ),
+    (
+        "ATENCION",
+        "En la sede no me explicaron bien el diagnóstico y me cobraron la revisión dos veces.",
+    ),
+    ("COBRO", "La factura de la reparación tiene un valor diferente al de la cotización aprobada."),
+]
+# Cliente para la demostración: reserva la entrega de su televisor listo.
+CLIENTE_DEMO = ("Juliana Restrepo Arango", "3001112233", "1037654321")
+PRESENCIAS_DEMO = {1: "ALMUERZO", 3: "PAUSA", 6: "AUSENTE"}  # índice en ASESORES
+NOTAS_LISTO = [
+    "Tu equipo ya fue probado y está empacado. Solo trae tu documento.",
+    "La revisión de garantía está lista; te explicamos el resultado en el módulo.",
+    "La cotización quedó impresa con precios y disponibilidad de repuestos.",
+    "Todo listo: firma de entrega y prueba del equipo frente a ti.",
+]
+NOTAS_NOVEDAD = [
+    "El repuesto llega mañana a las 10:00; puedes reprogramar sin costo.",
+    "Falta la factura original para validar la garantía; tráela por favor.",
 ]
 
 ADMINS = [
@@ -267,10 +332,13 @@ def borrar_todo(db, organizacion_id=None):
     """
     from flask import g, has_app_context
 
-    tenant_id = organizacion_id or (getattr(g, "organizacion_id", None) if has_app_context() else None) or 1
+    tenant_id = (
+        organizacion_id or (getattr(g, "organizacion_id", None) if has_app_context() else None) or 1
+    )
     db.session.rollback()
     tablas = [
-        tabla for tabla in reversed(db.metadata.sorted_tables)
+        tabla
+        for tabla in reversed(db.metadata.sorted_tables)
         if tabla.name != "organizaciones" and "organizacion_id" in tabla.c
     ]
     with db.engine.begin() as con:
@@ -328,6 +396,9 @@ def crear_catalogo(db):
         crear(Tramite, {"nombre": n}, descripcion=d, tiempo_estimado=m, activo=True)
         for n, d, m, _ in SERVICIOS
     ]
+    for servicio in servicios:
+        servicio.requiere_preparacion = servicio.nombre in SERVICIOS_CON_PREPARACION
+        servicio.tipo_flujo = FLUJOS_SERVICIO.get(servicio.nombre, "GENERAL")
     clave_admin = encriptar_password(CLAVE_ADMIN)
     clave_asesor = encriptar_password(CLAVE_ASESOR)
     admins = [
@@ -358,6 +429,11 @@ def crear_catalogo(db):
         )
         for n, c, i in ASESORES
     ]
+    # Cada asesor atiende en un módulo de su sede (Módulo 1, Módulo 2...).
+    por_sede = {}
+    for asesor in asesores:
+        por_sede[asesor.punto_asignado_id] = por_sede.get(asesor.punto_asignado_id, 0) + 1
+        asesor.modulo = f"Módulo {por_sede[asesor.punto_asignado_id]}"
     db.session.commit()
     return {
         "sedes": sedes,
@@ -387,6 +463,9 @@ def _clientes(db, rnd, cantidad=160):
             celular=celular,
             activo=True,
         )
+        # Cédula inventada (datos de prueba): se exige al recoger un equipo.
+        if not cliente.documento:
+            cliente.documento = str(rnd.randint(10_000_000, 1_299_999_999))
         db.session.add(cliente)
         clientes.append(cliente)
     db.session.commit()
@@ -580,6 +659,8 @@ def cargar_semana(
                             turno.fecha_fin = utc(fin)
                             pausa = rnd.choices([0, 1, 2], weights=[55, 30, 15])[0]
                             libre[asesor.id] = fin + timedelta(minutes=pausa)
+                    _simular_preparacion(turno, servicio, asesores, rnd, ahora)
+                    _simular_vinculos(turno, servicio, cliente, sede, asesores, rnd, ahora)
                     totales[turno.estado] += 1
                     db.session.add(turno)
 
@@ -650,6 +731,188 @@ def cargar_semana(
         )
 
     return datos, totales
+
+
+def _codigo_unico(prefijo, rnd, usados):
+    while True:
+        codigo = f"{prefijo}-{rnd.randint(0, 0xFFFFFF):06X}"
+        if codigo not in usados:
+            usados.add(codigo)
+            return codigo
+
+
+_CODIGOS_SIM = set()
+
+
+def _nuevo_equipo(cliente, sede, rnd, estado, origen="REPARACION", asesor=None, momento=None):
+    from app.dominios.equipos.modelos import Equipo
+
+    momento = momento or datetime.now(UTC).replace(tzinfo=None)
+    return Equipo(
+        codigo=_codigo_unico("EQ", rnd, _CODIGOS_SIM),
+        cliente_id=cliente.id,
+        punto_id=sede.id,
+        tipo="Televisor",
+        marca=rnd.choice(MARCAS_TV),
+        modelo=rnd.choice(MODELOS_TV),
+        serial=f"SN{rnd.randint(10**8, 10**9 - 1)}",
+        falla=rnd.choice(FALLAS_TV),
+        origen=origen,
+        fecha_compra=(date.today() - timedelta(days=rnd.randint(20, 330)))
+        if origen == "GARANTIA"
+        else None,
+        estado=estado,
+        nota=NOTAS_EQUIPO.get(estado),
+        registrado_por_id=asesor.id if asesor and estado != "POR_RECIBIR" else None,
+        fecha_registro=momento - timedelta(days=rnd.randint(2, 9)),
+        fecha_actualizacion=momento,
+        fecha_entrega=momento if estado == "ENTREGADO" else None,
+    )
+
+
+def _simular_vinculos(turno, servicio, cliente, sede, asesores, rnd, ahora):
+    """Equipos y reclamos coherentes con el tipo de trámite del turno."""
+    from app.dominios.reclamos.modelos import Reclamo
+
+    flujo = FLUJOS_SERVICIO.get(servicio.nombre)
+    asesor = asesores[0] if asesores else None
+    momento = turno.hora_solicitud or ahora.astimezone(UTC).replace(tzinfo=None)
+    pendiente = turno.estado == "ESPERANDO"
+    if flujo == "ENTREGA":
+        estado = "LISTO" if pendiente or turno.estado != "ATENDIDO" else "ENTREGADO"
+        turno.equipo = _nuevo_equipo(cliente, sede, rnd, estado, asesor=asesor, momento=momento)
+    elif flujo == "GARANTIA":
+        estado = "POR_RECIBIR" if pendiente else rnd.choice(["RECIBIDO", "EN_REPARACION", "LISTO"])
+        turno.equipo = _nuevo_equipo(
+            cliente, sede, rnd, estado, origen="GARANTIA", asesor=asesor, momento=momento
+        )
+    elif flujo == "RECLAMO":
+        categoria, texto = rnd.choice(RECLAMOS_DEMO)
+        resuelto = turno.estado == "ATENDIDO"
+        turno.reclamo = Reclamo(
+            radicado=_codigo_unico("RC", rnd, _CODIGOS_SIM),
+            cliente_id=cliente.id,
+            punto_id=sede.id,
+            categoria=categoria,
+            descripcion=texto,
+            presencial=True,
+            estado="RESUELTO" if resuelto else "RADICADO",
+            respuesta="Revisamos tu caso en sede y quedó solucionado." if resuelto else None,
+            gestionado_por_id=asesor.id if resuelto and asesor else None,
+            fecha_creacion=momento - timedelta(days=rnd.randint(1, 4)),
+            fecha_respuesta=momento if resuelto else None,
+        )
+
+
+def _simular_equipos_y_reclamos(db, datos, rnd):
+    """Taller en curso: equipos en reparación en cada sede, reclamos en línea
+    y el cliente de la demostración con un televisor listo para recoger."""
+    from app.dominios.reclamos.modelos import Reclamo
+    from app.dominios.usuarios.modelos import Usuario
+
+    ahora = datetime.now(UTC).replace(tzinfo=None)
+    clientes = Usuario.query.filter_by(rol="CLIENTE").limit(80).all()
+    for i, cliente in enumerate(clientes[:48]):
+        sede = datos["sedes"][i % len(datos["sedes"])]
+        asesor = next((a for a in datos["asesores"] if a.punto_asignado_id == sede.id), None)
+        estado = rnd.choices(["RECIBIDO", "EN_REPARACION", "LISTO"], weights=[3, 5, 3])[0]
+        cuando = ahora - timedelta(minutes=rnd.randint(20, 60 * 72))
+        db.session.add(_nuevo_equipo(cliente, sede, rnd, estado, asesor=asesor, momento=cuando))
+    respuestas = [
+        "Te contactamos por teléfono y acordamos la entrega para mañana a las 10:00.",
+        "Revisamos la factura y aplicamos el valor cotizado. Puedes recoger el soporte en sede.",
+    ]
+    for i, cliente in enumerate(clientes[48:64]):
+        sede = datos["sedes"][i % len(datos["sedes"])]
+        asesor = next((a for a in datos["asesores"] if a.punto_asignado_id == sede.id), None)
+        categoria, texto = rnd.choice(RECLAMOS_DEMO)
+        estado = rnd.choices(["RADICADO", "EN_GESTION", "RESUELTO"], weights=[4, 3, 3])[0]
+        db.session.add(
+            Reclamo(
+                radicado=_codigo_unico("RC", rnd, _CODIGOS_SIM),
+                cliente_id=cliente.id,
+                punto_id=sede.id,
+                categoria=categoria,
+                descripcion=texto,
+                presencial=False,
+                estado=estado,
+                respuesta=rnd.choice(respuestas) if estado == "RESUELTO" else None,
+                gestionado_por_id=asesor.id if estado != "RADICADO" and asesor else None,
+                fecha_creacion=ahora - timedelta(hours=rnd.randint(2, 96)),
+                fecha_respuesta=ahora if estado == "RESUELTO" else None,
+            )
+        )
+
+    # Cliente de la demostración (celular conocido).
+    nombre, celular, documento = CLIENTE_DEMO
+    demo = Usuario.query.filter_by(celular=celular, rol="CLIENTE").first() or Usuario(
+        nombre=nombre,
+        correo=f"cliente_{celular}@publico.filacero.local",
+        password_hash="",
+        rol="CLIENTE",
+        celular=celular,
+        activo=True,
+    )
+    demo.documento = documento
+    db.session.add(demo)
+    db.session.flush()
+    centro = datos["sedes"][0]
+    asesor = datos["asesores"][0]
+    listo = _nuevo_equipo(demo, centro, rnd, "LISTO", asesor=asesor, momento=ahora)
+    listo.marca, listo.modelo = "Samsung", '55" 4K UHD'
+    listo.falla = "No enciende, el led parpadea"
+    listo.nota = "Se cambió la fuente de poder. Probado 2 horas: listo para entregar."
+    reparando = _nuevo_equipo(demo, centro, rnd, "EN_REPARACION", asesor=asesor, momento=ahora)
+    reparando.marca, reparando.modelo = "LG", '43" Full HD'
+    reparando.falla = "Pantalla con líneas verticales"
+    db.session.add_all([listo, reparando])
+    db.session.add(
+        Reclamo(
+            radicado=_codigo_unico("RC", rnd, _CODIGOS_SIM),
+            cliente_id=demo.id,
+            punto_id=centro.id,
+            equipo_id=None,
+            categoria="DEMORA",
+            descripcion="El LG lleva varios días en reparación y quisiera saber la fecha estimada.",
+            presencial=False,
+            estado="EN_GESTION",
+            respuesta="Estamos esperando el panel de reemplazo; llega el lunes y te avisamos.",
+            gestionado_por_id=asesor.id,
+            fecha_creacion=ahora - timedelta(days=1),
+            fecha_respuesta=ahora,
+        )
+    )
+
+    # Qué está haciendo cada asesor en este momento.
+    for i, asesor in enumerate(datos["asesores"]):
+        asesor.presencia = PRESENCIAS_DEMO.get(i, "DISPONIBLE")
+        asesor.presencia_desde = ahora - timedelta(minutes=rnd.randint(4, 35))
+    db.session.commit()
+
+
+def _simular_preparacion(turno, servicio, asesores, rnd, ahora):
+    """Estado de la preparación previa según el momento del turno."""
+    if not servicio.requiere_preparacion:
+        return
+    responsable = asesores[0] if asesores else None
+    if turno.estado in ("ATENDIDO", "NO_ASISTIO"):
+        estado = "LISTO"
+    elif turno.estado == "CANCELADO":
+        estado = rnd.choice(["PENDIENTE", "LISTO"])
+    else:  # en espera: unos listos, otros en curso y alguno con novedad
+        estado = rnd.choices(
+            ["LISTO", "EN_PREPARACION", "PENDIENTE", "NOVEDAD"], weights=[45, 15, 34, 6]
+        )[0]
+    turno.estado_preparacion = estado
+    if estado == "PENDIENTE" or not responsable:
+        return
+    turno.preparado_por_id = responsable.id
+    momento = min(ahora, ahora - timedelta(minutes=rnd.randint(5, 240)))
+    turno.fecha_preparacion = momento.astimezone(UTC).replace(tzinfo=None)
+    if estado == "LISTO":
+        turno.nota_preparacion = rnd.choice(NOTAS_LISTO)
+    elif estado == "NOVEDAD":
+        turno.nota_preparacion = rnd.choice(NOTAS_NOVEDAD)
 
 
 def _rotar_asesores(db, datos, base, fecha, hoy, rnd):
@@ -820,6 +1083,7 @@ def comando_cargar(args, solo_borrar=False):
         datos, t = cargar_semana(
             db, desde, hasta, semilla=args.semilla, turnos_objetivo=args.turnos or None
         )
+        _simular_equipos_y_reclamos(db, datos, random.Random(args.semilla))
         _restaurar_protegidas(db, protegidas)
 
         from app.dominios.agentes.despacho import cumplimiento
@@ -843,14 +1107,17 @@ def comando_cargar(args, solo_borrar=False):
             print(f"  Administrador  {correo:<32} {clave}   ({n})")
         for n, correo in SUPERVISORES:
             clave = (
-                "(clave conservada)"
-                if correo.lower() in correos_protegidos
-                else CLAVE_SUPERVISOR
+                "(clave conservada)" if correo.lower() in correos_protegidos else CLAVE_SUPERVISOR
             )
             print(f"  Supervisor     {correo:<32} {clave}  ({n})")
         for _n, correo, i in ASESORES:
             clave = "(clave conservada)" if correo.lower() in correos_protegidos else CLAVE_ASESOR
             print(f"  Asesor         {correo:<32} {clave}  ({SEDES[i][0]})")
+        print(
+            f"\n{NEGRITA}Cliente de la demostración{FIN}  {CLIENTE_DEMO[0]} · celular "
+            f"{CLIENTE_DEMO[1]} · cédula {CLIENTE_DEMO[2]} "
+            f"(tiene un Samsung listo para recoger y un LG en reparación)"
+        )
         print(
             f"\n{GRIS}Para ver reservas llegando en vivo durante la presentación:"
             f"  python simulacion.py --en-vivo{FIN}"
@@ -861,6 +1128,7 @@ def comando_cargar(args, solo_borrar=False):
 # ======================================================================
 # MODO EN VIVO: reservas llegando mientras se presenta
 # ======================================================================
+
 
 def _agentes_demo_automaticos():
     from app.dominios.usuarios.modelos import Usuario
@@ -965,7 +1233,6 @@ def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
             trabajos.pop(turno_id)
 
 
-
 def _registrar_sesion_agentes(db, agentes, accion, detalle):
     """Registra entrada/salida de los agentes demo para que aparezcan en Actividad."""
     from app.dominios.auditoria.modelos import Auditoria
@@ -992,12 +1259,17 @@ def _mostrar_tablero_operativo(Turno, agentes, trabajos, ids_turnos, creadas, in
     estados = ("ESPERANDO", "LLAMADO", "EN_ATENCION", "ATENDIDO", "NO_ASISTIO", "CANCELADO")
     conteos = {
         estado: Turno.query.filter(Turno.id.in_(ids_turnos), Turno.estado == estado).count()
-        if ids_turnos else 0
+        if ids_turnos
+        else 0
         for estado in estados
     }
-    activos = Turno.query.filter(
-        Turno.agente_id.in_(ids), Turno.estado.in_(("LLAMADO", "EN_ATENCION"))
-    ).all() if ids else []
+    activos = (
+        Turno.query.filter(
+            Turno.agente_id.in_(ids), Turno.estado.in_(("LLAMADO", "EN_ATENCION"))
+        ).all()
+        if ids
+        else []
+    )
     ocupados = {t.agente_id: t for t in activos}
     print(f"\n{NEGRITA}TABLERO OPERATIVO · últimas {intervalo}s{FIN}")
     print(
@@ -1051,13 +1323,14 @@ def comando_en_vivo(args):
             return 1
         agentes_sesion = [] if args.solo_reservas else _agentes_demo_automaticos()
         if agentes_sesion:
-            _registrar_sesion_agentes(db, agentes_sesion, "login", "Inicio de jornada · simulación FilaCero")
+            _registrar_sesion_agentes(
+                db, agentes_sesion, "login", "Inicio de jornada · simulación FilaCero"
+            )
         print(
             f"{NEGRITA}Modo operativo integral{FIN} · {_descripcion_bd(app)}\n"
             f"Hasta {args.por_ciclo} reservas cada ~{args.cada} s "
             + (
-                "· atención automática de turnos demo "
-                "(Ctrl+C para detener).\n"
+                "· atención automática de turnos demo (Ctrl+C para detener).\n"
                 if not args.solo_reservas
                 else "· sin atención automática (Ctrl+C para detener).\n"
             )
@@ -1126,10 +1399,7 @@ def comando_en_vivo(args):
                             f"{GRIS}{nombre}{FIN}"
                         )
                     else:
-                        print(
-                            f"  {AMBAR}●{FIN} {ahora:%H:%M:%S}  "
-                            f"{sede.nombre}: sin cupo cercano"
-                        )
+                        print(f"  {AMBAR}●{FIN} {ahora:%H:%M:%S}  {sede.nombre}: sin cupo cercano")
                 if not args.solo_reservas:
                     db.session.expire_all()
                     agentes = _agentes_demo_automaticos()
@@ -1144,19 +1414,17 @@ def comando_en_vivo(args):
                         )
                 # De vez en cuando alguien cancela (libera cupo, como en la vida real)
                 if creadas and rnd.random() < 0.12:
-                    espera = (
-                        [
-                            turno
-                            for turno in Turno.query.filter(
-                                Turno.id.in_(turnos_simulados), Turno.estado == "ESPERANDO"
-                            )
-                            .order_by(Turno.id.desc())
-                            .limit(20)
-                            .all()
-                            if turno.id in trabajos_atencion
-                            and trabajos_atencion[turno.id]["estado"] == "ESPERANDO"
-                        ]
-                    )
+                    espera = [
+                        turno
+                        for turno in Turno.query.filter(
+                            Turno.id.in_(turnos_simulados), Turno.estado == "ESPERANDO"
+                        )
+                        .order_by(Turno.id.desc())
+                        .limit(20)
+                        .all()
+                        if turno.id in trabajos_atencion
+                        and trabajos_atencion[turno.id]["estado"] == "ESPERANDO"
+                    ]
                     if espera:
                         cancelado = rnd.choice(espera)
                         cancelado.estado = "CANCELADO"
@@ -1168,8 +1436,12 @@ def comando_en_vivo(args):
                     db.session.expire_all()
                     agentes_actuales = _agentes_demo_automaticos()
                     _mostrar_tablero_operativo(
-                        Turno, agentes_actuales, trabajos_atencion, turnos_simulados,
-                        creadas, args.tablero_cada,
+                        Turno,
+                        agentes_actuales,
+                        trabajos_atencion,
+                        turnos_simulados,
+                        creadas,
+                        args.tablero_cada,
                     )
                     ultimo_tablero = ahora_mono
                 time.sleep(max(1, args.cada * rnd.uniform(0.6, 1.4)))
@@ -1183,8 +1455,12 @@ def comando_en_vivo(args):
             print(f"\n{NEGRITA}Resumen final:{FIN} {creadas} reservas creadas en vivo.")
             if not args.solo_reservas:
                 _mostrar_tablero_operativo(
-                    Turno, _agentes_demo_automaticos(), trabajos_atencion,
-                    turnos_simulados, creadas, args.tablero_cada,
+                    Turno,
+                    _agentes_demo_automaticos(),
+                    trabajos_atencion,
+                    turnos_simulados,
+                    creadas,
+                    args.tablero_cada,
                 )
     return 0
 
@@ -1299,9 +1575,7 @@ def escenario_ciudadano(api, celular):
     s, d, _ = api("POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular})
     codigo = d.get("codigo_prueba")
     if not paso("Solicita código de verificación", s == 200 and codigo, f"código prueba {codigo}"):
-        print(
-            f"    {GRIS}(activa FILACERO_OTP_TEST_MODE=true y prueba contra localhost){FIN}"
-        )
+        print(f"    {GRIS}(activa FILACERO_OTP_TEST_MODE=true y prueba contra localhost){FIN}")
         return None
 
     s, _, _ = api(
@@ -1339,20 +1613,30 @@ def escenario_ciudadano(api, celular):
         turno.get("celular", ""),
     )
 
-    s_otp, d_otp, _ = api(
-        "POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular}
-    )
+    s_otp, d_otp, _ = api("POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular})
     otp_consulta = d_otp.get("codigo_prueba")
-    _, d_otp, _ = api(
-        "POST", "/api/v1/turnos/publico/verificar-codigo",
-        {"celular": celular, "codigo": otp_consulta, "proposito": "consulta",
-         "codigo_turno": turno.get("codigo")},
-    ) if otp_consulta else (0, {}, {})
+    _, d_otp, _ = (
+        api(
+            "POST",
+            "/api/v1/turnos/publico/verificar-codigo",
+            {
+                "celular": celular,
+                "codigo": otp_consulta,
+                "proposito": "consulta",
+                "codigo_turno": turno.get("codigo"),
+            },
+        )
+        if otp_consulta
+        else (0, {}, {})
+    )
     s, d, _ = api(
         "POST",
         "/api/v1/turnos/publico/consultar",
-        {"codigo": turno.get("codigo"), "celular": celular,
-         "token_verificacion": d_otp.get("token_verificacion")},
+        {
+            "codigo": turno.get("codigo"),
+            "celular": celular,
+            "token_verificacion": d_otp.get("token_verificacion"),
+        },
     )
     paso(
         "Consulta su turno con código + celular",
@@ -1368,20 +1652,30 @@ def escenario_ciudadano(api, celular):
     )
     paso("Otro celular NO puede ver el turno", s == 400)
 
-    _, d_otp, _ = api(
-        "POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular}
-    )
+    _, d_otp, _ = api("POST", "/api/v1/turnos/publico/solicitar-codigo", {"celular": celular})
     otp_cancelacion = d_otp.get("codigo_prueba")
-    _, d_otp, _ = api(
-        "POST", "/api/v1/turnos/publico/verificar-codigo",
-        {"celular": celular, "codigo": otp_cancelacion, "proposito": "cancelacion",
-         "codigo_turno": turno.get("codigo")},
-    ) if otp_cancelacion else (0, {}, {})
+    _, d_otp, _ = (
+        api(
+            "POST",
+            "/api/v1/turnos/publico/verificar-codigo",
+            {
+                "celular": celular,
+                "codigo": otp_cancelacion,
+                "proposito": "cancelacion",
+                "codigo_turno": turno.get("codigo"),
+            },
+        )
+        if otp_cancelacion
+        else (0, {}, {})
+    )
     s, d, _ = api(
         "POST",
         "/api/v1/turnos/publico/cancelar",
-        {"codigo": turno.get("codigo"), "celular": celular,
-         "token_verificacion": d_otp.get("token_verificacion")},
+        {
+            "codigo": turno.get("codigo"),
+            "celular": celular,
+            "token_verificacion": d_otp.get("token_verificacion"),
+        },
     )
     paso("Cancela su turno", s == 200 and d.get("turno", {}).get("estado") == "CANCELADO")
 
@@ -1839,15 +2133,20 @@ def main():
     )
     parser.add_argument("--cada", type=int, default=10, help="Segundos entre ciclos en vivo")
     parser.add_argument(
-        "--solo-reservas", action="store_true",
+        "--solo-reservas",
+        action="store_true",
         help="Solo crea reservas; no simula agentes atendiendo",
     )
     parser.add_argument(
-        "--duracion", type=int, default=0,
+        "--duracion",
+        type=int,
+        default=0,
         help="Segundos de operación en vivo; 0 = hasta Ctrl+C",
     )
     parser.add_argument(
-        "--tablero-cada", type=int, default=15,
+        "--tablero-cada",
+        type=int,
+        default=15,
         help="Frecuencia en segundos del tablero operativo de agentes",
     )
     parser.add_argument(

@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import * as catalogoApi from "../../api/catalogo.api";
 import Icon from "../ui/Icon";
 import { Confirmar, Modal } from "../ui/Modal";
-import Switch from "../ui/Switch";
+import PanelDetalle, { Datos } from "../ui/PanelDetalle";
 import { useToast } from "../../hooks/useToast";
 import usePolling from "../../hooks/usePolling";
 import Encabezado from "../layout/Encabezado";
+import { FLUJOS } from "../../utils/formatters";
+import TablaSeccion, { EnlaceDetalle, Estado } from "./TablaSeccion";
 
 const CONFIG = {
   sedes: {
@@ -21,8 +23,7 @@ const CONFIG = {
     vacio: {
       nombre: "",
       descripcion: "",
-      instrucciones_preparacion: "",
-      campos_solicitud: [],
+      tipo_flujo: "GENERAL",
       tiempo_estimado: 10,
     },
   },
@@ -33,49 +34,11 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
   const [form, setForm] = useState({
     ...c.vacio,
     ...inicial,
-    campos_solicitud: inicial?.campos_solicitud || [],
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const editando = Boolean(inicial?.id);
   const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }));
-
-  function cambiarCampo(indice, cambios) {
-    setForm((actual) => ({
-      ...actual,
-      campos_solicitud: actual.campos_solicitud.map((campo, i) =>
-        i === indice ? { ...campo, ...cambios } : campo
-      ),
-    }));
-  }
-
-  function agregarCampo() {
-    const id = globalThis.crypto?.randomUUID?.()
-      || `pregunta-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setForm((actual) => ({
-      ...actual,
-      campos_solicitud: [
-        ...actual.campos_solicitud,
-        { id, etiqueta: "", tipo: "texto", obligatorio: false, opciones: [] },
-      ],
-    }));
-  }
-
-  function moverCampo(indice, direccion) {
-    setForm((actual) => {
-      const campos = [...actual.campos_solicitud];
-      const destino = indice + direccion;
-      [campos[indice], campos[destino]] = [campos[destino], campos[indice]];
-      return { ...actual, campos_solicitud: campos };
-    });
-  }
-
-  function eliminarCampo(indice) {
-    setForm((actual) => ({
-      ...actual,
-      campos_solicitud: actual.campos_solicitud.filter((_, i) => i !== indice),
-    }));
-  }
 
   async function guardar(e) {
     e.preventDefault();
@@ -83,8 +46,7 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
     if (tipo === "sedes") cuerpo.direccion = (form.direccion || "").trim();
     else {
       cuerpo.descripcion = (form.descripcion || "").trim();
-      cuerpo.instrucciones_preparacion = (form.instrucciones_preparacion || "").trim();
-      cuerpo.campos_solicitud = form.campos_solicitud;
+      cuerpo.tipo_flujo = form.tipo_flujo || "GENERAL";
       cuerpo.tiempo_estimado = Number(form.tiempo_estimado);
     }
     if (cuerpo.nombre.length < 2) return setError("Escribe un nombre de al menos 2 caracteres.");
@@ -136,109 +98,35 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
               <span className="campo"><textarea value={form.descripcion || ""} onChange={cambiar("descripcion")} maxLength={1000} rows={3} placeholder="Qué incluye el servicio" /></span>
               <small className="formulario__ayuda">{(form.descripcion || "").length}/1000 · Describe brevemente qué debe esperar el ciudadano.</small>
             </label>
-            <label>
-              <span className="etiqueta">Ayuda para reservar (opcional)</span>
-              <span className="campo"><textarea value={form.instrucciones_preparacion || ""} onChange={cambiar("instrucciones_preparacion")} maxLength={1000} rows={2} placeholder="Ej. Ten a mano tu número de cliente." /></span>
-            </label>
-            <section className="preguntas-solicitud" aria-label="Preguntas del trámite">
-              <div className="preguntas-solicitud__encabezado">
-                <div>
-                  <strong>Preguntas adicionales</strong>
-                  <small>Máximo 3. Son opcionales, salvo que marques alguna como obligatoria.</small>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn--suave"
-                  onClick={agregarCampo}
-                  disabled={form.campos_solicitud.length >= 3}
-                >
-                  Agregar
-                </button>
+            <div>
+              <span className="etiqueta">Tipo de atención</span>
+              <div className="flujos">
+                {Object.entries(FLUJOS).map(([clave, f]) => (
+                  <button key={clave} type="button" className={`flujo ${form.tipo_flujo === clave ? "activo" : ""}`} onClick={() => setForm((x) => ({ ...x, tipo_flujo: clave }))}>
+                    <strong>{f.texto}</strong>
+                    <small>{f.detalle}</small>
+                  </button>
+                ))}
               </div>
-              {form.campos_solicitud.map((campo, indice) => (
-                <div className="pregunta-solicitud" key={campo.id}>
-                  <div className="pregunta-solicitud__barra">
-                    <strong>Pregunta {indice + 1}</strong>
-                    <div>
-                      <button type="button" className="btn btn--suave" onClick={() => moverCampo(indice, -1)} disabled={indice === 0}>Subir</button>
-                      <button type="button" className="btn btn--suave" onClick={() => moverCampo(indice, 1)} disabled={indice === form.campos_solicitud.length - 1}>Bajar</button>
-                      <button type="button" className="btn btn--suave" onClick={() => eliminarCampo(indice)}>Quitar</button>
-                    </div>
-                  </div>
-                  <label>
-                    <span className="etiqueta">Pregunta</span>
-                    <span className="campo">
-                      <input
-                        value={campo.etiqueta}
-                        onChange={(e) => cambiarCampo(indice, { etiqueta: e.target.value })}
-                        maxLength={120}
-                        placeholder="Ej. ¿Cuál es tu número de cliente?"
-                      />
-                    </span>
-                  </label>
-                  <label>
-                    <span className="etiqueta">Respuesta</span>
-                    <span className="campo">
-                      <select
-                        value={campo.tipo}
-                        onChange={(e) => cambiarCampo(indice, {
-                          tipo: e.target.value,
-                          opciones: e.target.value === "seleccion" ? campo.opciones : [],
-                        })}
-                      >
-                        <option value="texto">Texto corto</option>
-                        <option value="parrafo">Respuesta larga</option>
-                        <option value="seleccion">Elegir una opción</option>
-                        <option value="si_no">Sí / No</option>
-                      </select>
-                    </span>
-                  </label>
-                  {campo.tipo === "seleccion" && (
-                    <label>
-                      <span className="etiqueta">Opciones (una por línea, entre 2 y 8)</span>
-                      <span className="campo">
-                        <textarea
-                          value={(campo.opciones || []).join("\n")}
-                          onChange={(e) => cambiarCampo(indice, {
-                            opciones: e.target.value.split("\n").slice(0, 8),
-                          })}
-                          rows={3}
-                          placeholder={"Presencial\nVirtual"}
-                        />
-                      </span>
-                    </label>
-                  )}
-                  <label className="pregunta-solicitud__obligatoria">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(campo.obligatorio)}
-                      onChange={(e) => cambiarCampo(indice, { obligatorio: e.target.checked })}
-                    />
-                    Obligatoria
-                  </label>
-                </div>
-              ))}
-            </section>
+            </div>
             <label>
               <span className="etiqueta">Duración estimada (minutos)</span>
               <span className="campo"><Icon name="reloj" size={17} /><input type="number" min={1} max={10} value={form.tiempo_estimado} onChange={cambiar("tiempo_estimado")} /></span>
               <small className="formulario__ayuda">La operación reserva franjas de 30 minutos y limita cada atención a 10 minutos.</small>
             </label>
+            <p className={`opcion-preparacion ${["ENTREGA", "GARANTIA"].includes(form.tipo_flujo) ? "" : "opcion-preparacion--no"}`} role="note">
+              <Icon name={["ENTREGA", "GARANTIA"].includes(form.tipo_flujo) ? "paquete" : "alerta"} size={18} />
+              <span>
+                <strong>{["ENTREGA", "GARANTIA"].includes(form.tipo_flujo) ? "Se alista antes de que llegue el cliente" : "Sin preparación previa"}</strong>
+                <small>
+                  {form.tipo_flujo === "ENTREGA" ? "El asesor prueba y empaca el equipo; el cliente lo recibe presentando su cédula."
+                    : form.tipo_flujo === "GARANTIA" ? "El asesor revisa la compra y la cobertura antes de la cita."
+                      : "Solo la entrega de equipos y las garantías se preparan. Lo define el tipo de atención."}
+                </small>
+              </span>
+            </p>
           </>
         )}
-        <aside className="catalogo-vista" aria-live="polite">
-          <span className="etiqueta">Vista previa de reserva</span>
-          <div className="catalogo-vista__titulo">
-            <Icon name={tipo === "sedes" ? "pin" : "reloj"} size={18} />
-            <strong>{form.nombre.trim() || (tipo === "sedes" ? "Nombre de la sede" : "Nombre del trámite")}</strong>
-          </div>
-          <p>
-            {tipo === "sedes"
-              ? String(form.direccion || "").trim() || "La dirección aparecerá aquí."
-              : String(form.descripcion || "").trim() || "La descripción del servicio aparecerá aquí."}
-          </p>
-          {tipo === "tramites" && <span className="chip">{form.tiempo_estimado || "—"} min estimados</span>}
-        </aside>
         {error && <p className="rv__error" role="alert"><Icon name="alerta" size={16} /> {error}</p>}
       </form>
     </Modal>
@@ -247,12 +135,14 @@ function Formulario({ tipo, inicial, onCerrar, onGuardado }) {
 
 export default function Catalogo({ tipo, titulo, soloLectura }) {
   const c = CONFIG[tipo];
+  const esSede = tipo === "sedes";
   const avisar = useToast();
   const [buscar, setBuscar] = useState("");
   const [editar, setEditar] = useState(null); // {} = nuevo, objeto = editar
   const [eliminar, setEliminar] = useState(null);
   const [estadoEliminar, setEstadoEliminar] = useState({ ocupado: false, error: "" });
   const [cambiando, setCambiando] = useState(null);
+  const [detalleId, setDetalleId] = useState(null);
 
   const { datos, error, actualizado, refrescar, setDatos } = usePolling(
     () => catalogoApi.listar(tipo, { todos: true }),
@@ -265,12 +155,14 @@ export default function Catalogo({ tipo, titulo, soloLectura }) {
     return (datos || []).filter((x) => !f || `${x.nombre} ${x.direccion || ""} ${x.descripcion || ""}`.toLowerCase().includes(f));
   }, [datos, buscar]);
 
+  const detalle = (datos || []).find((x) => x.id === detalleId) || null;
+
   async function alternar(registro, activo) {
     setCambiando(registro.id);
     setDatos((d) => d.map((x) => (x.id === registro.id ? { ...x, activo } : x)));
     try {
       await catalogoApi.actualizar(tipo, registro.id, { activo });
-      avisar(`${registro.nombre} ${activo ? "activada" : "desactivada"}${tipo === "tramites" ? "" : ""}.`);
+      avisar(`${registro.nombre} ${activo ? "activado" : "desactivado"}.`);
     } catch (e) {
       avisar(e.message, "error");
     } finally {
@@ -284,6 +176,7 @@ export default function Catalogo({ tipo, titulo, soloLectura }) {
     try {
       await catalogoApi.eliminar(tipo, eliminar.id);
       avisar(`${eliminar.nombre} eliminado.`);
+      if (detalleId === eliminar.id) setDetalleId(null);
       setEliminar(null);
       setEstadoEliminar({ ocupado: false, error: "" });
       refrescar();
@@ -292,7 +185,52 @@ export default function Catalogo({ tipo, titulo, soloLectura }) {
     }
   }
 
+  const pedirEliminar = (r) => { setEliminar(r); setEstadoEliminar({ ocupado: false, error: "" }); };
   const activos = (datos || []).filter((x) => x.activo).length;
+
+  const columnas = esSede
+    ? ["Sede", "Dirección", "Asesores activos", "Cupos por franja", "Estado", ""]
+    : ["Trámite", "Tipo de atención", "Duración", "Preparación previa", "Estado", ""];
+
+  const filasTabla = filas.map((r) => {
+    const estado = <Estado tono={r.activo ? "ok" : "cancelado"}>{r.activo ? "Activo" : "Inactivo"}</Estado>;
+    const principal = <EnlaceDetalle texto={r.nombre} onClick={() => setDetalleId(r.id)} />;
+    const acciones = (
+      <>
+        {esSede && (
+          <a className="icono-btn" href={`/sala?sede=${r.id}`} target="_blank" rel="noopener noreferrer" title="Abrir pantalla de sala de espera" aria-label={`Abrir pantalla de sala de ${r.nombre} (nueva pestaña)`}>
+            <Icon name="pantalla" size={17} />
+          </a>
+        )}
+        {!soloLectura && (
+          <button className="icono-btn" title="Editar" aria-label={`Editar ${r.nombre}`} onClick={() => setEditar(r)}>
+            <Icon name="editar" size={17} />
+          </button>
+        )}
+        {!soloLectura && !esSede && (
+          <button className="icono-btn" title={r.activo ? "Desactivar" : "Activar"} aria-label={`${r.activo ? "Desactivar" : "Activar"} ${r.nombre}`} disabled={cambiando === r.id} onClick={() => alternar(r, !r.activo)}>
+            <Icon name="encender" size={17} />
+          </button>
+        )}
+        {!soloLectura && (
+          <button className="icono-btn icono-btn--peligro" title="Eliminar" aria-label={`Eliminar ${r.nombre}`} onClick={() => pedirEliminar(r)}>
+            <Icon name="eliminar" size={17} />
+          </button>
+        )}
+      </>
+    );
+    const celdas = esSede
+      ? [principal, r.direccion || <span key="k1" className="tenue">Sin dirección</span>, r.asesores_activos ?? "—", r.cupos_por_franja ?? "—", estado, acciones]
+      : [
+          principal,
+          FLUJOS[r.tipo_flujo || "GENERAL"]?.texto,
+          `${r.tiempo_estimado} min`,
+          r.requiere_preparacion ? <Estado key="k1" tono="atencion">Se prepara</Estado> : <span key="k2" className="tenue">No aplica</span>,
+          estado,
+          acciones,
+        ];
+    return { id: r.id, inactivo: !r.activo, celdas };
+  });
 
   return (
     <section className="adm__seccion">
@@ -312,59 +250,69 @@ export default function Catalogo({ tipo, titulo, soloLectura }) {
           </label>
           <span className="tenue">{activos} activos de {(datos || []).length}</span>
         </div>
-        <div className="tabla-envoltura">
-          <table className="tabla">
-            <thead>
-              <tr>
-                <th scope="col">Nombre</th>
-                {tipo === "sedes" ? <th scope="col">Dirección</th> : <><th scope="col">Descripción</th><th scope="col" className="num">Duración</th></>}
-                <th scope="col">Activo</th>
-                <th scope="col" className="acciones"><span className="sr">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((r) => (
-                <tr key={r.id} className={r.activo ? "" : "inactivo"}>
-                  <td><strong>{r.nombre}</strong></td>
-                  {tipo === "sedes" ? (
-                    <td className="tenue">{r.direccion || "Sin dirección"}</td>
-                  ) : (
-                    <>
-                      <td className="tenue recorte">{r.descripcion || "Sin descripción"}</td>
-                      <td className="num">{r.tiempo_estimado} min</td>
-                    </>
-                  )}
-                  <td>
-                    {soloLectura
-                      ? <span className={`estado estado--${r.activo ? "ok" : "cancelado"}`}>{r.activo ? "Activo" : "Inactivo"}</span>
-                      : <Switch activo={r.activo} disabled={cambiando === r.id} onChange={(v) => alternar(r, v)} etiqueta={r.activo ? "Desactivar" : "Activar"} />}
-                  </td>
-                  <td className="acciones">
-                    {tipo === "sedes" && (
-                      <a className="icono-btn" href={`/sala?sede=${r.id}`} target="_blank" rel="noopener noreferrer" title="Abrir pantalla de sala de espera" aria-label={`Abrir pantalla de sala de ${r.nombre} (nueva pestaña)`}>
-                        <Icon name="pantalla" size={17} />
-                      </a>
-                    )}
-                    {!soloLectura && <>
-                    <button className="icono-btn" title="Editar" aria-label={`Editar ${r.nombre}`} onClick={() => setEditar(r)}>
-                      <Icon name="editar" size={17} />
-                    </button>
-                    <button className="icono-btn icono-btn--peligro" title="Eliminar" aria-label={`Eliminar ${r.nombre}`} onClick={() => { setEliminar(r); setEstadoEliminar({ ocupado: false, error: "" }); }}>
-                      <Icon name="eliminar" size={17} />
-                    </button>
-                  </>}</td>
-                </tr>
-              ))}
-              {datos && !filas.length && (
-                <tr><td colSpan={5} className="vacio">
-                  {buscar ? "Ningún resultado con esa búsqueda." : `Aún no hay registros. Usa “${c.nuevo}” para crear el primero.`}
-                </td></tr>
-              )}
-              {!datos && [1, 2, 3].map((i) => <tr key={i}><td colSpan={5}><div className="esqueleto" style={{ height: 16 }} /></td></tr>)}
-            </tbody>
-          </table>
-        </div>
+        <TablaSeccion
+          etiqueta={titulo}
+          columnas={columnas}
+          alinear={esSede ? ["left", "left", "center", "center", "center", "right"] : ["left", "left", "center", "center", "center", "right"]}
+          anchos={esSede ? [20, 36, 12, 12, 10, 10] : [28, 18, 12, 18, 12, 12]}
+          filas={filasTabla}
+          cargando={!datos}
+          vacio={buscar ? "Ningún resultado con esa búsqueda." : `Aún no hay registros. Usa “${c.nuevo}” para crear el primero.`}
+        />
       </article>
+
+      {detalle && (
+        <PanelDetalle
+          titulo={detalle.nombre}
+          subtitulo={esSede ? detalle.direccion || "Sin dirección registrada" : `${detalle.tiempo_estimado} min por atención`}
+          insignia={<Estado tono={detalle.activo ? "ok" : "cancelado"}>{detalle.activo ? "Activo" : "Inactivo"}</Estado>}
+          onCerrar={() => setDetalleId(null)}
+          acciones={
+            <>
+              {esSede && (
+                <a className="btn btn--borde" href={`/sala?sede=${detalle.id}`} target="_blank" rel="noopener noreferrer">
+                  <Icon name="pantalla" size={16} /> Pantalla de sala
+                </a>
+              )}
+              {!soloLectura && <>
+                <button className="btn btn--suave" onClick={() => setEditar(detalle)}><Icon name="editar" size={16} /> Editar</button>
+                <button className="btn btn--suave" disabled={cambiando === detalle.id} onClick={() => alternar(detalle, !detalle.activo)}>
+                  <Icon name="encender" size={16} /> {detalle.activo ? "Desactivar" : "Activar"}
+                </button>
+                <button className="btn btn--peligro" onClick={() => pedirEliminar(detalle)}><Icon name="eliminar" size={16} /> Eliminar</button>
+              </>}
+            </>
+          }
+        >
+          {esSede ? (
+            <Datos
+              titulo="Operación"
+              filas={[
+                ["Asesores activos", detalle.asesores_activos],
+                ["Cupos por franja de 30 min", detalle.cupos_por_franja],
+                ["Estado", detalle.activo ? "Recibe reservas" : "No aparece al reservar"],
+                ["Identificador", `#${detalle.id}`],
+              ]}
+            />
+          ) : (
+            <>
+              <section className="detalle__bloque">
+                <h3>Descripción</h3>
+                <p className="detalle__texto">{detalle.descripcion || "Sin descripción."}</p>
+              </section>
+              <Datos
+                titulo="Configuración"
+                filas={[
+                  ["Tipo de atención", FLUJOS[detalle.tipo_flujo || "GENERAL"]?.texto],
+                  ["Cómo reserva el cliente", FLUJOS[detalle.tipo_flujo || "GENERAL"]?.detalle],
+                  ["Duración estimada", `${detalle.tiempo_estimado} min`],
+                  ["Preparación previa", detalle.requiere_preparacion ? "Sí, se alista antes de la llegada" : "No"],
+                ]}
+              />
+            </>
+          )}
+        </PanelDetalle>
+      )}
 
       {editar && (
         <Formulario

@@ -7,7 +7,7 @@ import Historial from "../components/admin/Historial";
 import Resumen from "../components/admin/Resumen";
 import Usuarios from "../components/admin/Usuarios";
 import Marca from "../components/layout/Marca";
-import { MenuAccesibilidad, SaltarAlContenido } from "../components/ui/Accesibilidad";
+import { SaltarAlContenido } from "../components/ui/Accesibilidad";
 import { CambiarMiClave } from "../components/ui/CambiarClave";
 import Icon from "../components/ui/Icon";
 import { useToast } from "../hooks/useToast";
@@ -89,7 +89,6 @@ export default function AdminPage({ usuario, params, onSalir, onUsuario }) {
               <small>{soloLectura ? "Supervisor · solo lectura" : "Administrador"}</small>
             </div>
           </div>
-          <MenuAccesibilidad className="adm__texto" arriba />
           <div className="adm__cuenta-acciones">
             <button onClick={() => setCambiarClave(true)}><Icon name="llave" size={15} /> Contraseña</button>
             <button onClick={onSalir}><Icon name="salir" size={15} /> Salir</button>

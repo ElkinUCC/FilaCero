@@ -23,7 +23,7 @@ def obtener_puntos():
     # ?todos=1 solo para administradores: incluye sedes inactivas.
     todos = request.args.get("todos") == "1" and _es_admin_opcional()
     puntos = [p for p in listar_puntos() if todos or p.activo]
-    return {"puntos": [punto_response(p) for p in puntos]}, 200
+    return {"puntos": [punto_response(p, operativo=todos) for p in puntos]}, 200
 
 
 @puntos_bp.post("/")

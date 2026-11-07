@@ -22,8 +22,37 @@ def obtener_por_id(turno_id):
     return db.session.get(Turno, turno_id)
 
 
-def obtener_por_codigo(codigo):
-    return Turno.query.filter_by(codigo=(codigo or "").strip().upper()).first()
+def normalizar_codigo(valor):
+    """Acepta el código completo (FC-AAAAMMDD-XXXXXX), el visible (TU-XXXXXX)
+    o solo los 6 caracteres. Devuelve el completo o los 6 caracteres."""
+    codigo = "".join(str(valor or "").split()).upper()
+    if codigo.startswith("TU-"):
+        codigo = codigo[3:]
+    return codigo
+
+
+def obtener_por_codigo(codigo, celular=None):
+    """Busca por código completo o, con el celular del dueño, por el corto."""
+    codigo = normalizar_codigo(codigo)
+    turno = Turno.query.filter_by(codigo=codigo).first()
+    if turno or len(codigo) != 6:
+        return turno
+    from app.dominios.usuarios.modelos import Usuario
+
+    if not celular:
+        # Solo el código corto: el turno más reciente con esa terminación.
+        return (
+            Turno.query.filter(Turno.codigo.like(f"%-{codigo}"))
+            .order_by(Turno.hora_solicitud.desc())
+            .first()
+        )
+
+    return (
+        Turno.query.join(Usuario, Turno.usuario_id == Usuario.id)
+        .filter(Usuario.celular == celular, Turno.codigo.like(f"%-{codigo}"))
+        .order_by(Turno.hora_solicitud.desc())
+        .first()
+    )
 
 
 def obtener_por_celular(celular, limite=10):

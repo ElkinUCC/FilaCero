@@ -66,3 +66,43 @@ def verificar_codigo(celular, codigo, organizacion_id=1):
 def reiniciar():
     with _candado:
         _codigos.clear()
+
+
+# ---------------------------------------------------------------------
+# Identidad del ciudadano a partir de su celular verificado
+# ---------------------------------------------------------------------
+VIGENCIA_TOKEN_SEG = 15 * 60
+
+
+def celular_del_token(datos, propositos=("reserva", "consulta_celular")):
+    """Devuelve el celular de un token de verificación válido.
+
+    Lo usan los módulos de equipos y reclamos: el ciudadano no tiene cuenta y
+    su identidad es el celular que acaba de verificar con el código OTP.
+    Lanza ValueError con un mensaje apto para mostrar.
+    """
+    from flask import g
+    from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+    from app.seguridad import normalizar_celular
+
+    celular = normalizar_celular(datos.get("celular"))
+    token = str(datos.get("token_verificacion", "")).strip()
+    if not token:
+        raise ValueError("Verifica tu celular para continuar.")
+    serializador = URLSafeTimedSerializer(
+        current_app.config["SECRET_KEY"], salt="filacero-verificacion-celular"
+    )
+    try:
+        datos_token = serializador.loads(token, max_age=VIGENCIA_TOKEN_SEG)
+    except SignatureExpired:
+        raise ValueError("La verificación expiró. Verifica tu celular nuevamente.") from None
+    except BadSignature:
+        raise ValueError("La verificación del celular no es válida.") from None
+    if datos_token.get("org_id") != getattr(g, "organizacion_id", 1):
+        raise ValueError("La verificación no corresponde a esta organización.")
+    if datos_token.get("proposito", "reserva") not in propositos:
+        raise ValueError("Verifica tu celular para esta operación.")
+    if datos_token.get("celular") != celular:
+        raise ValueError("El celular verificado no coincide.")
+    return celular

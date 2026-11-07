@@ -4,15 +4,34 @@ import Dropdown from "../ui/Dropdown";
 import Icon from "../ui/Icon";
 import usePolling from "../../hooks/usePolling";
 import Encabezado from "../layout/Encabezado";
+import { fechaHora } from "../../utils/formatters";
+import PanelDetalle, { Datos } from "../ui/PanelDetalle";
+import TablaSeccion, { EnlaceDetalle, Estado } from "./TablaSeccion";
 
 const TONOS = {
-  login_fallido: "ausente", usuario_desactivado: "ausente", rol_cambiado: "llamado",
-  clave_restablecida: "espera", clave_cambiada: "atencion", login: "ok",
+  login_fallido: "ausente", login_bloqueado: "ausente", usuario_desactivado: "ausente",
+  usuario_eliminado: "ausente", rol_cambiado: "llamado", clave_restablecida: "espera",
+  clave_cambiada: "atencion", login: "ok", logout: "cancelado", turno_preparado: "ok",
+  equipo_registrado: "atencion", equipo_actualizado: "ok", reclamo_gestionado: "llamado",
+  presencia_cambiada: "espera",
+};
+
+/** Tipo de evento en una palabra (columna Tipo). */
+const GRUPOS = {
+  login: "Ingreso", logout: "Salida", login_fallido: "Seguridad", login_bloqueado: "Seguridad",
+  clave_cambiada: "Seguridad", clave_restablecida: "Seguridad", rol_cambiado: "Permisos",
+  usuario_creado: "Cuentas", usuario_editado: "Cuentas", usuario_desactivado: "Cuentas",
+  usuario_activado: "Cuentas", usuario_eliminado: "Cuentas", sede_creada: "Catálogo",
+  sede_editada: "Catálogo", sede_eliminada: "Catálogo", tramite_creado: "Catálogo",
+  tramite_editado: "Catálogo", tramite_eliminado: "Catálogo", sede_cambiada: "Operación",
+  turno_preparado: "Operación", equipo_registrado: "Taller", equipo_actualizado: "Taller",
+  reclamo_gestionado: "Reclamos", presencia_cambiada: "Operación",
 };
 
 export default function Actividad({ titulo }) {
   const [accion, setAccion] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [detalle, setDetalle] = useState(null);
   const { datos, error, actualizado } = usePolling(() => {
     return adminApi.auditoria({ pagina, por_pagina: 20, accion });
   }, 15000, [accion, pagina]);
@@ -28,24 +47,26 @@ export default function Actividad({ titulo }) {
           <Dropdown ariaLabel="Filtrar por tipo de actividad" value={accion} options={opciones} onChange={(v) => { setAccion(v); setPagina(1); }} placeholder="Toda la actividad" />
           <span className="tenue">{datos ? `${datos.total.toLocaleString("es-CO")} eventos` : ""}</span>
         </div>
-        <div className="tabla-envoltura">
-          <table className="tabla tabla--densa">
-            <thead><tr><th scope="col">Cuándo</th><th scope="col">Acción</th><th scope="col">Detalle</th><th scope="col">Usuario</th><th scope="col">IP</th></tr></thead>
-            <tbody>
-              {eventos.map((e) => (
-                <tr key={e.id}>
-                  <td className="mono">{new Date(e.fecha).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</td>
-                  <td><span className={`estado estado--${TONOS[e.accion] || "cancelado"}`}>{e.accion_texto}</span></td>
-                  <td className="recorte" title={e.detalle || ""}>{e.detalle || <span className="tenue">—</span>}</td>
-                  <td>{e.usuario || <span className="tenue">Desconocido</span>}</td>
-                  <td className="tenue">{e.ip || "—"}</td>
-                </tr>
-              ))}
-              {datos && !eventos.length && <tr><td colSpan={5} className="vacio">Sin actividad registrada con ese filtro.</td></tr>}
-              {!datos && [1, 2, 3].map((i) => <tr key={i}><td colSpan={5}><div className="esqueleto" style={{ height: 16 }} /></td></tr>)}
-            </tbody>
-          </table>
-        </div>
+        <TablaSeccion
+          etiqueta={titulo}
+          columnas={["Evento", "Fecha y hora", "Usuario", "Dirección IP", "Tipo", ""]}
+          alinear={["left", "left", "left", "center", "center", "right"]}
+          filas={eventos.map((e) => ({
+            id: e.id,
+            celdas: [
+              <EnlaceDetalle key="n" texto={e.accion_texto} onClick={() => setDetalle(e)} />,
+              fechaHora(e.fecha),
+              e.usuario || <span key="k1" className="tenue">Desconocido</span>,
+              e.ip || <span key="k1" className="tenue">—</span>,
+              <Estado key="t" tono={TONOS[e.accion] || "cancelado"}>{GRUPOS[e.accion] || "Cambio"}</Estado>,
+              <button key="v" className="icono-btn" title="Ver detalle" aria-label={`Ver detalle del evento ${e.id}`} onClick={() => setDetalle(e)}>
+                <Icon name="ver" size={17} />
+              </button>,
+            ],
+          }))}
+          cargando={!datos}
+          vacio="Sin actividad registrada con ese filtro."
+        />
         {datos?.total_paginas > 1 && (
           <footer className="paginador">
             <span className="tenue">Página {datos.pagina} de {datos.total_paginas}</span>
@@ -56,6 +77,29 @@ export default function Actividad({ titulo }) {
           </footer>
         )}
       </article>
+
+      {detalle && (
+        <PanelDetalle
+          titulo={detalle.accion_texto}
+          subtitulo={fechaHora(detalle.fecha)}
+          insignia={<Estado tono={TONOS[detalle.accion] || "cancelado"}>{GRUPOS[detalle.accion] || "Cambio"}</Estado>}
+          onCerrar={() => setDetalle(null)}
+        >
+          <section className="detalle__bloque">
+            <h3>Detalle</h3>
+            <p className="detalle__texto">{detalle.detalle || "Sin detalle adicional."}</p>
+          </section>
+          <Datos
+            titulo="Origen"
+            filas={[
+              ["Usuario", detalle.usuario || "Desconocido"],
+              ["Correo", detalle.usuario_correo],
+              ["Dirección IP", detalle.ip],
+              ["Evento", `#${detalle.id}`],
+            ]}
+          />
+        </PanelDetalle>
+      )}
     </section>
   );
 }

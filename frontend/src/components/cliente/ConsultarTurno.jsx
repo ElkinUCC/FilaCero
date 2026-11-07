@@ -3,12 +3,38 @@ import {
   cancelarTurno,
   consultarTurno,
   consultarTurnosPorCelular,
+  misEquipos,
+  escribirReclamo,
+  misReclamos,
   solicitarCodigo,
   verificarCodigo,
 } from "../../api/publico.api";
 import { anunciar } from "../../hooks/useAccesibilidad";
+import Chat from "../ui/Chat";
 import Icon from "../ui/Icon";
-import { ESTADOS, fechaLarga, soloDigitos } from "../../utils/formatters";
+import {
+  codigoTurno, ESTADOS, ESTADOS_EQUIPO, ESTADOS_RECLAMO, fechaHora, fechaLarga, FLUJOS_CON_PREPARACION,
+  PREPARACION, soloDigitos,
+} from "../../utils/formatters";
+
+/**
+ * Lo que ve el ciudadano sobre la preparación previa. Solo aplica a la entrega
+ * de un equipo reparado y a la garantía; los demás servicios no la muestran.
+ */
+const TEXTO_PREPARACION = {
+  ENTREGA: {
+    PENDIENTE: "Alistaremos tu equipo antes de que llegues.",
+    EN_PREPARACION: "Estamos probando y empacando tu equipo.",
+    LISTO: "¡Tu equipo está listo! Trae tu cédula para recibirlo.",
+    NOVEDAD: "Hay una novedad con tu equipo. Revisa el mensaje antes de ir.",
+  },
+  GARANTIA: {
+    PENDIENTE: "Revisaremos tu garantía antes de que llegues.",
+    EN_PREPARACION: "Estamos revisando tu garantía.",
+    LISTO: "Garantía revisada. Trae el televisor, la factura y tu cédula.",
+    NOVEDAD: "Hay una novedad con tu garantía. Revisa el mensaje antes de ir.",
+  },
+};
 
 const MENSAJES = {
   ESPERANDO: "Te llamaremos en la sede. Llega unos minutos antes de tu hora.",
@@ -22,6 +48,7 @@ const MENSAJES = {
 export default function ConsultarTurno({ inicial, onResultado }) {
   const [modoConsulta, setModoConsulta] = useState("codigo");
   const [turnosEncontrados, setTurnosEncontrados] = useState([]);
+  const [misDatos, setMisDatos] = useState({ equipos: [], reclamos: [] });
   const [codigo, setCodigo] = useState(inicial?.codigo || "");
   const [celular, setCelular] = useState(inicial?.celular || "");
   const [resultado, setResultado] = useState(null);
@@ -35,6 +62,11 @@ export default function ConsultarTurno({ inicial, onResultado }) {
   const [codigoPruebaCancelacion, setCodigoPruebaCancelacion] = useState("");
   const [cancelacionEnviada, setCancelacionEnviada] = useState(false);
   const [error, setError] = useState("");
+  // "Por código" no pide celular: el SMS llega al celular registrado en el turno.
+  const [celularMasc, setCelularMasc] = useState("");
+  const [tokenCelular, setTokenCelular] = useState("");
+  const porCodigo = modoConsulta === "codigo";
+  const celularDe = () => (porCodigo ? (inicial?.codigo === codigo ? celular : "") : celular);
 
   const consultar = useCallback(async (
     silencioso = false,
@@ -42,8 +74,8 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     cel = celular,
     token = tokenConsulta
   ) => {
-    if ((modoConsulta === "codigo" && !c.trim()) || !/^3\d{9}$/.test(cel)) {
-      if (!silencioso) setError(modoConsulta === "codigo" ? "Escribe el código del turno y el celular con el que reservaste." : "Escribe el celular de la reserva.");
+    if (modoConsulta === "codigo" ? !c.trim() : !/^3\d{9}$/.test(cel)) {
+      if (!silencioso) setError(modoConsulta === "codigo" ? "Escribe el código de tu turno (TU-…)." : "Escribe el celular de la reserva.");
       return;
     }
     if (!token) {
@@ -51,7 +83,8 @@ export default function ConsultarTurno({ inicial, onResultado }) {
       setCargando(true);
       setError("");
       try {
-        const r = await solicitarCodigo(cel);
+        const r = modoConsulta === "codigo" ? await solicitarCodigo(cel || null, c.trim()) : await solicitarCodigo(cel);
+        setCelularMasc(r.celular_enmascarado || cel);
         setCodigoConsulta("");
         setCodigoPruebaConsulta(r.codigo_prueba || "");
         setConsultaEnviada(true);
@@ -64,7 +97,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     }
     if (!silencioso) { setCargando(true); setError(""); }
     try {
-      const r = await consultarTurno(c.trim(), cel, token);
+      const r = await consultarTurno(c.trim(), modoConsulta === "codigo" && !inicial?.celular ? "" : cel, token);
       setResultado(r);
       onResultado?.(r.turno);
     } catch (e) {
@@ -112,6 +145,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setCodigoConsulta("");
     setResultado(null);
     setTurnosEncontrados([]);
+    setMisDatos({ equipos: [], reclamos: [] });
     onResultado?.(null);
   }
 
@@ -122,6 +156,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setCodigoConsulta("");
     setResultado(null);
     setTurnosEncontrados([]);
+    setMisDatos({ equipos: [], reclamos: [] });
     onResultado?.(null);
   }
 
@@ -130,7 +165,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setError("");
     try {
       const verificacion = await verificarCodigo(
-        celular,
+        celularDe(),
         codigoConsulta,
         modoConsulta === "codigo" ? "consulta" : "consulta_celular",
         modoConsulta === "codigo" ? codigo.trim() : undefined
@@ -139,15 +174,23 @@ export default function ConsultarTurno({ inicial, onResultado }) {
       setConsultaEnviada(false);
       setCodigoConsulta("");
       if (modoConsulta === "celular") {
-        const r = await consultarTurnosPorCelular(celular, token);
+        const [r, eq, rc] = await Promise.all([
+          consultarTurnosPorCelular(celular, token),
+          misEquipos(celular, token).catch(() => null),
+          misReclamos(celular, token).catch(() => null),
+        ]);
+        setTokenCelular(token);
         setTurnosEncontrados(r.turnos || []);
+        setMisDatos({ equipos: eq?.equipos || [], reclamos: rc?.reclamos || [] });
         setResultado(null);
         setTokenConsulta("");
         onResultado?.(null);
-        if (!r.turnos?.length) setError("No encontramos turnos asociados a ese celular.");
+        if (!r.turnos?.length && !eq?.equipos?.length && !rc?.reclamos?.length) {
+          setError("No encontramos turnos, equipos ni reclamos asociados a ese celular.");
+        }
       } else {
         setTokenConsulta(token);
-        const r = await consultarTurno(codigo.trim(), celular, token);
+        const r = await consultarTurno(codigo.trim(), celularDe(), token);
         setResultado(r);
         onResultado?.(r.turno);
       }
@@ -162,7 +205,8 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setCargando(true);
     setError("");
     try {
-      const r = await solicitarCodigo(celular);
+      const r = await solicitarCodigo(celularDe() || null, codigo.trim());
+      setCelularMasc(r.celular_enmascarado || celular);
       setCodigoPruebaCancelacion(r.codigo_prueba || "");
       setCodigoCancelacion("");
       setCancelacionEnviada(true);
@@ -178,14 +222,14 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     setError("");
     try {
       const verificacion = await verificarCodigo(
-        celular,
+        celularDe(),
         codigoCancelacion,
         "cancelacion",
         codigo.trim()
       );
       const r = await cancelarTurno(
         codigo.trim(),
-        celular,
+        celularDe(),
         verificacion.token_verificacion
       );
       setResultado({ turno: r.turno, espera: null });
@@ -200,14 +244,34 @@ export default function ConsultarTurno({ inicial, onResultado }) {
     }
   }
 
+  // Minichat: enviar y refrescar las conversaciones mientras la vista esté abierta.
+  async function escribir(radicado, texto) {
+    try {
+      const r = await escribirReclamo(celular, tokenCelular, radicado, texto);
+      setMisDatos((d) => ({ ...d, reclamos: d.reclamos.map((x) => (x.radicado === radicado ? r.reclamo : x)) }));
+    } catch (e) {
+      if (e.status === 400) setTokenCelular("");
+      setError(e.message);
+      throw e;
+    }
+  }
+  useEffect(() => {
+    if (!tokenCelular || !misDatos.reclamos.length) return undefined;
+    const t = window.setInterval(() => {
+      misReclamos(celular, tokenCelular)
+        .then((rc) => setMisDatos((d) => ({ ...d, reclamos: rc?.reclamos || d.reclamos })))
+        .catch(() => setTokenCelular(""));
+    }, 15000);
+    return () => window.clearInterval(t);
+  }, [tokenCelular, celular, misDatos.reclamos.length]);
+
   const turno = resultado?.turno;
 
-  // Cuando el asesor llama el turno se avisa: en pantalla siempre, y en voz
-  // alta solo si la persona activó "Leer avisos en voz alta" en Accesibilidad.
+  // Cuando el asesor llama el turno se avisa en pantalla (y al lector de pantalla).
   const [estadoPrevio, setEstadoPrevio] = useState(null);
   if (turno && turno.estado !== estadoPrevio) {
     if (estadoPrevio && turno.estado === "LLAMADO") {
-      anunciar(`Tu turno ${turno.codigo.slice(-6).split("").join(" ")} fue llamado. Acércate al punto de atención.`);
+      anunciar(`${turno.nombre ? `${turno.nombre.split(" ")[0]}, tu` : "Tu"} turno fue llamado. Acércate al punto de atención.`);
     }
     setEstadoPrevio(turno.estado);
   }
@@ -226,11 +290,11 @@ export default function ConsultarTurno({ inicial, onResultado }) {
           <input
             value={codigo}
             onChange={(e) => cambiarCodigoTurno(e.target.value)}
-            placeholder="Código del turno (FC-…)"
+            placeholder="Código del turno (TU-…)"
             aria-label="Código del turno"
           />
         </label>}
-        <label className="campo">
+        {modoConsulta === "celular" && <label className="campo">
           <Icon name="celular" size={17} />
           <input
             type="tel"
@@ -240,7 +304,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
             placeholder="Celular de la reserva"
             aria-label="Celular de la reserva"
           />
-        </label>
+        </label>}
         <button className="btn btn--primario" disabled={cargando || consultaEnviada}>
           {cargando ? "Procesando…" : tokenConsulta ? "Consultar" : "Enviar código"}
         </button>
@@ -263,7 +327,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
           <p className="rv__nota">
             {codigoPruebaConsulta ? (
               <>Modo prueba: tu código es <button type="button" className="enlace" onClick={() => setCodigoConsulta(codigoPruebaConsulta)}>{codigoPruebaConsulta}</button></>
-            ) : `Te enviamos un SMS al ${celular}.`}
+            ) : `Te enviamos un SMS al ${celularMasc || celular}.`}
           </p>
           <button
             type="button"
@@ -283,16 +347,64 @@ export default function ConsultarTurno({ inicial, onResultado }) {
           <h3>Turnos asociados a tu celular</h3>
           {turnosEncontrados.map((item) => (
             <button type="button" className="ct__turno-encontrado" key={item.turno.codigo} onClick={() => { setCodigo(item.turno.codigo); setResultado(item); setTokenConsulta(""); onResultado?.(item.turno); }}>
-              <span><strong>{item.turno.codigo}</strong><small>{item.turno.fecha} · {item.turno.hora_inicio} · {item.turno.sede}</small></span>
+              <span><strong className="mono">{codigoTurno(item.turno)}</strong><small>{item.turno.fecha} · {item.turno.hora_inicio} · {item.turno.sede}</small></span>
               <span>{ESTADOS[item.turno.estado]?.texto || item.turno.estado}</span>
             </button>
           ))}
         </section>
       )}
 
-      {!turno && !error && turnosEncontrados.length === 0 && (
+      {misDatos.equipos.length > 0 && (
+        <section className="ct__lista-turnos" aria-label="Tus equipos">
+          <h3>Tus equipos con nosotros</h3>
+          {misDatos.equipos.map((e) => {
+            const est = ESTADOS_EQUIPO[e.estado] || {};
+            return (
+              <div className="ct__equipo" key={e.codigo}>
+                <span className="ct__equipo-icono"><Icon name="tv" size={20} /></span>
+                <div>
+                  <strong>{e.marca} {e.modelo}</strong>
+                  <small><span className="mono">{e.codigo}</span> · {e.sede}{e.origen === "GARANTIA" ? " · Garantía" : ""}</small>
+                  <span className="wz__progreso">{[1, 2, 3].map((k) => <i key={k} className={est.paso >= k ? "hecho" : ""} />)}</span>
+                  {e.nota && <small className="ct__nota">{e.nota}</small>}
+                </div>
+                <span className={`estado estado--${est.tono}`}>{est.texto}</span>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {misDatos.reclamos.length > 0 && (
+        <section className="ct__lista-turnos" aria-label="Tus reclamos">
+          <h3>Tus reclamos</h3>
+          {misDatos.reclamos.map((r) => {
+            const est = ESTADOS_RECLAMO[r.estado] || {};
+            return (
+              <details className="ct__reclamo" key={r.radicado} open={r.sin_leer > 0 || misDatos.reclamos.length === 1}>
+                <summary>
+                  <span><strong className="mono">{r.radicado}</strong><small>{r.categoria_texto} · {fechaHora(r.fecha)}</small></span>
+                  {r.sin_leer > 0 && <span className="punto-nuevo" title="Respuestas nuevas">{r.sin_leer}</span>}
+                  <span className={`estado estado--${est.tono}`}>{est.texto}</span>
+                </summary>
+                <Chat
+                  yo="CLIENTE"
+                  inicial={{ autor: "CLIENTE", autor_nombre: "Tú", texto: r.descripcion, fecha: r.fecha }}
+                  mensajes={r.mensajes || []}
+                  deshabilitado={!tokenCelular}
+                  placeholder={tokenCelular ? "Escribe tu duda: precio, horario, estado de tu equipo…" : "Verifica tu celular de nuevo para escribir"}
+                  onEnviar={(texto) => escribir(r.radicado, texto)}
+                />
+                <p className="ct__nota">Te responde al instante el asistente y luego un asesor de {r.sede}.</p>
+              </details>
+            );
+          })}
+        </section>
+      )}
+
+      {!turno && !error && turnosEncontrados.length === 0 && misDatos.equipos.length === 0 && (
         <p className="ct__ayuda">
-          {modoConsulta === "codigo" ? "Ingresa el código y el celular registrado. Te enviaremos un SMS para verificar tu identidad." : "Ingresa tu celular registrado. Te enviaremos un SMS y mostraremos los turnos asociados después de verificarlo."}
+          {modoConsulta === "codigo" ? "Escribe el código de tu turno (TU-…). Te enviaremos un SMS al celular con el que reservaste." : "Ingresa tu celular registrado. Te enviaremos un SMS y mostraremos tus turnos, equipos y reclamos después de verificarlo."}
         </p>
       )}
 
@@ -300,7 +412,7 @@ export default function ConsultarTurno({ inicial, onResultado }) {
         <section className={`ct__resultado tono-${estado.tono}`} aria-live="polite">
           <header className="ct__cabeza">
             <div>
-              <span className="ct__codigo">{turno.codigo}</span>
+              <span className="ct__codigo">{codigoTurno(turno)}</span>
               <h2>{fechaLarga(turno.fecha)}, {turno.hora_inicio}</h2>
             </div>
             <span className={`estado estado--${estado.tono}`}>{estado.texto}</span>
@@ -322,6 +434,29 @@ export default function ConsultarTurno({ inicial, onResultado }) {
           <div className="ct__fila-mensaje">
             <p className="ct__mensaje">{MENSAJES[turno.estado]}</p>
           </div>
+
+          {turno.equipo && (
+            <div className="ct__equipo">
+              <span className="ct__equipo-icono"><Icon name="tv" size={20} /></span>
+              <div>
+                <strong>{turno.equipo.marca} {turno.equipo.modelo}</strong>
+                <small><span className="mono">{turno.equipo.codigo}</span> · {ESTADOS_EQUIPO[turno.equipo.estado]?.texto}</small>
+              </div>
+            </div>
+          )}
+          {turno.reclamo && (
+            <p className="ct__nota"><Icon name="mensaje" size={14} /> Reclamo <span className="mono">{turno.reclamo.radicado}</span> · {turno.reclamo.estado_texto}. El asesor lo tendrá a la mano.</p>
+          )}
+          {turno.preparacion && FLUJOS_CON_PREPARACION.includes(turno.tramite_flujo)
+            && ["ESPERANDO", "LLAMADO", "EN_ATENCION"].includes(turno.estado) && (
+            <div className={`ct__prep ct__prep--${PREPARACION[turno.preparacion.estado]?.tono}`} role="status">
+              <Icon name={turno.tramite_flujo === "GARANTIA" ? "escudo2" : "paquete"} size={20} />
+              <div>
+                <strong>{TEXTO_PREPARACION[turno.tramite_flujo][turno.preparacion.estado]}</strong>
+                {turno.preparacion.nota && <p>{turno.preparacion.nota}</p>}
+              </div>
+            </div>
+          )}
 
           <dl className="ct__datos">
             <div><dt>Sede</dt><dd>{turno.sede}{turno.direccion ? ` · ${turno.direccion}` : ""}</dd></div>

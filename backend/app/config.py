@@ -139,6 +139,10 @@ class Config:
     # True: el asesor solo ve y llama turnos de HOY (operación real).
     # False: también ve los próximos días (útil para pruebas).
     COLA_SOLO_HOY = _bool("COLA_SOLO_HOY", False)
+    # Pantalla de sala: nombre completo de la persona llamada (decisión de
+    # usabilidad, ver ADR-008). false = solo nombre e inicial del apellido.
+    # El celular nunca se muestra en la sala.
+    SALA_NOMBRE_COMPLETO = _bool("SALA_NOMBRE_COMPLETO", True)
 
     # ------------------------------------------------------------------
     # Verificación por celular

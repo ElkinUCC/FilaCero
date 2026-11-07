@@ -1,5 +1,6 @@
 """Pruebas de las mejoras de la entrega final: cola ordenada, un turno en curso por
 agente, autorización de la estimación, consulta pública y errores uniformes."""
+
 from datetime import date, datetime, time, timedelta
 
 import pytest
@@ -17,12 +18,14 @@ CELULAR_B = "3009999999"
 
 
 def _crear_app(cola_solo_hoy):
-    return create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
-        "COLA_SOLO_HOY": cola_solo_hoy,
-    })
+    return create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "JWT_SECRET_KEY": "PRUEBAS-FilaCero-JWT-Clave-Segura-2026",
+            "COLA_SOLO_HOY": cola_solo_hoy,
+        }
+    )
 
 
 @pytest.fixture
@@ -47,33 +50,60 @@ def app_cola_hoy():
 
 def sembrar(horarios):
     """horarios: lista de (días desde hoy, hora de inicio). Devuelve entidades creadas."""
-    cliente = Usuario(nombre="Cliente A", correo="a@prueba.local",
-                      password_hash="x", rol="CLIENTE", activo=True,
-                      celular=CELULAR_A)
-    otro = Usuario(nombre="Cliente B", correo="b@prueba.local",
-                   password_hash="x", rol="CLIENTE", activo=True,
-                   celular=CELULAR_B)
+    cliente = Usuario(
+        nombre="Cliente A",
+        correo="a@prueba.local",
+        password_hash="x",
+        rol="CLIENTE",
+        activo=True,
+        celular=CELULAR_A,
+    )
+    otro = Usuario(
+        nombre="Cliente B",
+        correo="b@prueba.local",
+        password_hash="x",
+        rol="CLIENTE",
+        activo=True,
+        celular=CELULAR_B,
+    )
     punto = Punto(nombre="Sede de prueba", activo=True)
     tramite = Tramite(nombre="Trámite de prueba", tiempo_estimado=15, activo=True)
     db.session.add_all([cliente, otro, punto, tramite])
     db.session.flush()
 
-    agente = Usuario(nombre="Agente", correo="agente@prueba.local",
-                     password_hash="x", rol="AGENTE", activo=True,
-                     punto_asignado_id=punto.id)
+    agente = Usuario(
+        nombre="Agente",
+        correo="agente@prueba.local",
+        password_hash="x",
+        rol="AGENTE",
+        activo=True,
+        punto_asignado_id=punto.id,
+    )
     franjas = []
     for dias, inicio in horarios:
         fin = (datetime.combine(date.today(), inicio) + timedelta(minutes=15)).time()
-        franjas.append(Franja(
-            punto_id=punto.id, tramite_id=tramite.id,
-            fecha=date.today() + timedelta(days=dias),
-            hora_inicio=inicio, hora_fin=fin, capacidad=1, activa=True,
-        ))
+        franjas.append(
+            Franja(
+                punto_id=punto.id,
+                tramite_id=tramite.id,
+                fecha=date.today() + timedelta(days=dias),
+                hora_inicio=inicio,
+                hora_fin=fin,
+                capacidad=1,
+                activa=True,
+            )
+        )
     db.session.add_all(franjas + [agente])
     db.session.commit()
 
-    return {"cliente": cliente, "otro": otro, "punto": punto,
-            "tramite": tramite, "agente": agente, "franjas": franjas}
+    return {
+        "cliente": cliente,
+        "otro": otro,
+        "punto": punto,
+        "tramite": tramite,
+        "agente": agente,
+        "franjas": franjas,
+    }
 
 
 def reservar(datos, franja, usuario=None):
@@ -87,15 +117,13 @@ def reservar(datos, franja, usuario=None):
 
 def cabecera(app, usuario_id, rol):
     with app.app_context():
-        token = create_access_token(
-            identity=str(usuario_id), additional_claims={"rol": rol}
-        )
+        token = create_access_token(identity=str(usuario_id), additional_claims={"rol": rol})
     return {"Authorization": f"Bearer {token}"}
 
 
 def test_cola_se_ordena_por_hora_de_franja(app_cola_libre):
     datos = sembrar([(2, time(11, 0)), (2, time(9, 0))])
-    tarde = reservar(datos, datos["franjas"][0])   # reservó primero, franja 11:00
+    tarde = reservar(datos, datos["franjas"][0])  # reservó primero, franja 11:00
     temprano = reservar(datos, datos["franjas"][1], datos["otro"])  # franja 09:00
 
     respuesta = app_cola_libre.test_client().get(
@@ -142,14 +170,10 @@ def test_cliente_no_consulta_espera_de_turno_ajeno(app_cola_libre):
     cliente = app_cola_libre.test_client()
     ruta = f"/api/v1/turnos/{turno.id}/tiempo-espera"
 
-    ajeno = cliente.get(
-        ruta, headers=cabecera(app_cola_libre, datos["otro"].id, "CLIENTE")
-    )
+    ajeno = cliente.get(ruta, headers=cabecera(app_cola_libre, datos["otro"].id, "CLIENTE"))
     assert ajeno.status_code == 404
 
-    propio = cliente.get(
-        ruta, headers=cabecera(app_cola_libre, datos["cliente"].id, "CLIENTE")
-    )
+    propio = cliente.get(ruta, headers=cabecera(app_cola_libre, datos["cliente"].id, "CLIENTE"))
     assert propio.status_code == 200
     assert "tiempo_estimado_minutos" in propio.get_json()
 
@@ -162,16 +186,10 @@ def test_consulta_y_cancelacion_publica_exigen_celular_correcto(app_cola_libre):
     correcto = {"codigo": turno.codigo, "celular": CELULAR_A}
     incorrecto = {"codigo": turno.codigo, "celular": CELULAR_B}
 
-    assert cliente.post(
-        "/api/v1/turnos/publico/consultar", json=incorrecto
-    ).status_code == 400
+    assert cliente.post("/api/v1/turnos/publico/consultar", json=incorrecto).status_code == 400
 
-    assert cliente.post(
-        "/api/v1/turnos/publico/consultar", json=correcto
-    ).status_code == 400
-    solicitud = cliente.post(
-        "/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR_A}
-    )
+    assert cliente.post("/api/v1/turnos/publico/consultar", json=correcto).status_code == 400
+    solicitud = cliente.post("/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR_A})
     assert solicitud.status_code == 200
     verificacion = cliente.post(
         "/api/v1/turnos/publico/verificar-codigo",
@@ -191,13 +209,9 @@ def test_consulta_y_cancelacion_publica_exigen_celular_correcto(app_cola_libre):
     assert consulta.get_json()["turno"]["codigo"] == turno.codigo
     assert "espera" in consulta.get_json()
 
-    assert cliente.post(
-        "/api/v1/turnos/publico/cancelar", json=incorrecto
-    ).status_code == 400
+    assert cliente.post("/api/v1/turnos/publico/cancelar", json=incorrecto).status_code == 400
 
-    solicitud = cliente.post(
-        "/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR_A}
-    )
+    solicitud = cliente.post("/api/v1/turnos/publico/solicitar-codigo", json={"celular": CELULAR_A})
     assert solicitud.status_code == 200
     verificacion = cliente.post(
         "/api/v1/turnos/publico/verificar-codigo",
@@ -218,9 +232,7 @@ def test_consulta_y_cancelacion_publica_exigen_celular_correcto(app_cola_libre):
 
 
 def test_errores_de_validacion_devuelven_json_400(app_cola_libre):
-    respuesta = app_cola_libre.test_client().post(
-        "/api/v1/usuarios/registro", json={}
-    )
+    respuesta = app_cola_libre.test_client().post("/api/v1/usuarios/registro", json={})
     assert respuesta.status_code == 400
     assert "error" in respuesta.get_json()
 

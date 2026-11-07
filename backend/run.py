@@ -10,9 +10,10 @@ from app import crear_app
 app = crear_app()
 
 if __name__ == "__main__":
-    # debug solo si FLASK_DEBUG=true en el .env
-    app.run(
-        host=os.getenv("FLASK_HOST", "127.0.0.1"),
-        port=int(os.getenv("FLASK_PORT", "5000")),
-        debug=app.config.get("DEBUG", False),
-    )
+    host = os.getenv("FLASK_HOST", "127.0.0.1")
+    # El depurador de Werkzeug ejecuta código arbitrario: solo se permite en
+    # loopback. Si alguien expone el servidor en la red, se apaga solo.
+    debug = app.config.get("DEBUG", False) and host in ("127.0.0.1", "localhost", "::1")
+    if app.config.get("DEBUG") and not debug:
+        print("Aviso: FLASK_DEBUG ignorado porque FLASK_HOST no es localhost.")
+    app.run(host=host, port=int(os.getenv("FLASK_PORT", "5000")), debug=debug)

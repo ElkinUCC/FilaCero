@@ -104,6 +104,17 @@ def _campos_solicitud(valor):
     return campos
 
 
+FLUJOS = ("GENERAL", "ENTREGA", "GARANTIA", "RECLAMO")
+FLUJOS_CON_PREPARACION = ("ENTREGA", "GARANTIA")
+
+
+def _flujo(valor):
+    flujo = str(valor or "GENERAL").upper()
+    if flujo not in FLUJOS:
+        raise DatosInvalidosError("Tipo de atención no válido.")
+    return flujo
+
+
 def _nombre_duplicado(nombre, excluir_id=None):
     consulta = Tramite.query.filter(db.func.lower(Tramite.nombre) == nombre.lower())
     if excluir_id:
@@ -120,7 +131,9 @@ def crear_tramite(datos):
     if _nombre_duplicado(nombre):
         raise TramiteDuplicadoError("Ya existe un trámite con ese nombre.")
 
+    flujo = _flujo(datos.get("tipo_flujo", "GENERAL"))
     tramite = Tramite(
+        requiere_preparacion=flujo in FLUJOS_CON_PREPARACION,
         nombre=nombre,
         descripcion=_texto(datos.get("descripcion"), "descripción", 1000),
         instrucciones_preparacion=_texto(
@@ -128,6 +141,7 @@ def crear_tramite(datos):
         ),
         campos_solicitud=_campos_solicitud(datos.get("campos_solicitud")),
         tiempo_estimado=_tiempo(datos.get("tiempo_estimado", 15)),
+        tipo_flujo=_flujo(datos.get("tipo_flujo", "GENERAL")),
         activo=bool(datos.get("activo", True)),
     )
     db.session.add(tramite)
@@ -155,6 +169,11 @@ def actualizar_tramite(tramite_id, datos):
         tramite.campos_solicitud = _campos_solicitud(datos["campos_solicitud"])
     if "tiempo_estimado" in datos:
         tramite.tiempo_estimado = _tiempo(datos["tiempo_estimado"])
+    if "tipo_flujo" in datos:
+        tramite.tipo_flujo = _flujo(datos["tipo_flujo"])
+    # La preparación previa depende del tipo de atención (ADR-010 revisado):
+    # solo se alista lo que el cliente viene a recoger o a dejar en garantía.
+    tramite.requiere_preparacion = (tramite.tipo_flujo or "GENERAL") in FLUJOS_CON_PREPARACION
     if "activo" in datos:
         tramite.activo = bool(datos["activo"])
 

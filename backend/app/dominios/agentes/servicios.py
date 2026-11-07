@@ -79,6 +79,9 @@ def cambiar_sede_propia(usuario_id, punto_id):
         )
     anterior = agente.punto_asignado.nombre if agente.punto_asignado else "sin sede"
     agente.punto_asignado_id = punto.id
+    from app.dominios.usuarios.servicios import liberar_modulo_si_choca
+
+    liberar_modulo_si_choca(agente)
     db.session.commit()
     return agente, anterior
 
@@ -105,6 +108,7 @@ def llamar_siguiente(usuario_id):
         turno.estado = "LLAMADO"
         turno.agente_id = agente.id
         turno.fecha_llamado = _utc_ahora()
+        agente.presencia = "DISPONIBLE"  # llamar a alguien implica estar atendiendo
         db.session.commit()
         return turno
     except Exception:
@@ -132,6 +136,7 @@ def llamar_turno(usuario_id, turno_id):
         turno.estado = "LLAMADO"
         turno.agente_id = agente.id
         turno.fecha_llamado = _utc_ahora()
+        agente.presencia = "DISPONIBLE"  # llamar a alguien implica estar atendiendo
         db.session.commit()
         return turno
     except Exception:

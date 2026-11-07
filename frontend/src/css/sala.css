@@ -75,3 +75,14 @@
 .sala__actual--llamando { border-color: rgb(240 180 41 / 60%); }
 .sala__codigo { border-radius: 20px; box-shadow: 0 10px 30px rgb(240 180 41 / 15%); }
 .sala__lado li { border-color: rgb(255 255 255 / 10%); }
+
+/* Entrega final: nombre completo (sin recortes) y módulo de atención */
+.sala__nombre { overflow-wrap: anywhere; line-height: 1.12; }
+.sala__asesor { color: #a9c1bd; font-size: clamp(18px, 1.8vw, 26px); }
+.sala__lado li { grid-template-columns: 110px minmax(0, 1fr) auto; align-items: baseline; }
+.sala__persona { overflow-wrap: anywhere; white-space: normal; }
+.sala__lado li span:last-child { white-space: nowrap; }
+.sala__codigo, .sala__lado li b { white-space: nowrap; }
+.sala__prefijo { margin-right: .08em; font-size: .42em; font-weight: 750; letter-spacing: 1px; opacity: .7; vertical-align: .55em; }
+.sala__lado li { grid-template-columns: 150px 1fr auto; }
+.sala__lado li .sala__prefijo { vertical-align: .25em; font-size: .6em; }

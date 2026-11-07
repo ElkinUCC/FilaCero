@@ -5,10 +5,12 @@ import Dropdown from "../ui/Dropdown";
 import { teclasPestanas } from "../../hooks/useAccesibilidad";
 import Icon from "../ui/Icon";
 import { Confirmar, Modal } from "../ui/Modal";
-import Switch from "../ui/Switch";
+import PanelDetalle, { Datos } from "../ui/PanelDetalle";
 import { useToast } from "../../hooks/useToast";
 import usePolling from "../../hooks/usePolling";
 import Encabezado from "../layout/Encabezado";
+import { fechaHora } from "../../utils/formatters";
+import TablaSeccion, { EnlaceDetalle, Estado } from "./TablaSeccion";
 
 const ROLES = {
   ADMIN: {
@@ -161,8 +163,10 @@ export default function Usuarios({ titulo }) {
   const [buscar, setBuscar] = useState("");
   const [editar, setEditar] = useState(null);
   const [restablecer, setRestablecer] = useState(null);
-  const [estadoRest, setEstadoRest] = useState({ ocupado: false, error: "" });
+  const [eliminar, setEliminar] = useState(null);
+  const [estadoAccion, setEstadoAccion] = useState({ ocupado: false, error: "" });
   const [clave, setClave] = useState(null);
+  const [detalleId, setDetalleId] = useState(null);
 
   const { datos, error, actualizado, refrescar, setDatos } = usePolling(async () => {
     const [u, sedes] = await Promise.all([adminApi.listarUsuarios(), listarSedes({ todos: true })]);
@@ -176,6 +180,7 @@ export default function Usuarios({ titulo }) {
   }, [datos, filtroRol, buscar]);
 
   const conteo = (datos?.usuarios || []).reduce((acc, u) => ({ ...acc, [u.rol]: (acc[u.rol] || 0) + 1 }), {});
+  const detalle = (datos?.usuarios || []).find((u) => u.id === detalleId) || null;
 
   async function alternar(u, activo) {
     setDatos((d) => ({ ...d, usuarios: d.usuarios.map((x) => (x.id === u.id ? { ...x, activo } : x)) }));
@@ -189,21 +194,62 @@ export default function Usuarios({ titulo }) {
   }
 
   async function confirmarRestablecer() {
-    setEstadoRest({ ocupado: true, error: "" });
+    setEstadoAccion({ ocupado: true, error: "" });
     try {
       const r = await adminApi.restablecerClave(restablecer.id);
       setClave({ titulo: "Contraseña restablecida", usuario: restablecer, clave: r.clave_temporal });
       setRestablecer(null);
-      setEstadoRest({ ocupado: false, error: "" });
+      setEstadoAccion({ ocupado: false, error: "" });
       refrescar();
     } catch (e) {
-      setEstadoRest({ ocupado: false, error: e.message });
+      setEstadoAccion({ ocupado: false, error: e.message });
     }
   }
 
+  async function confirmarEliminar() {
+    setEstadoAccion({ ocupado: true, error: "" });
+    try {
+      const r = await adminApi.eliminarUsuario(eliminar.id);
+      avisar(r?.mensaje || `${eliminar.nombre} eliminado.`);
+      if (detalleId === eliminar.id) setDetalleId(null);
+      setEliminar(null);
+      setEstadoAccion({ ocupado: false, error: "" });
+      refrescar();
+    } catch (e) {
+      setEstadoAccion({ ocupado: false, error: e.message });
+    }
+  }
+
+  const esYoId = (u) => u.id === datos?.yo;
+  const pedir = (setter) => (u) => { setter(u); setEstadoAccion({ ocupado: false, error: "" }); };
+
+  const filas = usuarios.map((u) => {
+    const r = ROLES[u.rol] || {};
+    const esYo = esYoId(u);
+    return {
+      id: u.id,
+      inactivo: !u.activo,
+      celdas: [
+        <EnlaceDetalle key="n" texto={`${u.nombre}${esYo ? " (tú)" : ""}`} avatar={u.nombre[0]} onClick={() => setDetalleId(u.id)} />,
+        <span key="r" className={`rol rol--${r.tono}`}>{r.nombre}</span>,
+        u.rol === "AGENTE" ? (u.sede || <span key="k1" className="tenue">Sin sede</span>) : <span key="k2" className="tenue">No aplica</span>,
+        <span key="a" title={u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString("es-CO") : undefined}>{hace(u.ultimo_acceso)}</span>,
+        <Estado key="e" tono={u.activo ? "ok" : "cancelado"}>{u.activo ? "Activo" : "Bloqueado"}</Estado>,
+        <>
+          <button className="icono-btn" title="Editar datos y rol" aria-label={`Editar ${u.nombre}`} onClick={() => setEditar(u)}><Icon name="editar" size={17} /></button>
+          <button className="icono-btn" title={esYo ? "Usa “Cambiar mi contraseña”" : "Restablecer contraseña"} aria-label={`Restablecer contraseña de ${u.nombre}`} disabled={esYo} onClick={() => pedir(setRestablecer)(u)}><Icon name="llave" size={17} /></button>
+          <button className="icono-btn icono-btn--peligro" title={esYo ? "No puedes eliminar tu propia cuenta" : u.protegida ? "Cuenta protegida" : "Eliminar cuenta"} aria-label={`Eliminar a ${u.nombre}`} disabled={esYo || u.protegida} onClick={() => pedir(setEliminar)(u)}><Icon name="eliminar" size={17} /></button>
+        </>,
+      ],
+    };
+  });
+
+  const rolDetalle = detalle ? ROLES[detalle.rol] || {} : null;
+  const yoDetalle = detalle ? esYoId(detalle) : false;
+
   return (
     <section className="adm__seccion">
-      <Encabezado titulo={titulo} detalle="Cuentas del personal, sus credenciales y lo que cada rol puede hacer." actualizado={actualizado} error={error}>
+      <Encabezado titulo={titulo} detalle="Cuentas del personal y lo que cada rol puede hacer. Haz clic en un usuario para ver sus permisos." actualizado={actualizado} error={error}>
         <button className="btn btn--primario" onClick={() => setEditar({})}><Icon name="mas" size={17} /> Nuevo usuario</button>
       </Encabezado>
 
@@ -222,39 +268,52 @@ export default function Usuarios({ titulo }) {
             ))}
           </div>
         </div>
-        <div className="tabla-envoltura">
-          <table className="tabla">
-            <thead><tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Sede</th><th scope="col">Último acceso</th><th scope="col">Acceso</th><th scope="col" className="acciones"><span className="sr">Acciones</span></th></tr></thead>
-            <tbody>
-              {usuarios.map((u) => {
-                const r = ROLES[u.rol] || {};
-                const esYo = u.id === datos?.yo;
-                return (
-                  <tr key={u.id} className={u.activo ? "" : "inactivo"}>
-                    <td>
-                      <div className="persona">
-                        <span className="adm__avatar adm__avatar--chico">{u.nombre[0]}</span>
-                        <div><strong>{u.nombre}{esYo && <span className="tenue"> (tú)</span>}{u.protegida && <span className="insignia-protegida" title="Cuenta protegida: no se puede desactivar ni cambiar su rol"><Icon name="escudo" size={12} /> Protegida</span>}</strong><small>{u.correo}</small></div>
-                      </div>
-                    </td>
-                    <td><span className={`rol rol--${r.tono}`}>{r.nombre}</span>{u.debe_cambiar_clave && <small className="bloque">Clave temporal pendiente</small>}</td>
-                    <td>{u.rol === "AGENTE" ? (u.sede || <span className="estado estado--espera">Sin sede</span>) : <span className="tenue">—</span>}</td>
-                    <td className="tenue" title={u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString("es-CO") : undefined}>{hace(u.ultimo_acceso)}</td>
-                    <td><Switch activo={u.activo} disabled={esYo || u.protegida} onChange={(v) => alternar(u, v)} etiqueta={esYo ? "No puedes desactivar tu cuenta" : u.protegida ? "Cuenta protegida" : u.activo ? "Bloquear acceso" : "Permitir acceso"} /></td>
-                    <td className="acciones">
-                      <button className="icono-btn" title="Editar datos y rol" aria-label={`Editar ${u.nombre}`} onClick={() => setEditar(u)}><Icon name="editar" size={17} /></button>
-                      <button className="icono-btn" title={esYo ? "Usa “Cambiar mi contraseña”" : "Restablecer contraseña"} aria-label={`Restablecer contraseña de ${u.nombre}`} disabled={esYo}
-                        onClick={() => { setRestablecer(u); setEstadoRest({ ocupado: false, error: "" }); }}><Icon name="llave" size={17} /></button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {datos && !usuarios.length && <tr><td colSpan={6} className="vacio">Ningún usuario con ese filtro.</td></tr>}
-              {!datos && [1, 2, 3].map((i) => <tr key={i}><td colSpan={6}><div className="esqueleto" style={{ height: 16 }} /></td></tr>)}
-            </tbody>
-          </table>
-        </div>
+        <TablaSeccion
+          etiqueta={titulo}
+          columnas={["Usuario", "Rol", "Sede", "Último acceso", "Estado", ""]}
+          alinear={["left", "center", "left", "center", "center", "right"]}
+          filas={filas}
+          cargando={!datos}
+          vacio="Ningún usuario con ese filtro."
+        />
       </article>
+
+      {detalle && (
+        <PanelDetalle
+          titulo={detalle.nombre + (yoDetalle ? " (tú)" : "")}
+          subtitulo={detalle.correo}
+          insignia={<>
+            <span className={`rol rol--${rolDetalle.tono}`}>{rolDetalle.nombre}</span>
+            <Estado tono={detalle.activo ? "ok" : "cancelado"}>{detalle.activo ? "Activo" : "Bloqueado"}</Estado>
+            {detalle.protegida && <span className="insignia-protegida"><Icon name="escudo" size={12} /> Protegida</span>}
+          </>}
+          onCerrar={() => setDetalleId(null)}
+          acciones={<>
+            <button className="btn btn--suave" onClick={() => setEditar(detalle)}><Icon name="editar" size={16} /> Editar</button>
+            <button className="btn btn--suave" disabled={yoDetalle} onClick={() => pedir(setRestablecer)(detalle)}><Icon name="llave" size={16} /> Restablecer clave</button>
+            <button className="btn btn--suave" disabled={yoDetalle || detalle.protegida} onClick={() => alternar(detalle, !detalle.activo)}>
+              <Icon name="encender" size={16} /> {detalle.activo ? "Bloquear acceso" : "Permitir acceso"}
+            </button>
+            <button className="btn btn--peligro" disabled={yoDetalle || detalle.protegida} onClick={() => pedir(setEliminar)(detalle)}><Icon name="eliminar" size={16} /> Eliminar</button>
+          </>}
+        >
+          <section className="detalle__bloque">
+            <h3>Permisos del rol</h3>
+            <ul className="detalle__lista">{(rolDetalle.permisos || []).map((p) => <li key={p}>{p}</li>)}</ul>
+          </section>
+          <Datos
+            titulo="Cuenta"
+            filas={[
+              ["Correo de acceso", detalle.correo],
+              detalle.rol === "AGENTE" && ["Sede", detalle.sede || "Sin sede"],
+              detalle.rol === "AGENTE" && ["Módulo", detalle.modulo || "Sin módulo"],
+              ["Último acceso", detalle.ultimo_acceso ? fechaHora(detalle.ultimo_acceso) : "Nunca"],
+              ["Contraseña", detalle.debe_cambiar_clave ? "Temporal (debe cambiarla)" : "Propia"],
+              ["Creada", detalle.fecha_creacion ? fechaHora(detalle.fecha_creacion) : null],
+            ]}
+          />
+        </PanelDetalle>
+      )}
 
       {editar && (
         <FormularioUsuario
@@ -277,10 +336,22 @@ export default function Usuarios({ titulo }) {
           mensaje={`Se generará una contraseña temporal para ${restablecer.nombre}. Su contraseña actual dejará de funcionar y deberá crear una nueva al ingresar.`}
           textoConfirmar="Restablecer"
           peligro={false}
-          ocupado={estadoRest.ocupado}
-          error={estadoRest.error}
+          ocupado={estadoAccion.ocupado}
+          error={estadoAccion.error}
           onConfirmar={confirmarRestablecer}
           onCerrar={() => setRestablecer(null)}
+        />
+      )}
+
+      {eliminar && (
+        <Confirmar
+          titulo="Eliminar cuenta"
+          mensaje={`¿Eliminar definitivamente la cuenta de ${eliminar.nombre}? No podrá volver a ingresar y desaparecerá de la lista. Su historial de atenciones y la bitácora se conservan. Si solo quieres pausar el acceso, usa “Bloquear acceso”.`}
+          textoConfirmar="Eliminar cuenta"
+          ocupado={estadoAccion.ocupado}
+          error={estadoAccion.error}
+          onConfirmar={confirmarEliminar}
+          onCerrar={() => setEliminar(null)}
         />
       )}
 

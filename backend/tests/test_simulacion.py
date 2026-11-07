@@ -145,10 +145,15 @@ def test_catalogo_incluye_supervisor_demo_y_no_duplica_cuentas(app, db):
     assert respuesta.status_code == 200
     claims = decode_token(respuesta.get_json()["access_token"])
     assert claims["rol"] == "SUPERVISOR"
-    assert app.test_client().get(
-        "/api/v1/admin/usuarios/",
-        headers={"Authorization": f"Bearer {respuesta.get_json()['access_token']}"},
-    ).status_code == 403
+    assert (
+        app.test_client()
+        .get(
+            "/api/v1/admin/usuarios/",
+            headers={"Authorization": f"Bearer {respuesta.get_json()['access_token']}"},
+        )
+        .status_code
+        == 403
+    )
 
 
 def test_atencion_automatica_solo_avanza_los_turnos_simulados(app, db, monkeypatch):

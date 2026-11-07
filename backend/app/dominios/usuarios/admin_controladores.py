@@ -18,11 +18,20 @@ from app.seguridad import encriptar_password, requiere_rol, validar_password_seg
 from .dtos import usuario_response
 from .modelos import Usuario
 from .repositorios import buscar_por_correo
-from .servicios import generar_clave_temporal
+from .servicios import dar_de_baja, generar_clave_temporal, liberar_modulo_si_choca
 
 admin_usuarios_bp = Blueprint("admin_usuarios", __name__)
 
 ROLES = {"ADMIN": "Administrador", "SUPERVISOR": "Supervisor", "AGENTE": "Asesor"}
+
+
+def _personal(usuario_id):
+    """Cuenta del personal vigente (las eliminadas no se pueden editar)."""
+    return Usuario.query.filter(
+        Usuario.id == usuario_id,
+        Usuario.rol.in_(tuple(ROLES)),
+        Usuario.eliminado_en.is_(None),
+    ).first()
 
 
 def _admins_activos(excluir_id=None):
@@ -73,7 +82,7 @@ def _sede(valor):
 @requiere_rol("ADMIN")
 def listar():
     usuarios = (
-        Usuario.query.filter(Usuario.rol.in_(tuple(ROLES)))
+        Usuario.query.filter(Usuario.rol.in_(tuple(ROLES)), Usuario.eliminado_en.is_(None))
         .order_by(Usuario.rol.asc(), Usuario.nombre.asc())
         .all()
     )
@@ -125,7 +134,7 @@ def crear():
 @admin_usuarios_bp.put("/<int:usuario_id>")
 @requiere_rol("ADMIN")
 def editar(usuario_id):
-    usuario = Usuario.query.filter(Usuario.id == usuario_id, Usuario.rol.in_(tuple(ROLES))).first()
+    usuario = _personal(usuario_id)
     if not usuario:
         return jsonify({"error": "Usuario no encontrado."}), 404
 
@@ -167,6 +176,7 @@ def editar(usuario_id):
                 usuario.punto_asignado_id = None
         if "punto_id" in datos and usuario.rol == "AGENTE":
             usuario.punto_asignado_id = _sede(datos["punto_id"])
+            liberar_modulo_si_choca(usuario)
         if "activo" in datos and bool(datos["activo"]) != usuario.activo:
             activo = bool(datos["activo"])
             if es_yo and not activo:
@@ -196,10 +206,19 @@ def editar(usuario_id):
     return jsonify({"mensaje": "Usuario actualizado.", "usuario": usuario_response(usuario)}), 200
 
 
+@admin_usuarios_bp.delete("/<int:usuario_id>")
+@requiere_rol("ADMIN")
+def eliminar(usuario_id):
+    """Baja definitiva (lógica): conserva turnos atendidos y bitácora."""
+    usuario, correo = dar_de_baja(usuario_id, current_user.id)
+    registrar("usuario_eliminado", f"{correo} ({usuario.nombre})")
+    return jsonify({"mensaje": f"{usuario.nombre} fue eliminado. Su historial se conserva."}), 200
+
+
 @admin_usuarios_bp.post("/<int:usuario_id>/restablecer-clave")
 @requiere_rol("ADMIN")
 def restablecer_clave(usuario_id):
-    usuario = Usuario.query.filter(Usuario.id == usuario_id, Usuario.rol.in_(tuple(ROLES))).first()
+    usuario = _personal(usuario_id)
     if not usuario:
         return jsonify({"error": "Usuario no encontrado."}), 404
     if usuario.id == current_user.id:

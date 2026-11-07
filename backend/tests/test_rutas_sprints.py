@@ -35,4 +35,4 @@ def test_rutas_clave_de_fila_cero_registradas():
 
     faltantes = esperadas - rutas
 
-    assert not faltantes, "Hay rutas esperadas que no están registradas: " f"{sorted(faltantes)}"
+    assert not faltantes, f"Hay rutas esperadas que no están registradas: {sorted(faltantes)}"

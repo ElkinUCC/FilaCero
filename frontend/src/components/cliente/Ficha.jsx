@@ -1,4 +1,4 @@
-import { fechaLarga } from "../../utils/formatters";
+import { codigoTurno, fechaLarga } from "../../utils/formatters";
 
 /** Ficha de turno que se llena en vivo y "se imprime" al confirmar. */
 export default function Ficha({ resumen = {}, turno = null }) {
@@ -28,7 +28,7 @@ export default function Ficha({ resumen = {}, turno = null }) {
         <span className="ficha__tipo">{turno ? "Turno confirmado" : "Tu turno"}</span>
       </div>
       <div className={`ficha__codigo ${turno ? "" : "ficha__codigo--vacio"}`}>
-        {turno ? turno.codigo.replace(/^FC-\d{8}-/, "") : "······"}
+        {turno ? codigoTurno(turno) : "TU-······"}
       </div>
       <div className="ficha__corte" aria-hidden="true" />
       <dl className="ficha__datos">

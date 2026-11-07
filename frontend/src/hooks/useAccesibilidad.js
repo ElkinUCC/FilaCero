@@ -1,55 +1,22 @@
 /**
- * Accesibilidad sin componentes: preferencias guardadas, anuncios al lector de
- * pantalla, voz (Web Speech API) y teclado en pestañas. Los componentes visuales
- * están en components/ui/Accesibilidad.jsx.
+ * Utilidades de interfaz sin componentes: voz (Web Speech API), avisos para
+ * lectores de pantalla y teclado en pestañas.
+ *
+ * El menú de "Accesibilidad" (texto grande, alto contraste, leer avisos) se
+ * retiró en la entrega final: la paleta de alto contraste quedó como la
+ * principal del portal y la voz se usa en el llamado del asesor.
  */
-import { useSyncExternalStore } from "react";
-import { guardarLocal, leerLocal } from "../utils/storage";
+import { guardarLocal } from "../utils/storage";
 
-/* ------------------------------------------------------------------
-   Preferencias de accesibilidad (se recuerdan en este navegador)
-   - texto: agranda toda la interfaz
-   - contraste: colores de alto contraste
-   - voz: lee en voz alta los avisos importantes
-   ------------------------------------------------------------------ */
-
-const CLAVE = "filacero_accesibilidad";
-const PREDETERMINADAS = { texto: false, contraste: false, voz: false };
-const oyentes = new Set();
-
-function leer() {
-  try {
-    return { ...PREDETERMINADAS, ...JSON.parse(leerLocal(CLAVE) || "{}") };
-  } catch {
-    return { ...PREDETERMINADAS };
-  }
-}
-
-let actuales = leer();
-
-function aplicar(p) {
-  const raiz = document.documentElement;
-  raiz.dataset.texto = p.texto ? "grande" : "normal";
-  raiz.dataset.contraste = p.contraste ? "alto" : "normal";
-}
-aplicar(actuales); // antes del primer render, sin saltos visuales
-
-export function cambiarPreferencia(clave, valor) {
-  actuales = { ...actuales, [clave]: valor };
-  guardarLocal(CLAVE, JSON.stringify(actuales));
-  aplicar(actuales);
-  oyentes.forEach((f) => f());
-}
-
-export function usePreferencias() {
-  return useSyncExternalStore(
-    (f) => { oyentes.add(f); return () => oyentes.delete(f); },
-    () => actuales,
-  );
+// Limpia preferencias guardadas por versiones anteriores del menú.
+guardarLocal("filacero_accesibilidad", null);
+if (typeof document !== "undefined") {
+  delete document.documentElement.dataset.texto;
+  delete document.documentElement.dataset.contraste;
 }
 
 /* ------------------------------------------------------------------
-   Anuncios: siempre al lector de pantalla; en voz alta si está activo
+   Avisos: región "en vivo" para lectores de pantalla (sin voz)
    ------------------------------------------------------------------ */
 
 let region = null;
@@ -64,8 +31,9 @@ function regionViva() {
   return region;
 }
 
-export function hablar(texto, { forzar = false } = {}) {
-  if (!(forzar || actuales.voz) || !("speechSynthesis" in window)) return false;
+/** Habla en español con la voz del navegador. Devuelve false si no hay voz. */
+export function hablar(texto) {
+  if (!("speechSynthesis" in window)) return false;
   window.speechSynthesis.cancel();
   const frase = new SpeechSynthesisUtterance(texto);
   frase.lang = "es-CO";
@@ -80,7 +48,6 @@ export function anunciar(texto) {
   const r = regionViva();
   r.textContent = "";
   window.setTimeout(() => { r.textContent = texto; }, 50);
-  hablar(texto);
 }
 
 /** Flechas izquierda/derecha para moverse entre pestañas (patrón ARIA). */

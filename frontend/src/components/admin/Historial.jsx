@@ -4,8 +4,12 @@ import { listarSedes } from "../../api/catalogo.api";
 import Dropdown from "../ui/Dropdown";
 import Icon from "../ui/Icon";
 import usePolling from "../../hooks/usePolling";
-import { duracion, ESTADOS, fechaCorta, horaDe } from "../../utils/formatters";
+import {
+  duracion, ESTADOS, fechaCorta, fechaHora, fechaLarga, horaDe, PREPARACION, valorRespuesta,
+} from "../../utils/formatters";
 import Encabezado from "../layout/Encabezado";
+import PanelDetalle, { Datos } from "../ui/PanelDetalle";
+import TablaSeccion, { EnlaceDetalle, Estado } from "./TablaSeccion";
 
 const POR_PAGINA = 15;
 
@@ -21,6 +25,7 @@ export default function Historial({ titulo }) {
   const [buscar, setBuscar] = useState("");
   const [pagina, setPagina] = useState(1);
   const [sedes, setSedes] = useState([]);
+  const [detalle, setDetalle] = useState(null);
 
   useEffect(() => {
     listarSedes({ todos: true }).then(setSedes).catch(() => {});
@@ -67,34 +72,29 @@ export default function Historial({ titulo }) {
           )}
         </div>
 
-        <div className="tabla-envoltura">
-          <table className="tabla tabla--densa">
-            <thead>
-              <tr><th scope="col">Turno</th><th scope="col">Ciudadano</th><th scope="col">Sede · trámite</th><th scope="col">Cita</th><th scope="col">Estado</th><th scope="col">Atendió</th><th scope="col" className="num">Duración</th><th scope="col">Franja</th></tr>
-            </thead>
-            <tbody>
-              {turnos.map((t) => {
-                const e = ESTADOS[t.estado] || {};
-                const p = puntual(t);
-                const seg = t.fecha_inicio && t.fecha_fin ? (new Date(t.fecha_fin) - new Date(t.fecha_inicio)) / 1000 : null;
-                return (
-                  <tr key={t.id}>
-                    <td className="mono" title={t.codigo}>{t.codigo.slice(-6)}</td>
-                    <td><strong>{t.usuario_nombre}</strong><small className="bloque">{t.usuario_celular}</small></td>
-                    <td>{t.punto_nombre}<small className="bloque">{t.tramite_nombre}</small></td>
-                    <td>{fechaCorta(t.fecha)}<small className="bloque">{t.hora_inicio}–{t.hora_fin}</small></td>
-                    <td><span className={`estado estado--${e.tono}`}>{e.texto}</span></td>
-                    <td>{t.agente_nombre?.replace(/^Agente /, "") || <span className="tenue">—</span>}</td>
-                    <td className={`num ${seg > 600 ? "texto-rojo" : ""}`}>{seg != null ? duracion(seg) : "—"}</td>
-                    <td>{p == null ? <span className="tenue">—</span> : p ? <span className="marca-ok"><Icon name="check" size={14} /> Cumplida</span> : <span className="texto-rojo">Tarde</span>}</td>
-                  </tr>
-                );
-              })}
-              {datos && !turnos.length && <tr><td colSpan={8} className="vacio">{hayFiltros ? "No hay turnos con esos filtros." : "Aún no hay turnos registrados."}</td></tr>}
-              {!datos && [1, 2, 3, 4].map((i) => <tr key={i}><td colSpan={8}><div className="esqueleto" style={{ height: 16 }} /></td></tr>)}
-            </tbody>
-          </table>
-        </div>
+        <TablaSeccion
+          etiqueta={titulo}
+          columnas={["Turno", "Ciudadano", "Trámite", "Cita", "Estado", ""]}
+          anchos={[14, 26, 22, 16, 12, 10]}
+          filas={turnos.map((t) => {
+            const e = ESTADOS[t.estado] || {};
+            return {
+              id: t.id,
+              celdas: [
+                <EnlaceDetalle key="c" mono texto={t.codigo.slice(-6)} onClick={() => setDetalle(t)} />,
+                t.usuario_nombre,
+                t.tramite_nombre,
+                `${fechaCorta(t.fecha)} · ${t.hora_inicio}`,
+                <Estado key="e" tono={e.tono}>{e.texto}</Estado>,
+                <button key="v" className="icono-btn" title="Ver detalle" aria-label={`Ver detalle del turno ${t.codigo}`} onClick={() => setDetalle(t)}>
+                  <Icon name="ver" size={17} />
+                </button>,
+              ],
+            };
+          })}
+          cargando={!datos}
+          vacio={hayFiltros ? "No hay turnos con esos filtros." : "Aún no hay turnos registrados."}
+        />
 
         {datos?.total_paginas > 1 && (
           <footer className="paginador">
@@ -106,6 +106,75 @@ export default function Historial({ titulo }) {
           </footer>
         )}
       </article>
+
+      {detalle && <DetalleTurno turno={detalle} onCerrar={() => setDetalle(null)} />}
     </section>
+  );
+}
+
+function DetalleTurno({ turno: t, onCerrar }) {
+  const e = ESTADOS[t.estado] || {};
+  const p = puntual(t);
+  const seg = t.fecha_inicio && t.fecha_fin ? (new Date(t.fecha_fin) - new Date(t.fecha_inicio)) / 1000 : null;
+  const prep = t.preparacion ? PREPARACION[t.preparacion.estado] : null;
+  return (
+    <PanelDetalle
+      titulo={`Turno ${t.codigo}`}
+      subtitulo={`${t.punto_nombre} · ${t.tramite_nombre}`}
+      insignia={<>
+        <Estado tono={e.tono}>{e.texto}</Estado>
+        {prep && <Estado tono={prep.tono}>{prep.texto}</Estado>}
+      </>}
+      onCerrar={onCerrar}
+    >
+      <Datos
+        titulo="Ciudadano"
+        filas={[
+          ["Nombre", t.usuario_nombre],
+          ["Celular", t.usuario_celular],
+        ]}
+      />
+      <Datos
+        titulo="Cita"
+        filas={[
+          ["Fecha", fechaLarga(t.fecha)],
+          ["Franja reservada", `${t.hora_inicio}–${t.hora_fin}`],
+          ["Sede", t.punto_nombre],
+          ["Reservó", fechaHora(t.hora_solicitud)],
+        ]}
+      />
+      <Datos
+        titulo="Atención"
+        filas={[
+          ["Atendió", t.agente_nombre],
+          ["Módulo", t.agente_modulo],
+          ["Llamado", t.fecha_llamado ? horaDe(t.fecha_llamado) : null],
+          ["Inicio", t.fecha_inicio ? horaDe(t.fecha_inicio) : null],
+          ["Fin", t.fecha_fin ? horaDe(t.fecha_fin) : null],
+          ["Duración", seg != null ? <span key="k1" className={seg > 600 ? "texto-rojo" : ""}>{duracion(seg)}</span> : null],
+          ["Dentro de su franja", p == null ? null : p ? <span key="k1" className="marca-ok"><Icon name="check" size={14} /> Cumplida</span> : <span key="k2" className="texto-rojo">Tarde</span>],
+        ]}
+      />
+      {(t.respuestas_solicitud?.length > 0 || t.detalle_necesidad) && (
+        <Datos
+          titulo="Lo que pidió al reservar"
+          filas={[
+            ...(t.respuestas_solicitud || []).map((r) => [r.etiqueta, valorRespuesta(r.valor)]),
+            t.detalle_necesidad && ["Necesidad", t.detalle_necesidad],
+          ]}
+        />
+      )}
+      {t.preparacion && (
+        <section className="detalle__bloque">
+          <h3>Preparación previa</h3>
+          <p className="detalle__texto">
+            <strong>{prep?.texto}</strong>
+            {t.preparacion.preparado_por ? ` · ${t.preparacion.preparado_por}` : ""}
+            {t.preparacion.fecha ? ` · ${fechaHora(t.preparacion.fecha)}` : ""}
+            {t.preparacion.nota ? `\n${t.preparacion.nota}` : ""}
+          </p>
+        </section>
+      )}
+    </PanelDetalle>
   );
 }

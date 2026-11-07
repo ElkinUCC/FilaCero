@@ -5,9 +5,10 @@ import Ficha from "../components/cliente/Ficha";
 import Login from "../components/cliente/Login";
 import ReservarTurno from "../components/cliente/ReservarTurno";
 import Marca from "../components/layout/Marca";
-import { MenuAccesibilidad, SaltarAlContenido } from "../components/ui/Accesibilidad";
+import { SaltarAlContenido } from "../components/ui/Accesibilidad";
 import { teclasPestanas } from "../hooks/useAccesibilidad";
 import Icon from "../components/ui/Icon";
+import { codigoTurno } from "../utils/formatters";
 import "../css/cliente.css";
 
 /** Portal del ciudadano: reservar y consultar turno sin crear cuenta. Ruta: / */
@@ -53,7 +54,6 @@ export default function PortalPage({ onIngresar }) {
         <span className="portal__horario">
           <Icon name="reloj" size={15} /> {textoHorario}
         </span>
-        <MenuAccesibilidad />
         <button type="button" className="portal__personal" onClick={() => setLogin(true)}>
           <Icon name="llave" size={15} /> Acceso personal
         </button>
@@ -108,7 +108,7 @@ export default function PortalPage({ onIngresar }) {
                 <p>
                   Guarda este código. Lo necesitas para consultar o cancelar tu turno.
                 </p>
-                <div className="listo__codigo">{confirmado.turno.codigo}</div>
+                <div className="listo__codigo">{codigoTurno(confirmado.turno)}</div>
                 <Ficha turno={confirmado.turno} />
                 <div className="listo__acciones">
                   <button className="btn btn--primario" onClick={verEstado}>Ver estado del turno</button>

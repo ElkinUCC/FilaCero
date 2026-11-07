@@ -11,10 +11,18 @@ from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
 from app.dominios.turnos.dtos import turno_response
 from app.dominios.turnos.modelos import Turno
+from app.dominios.turnos.preparacion import pendientes, registrar_preparacion
 from app.dominios.turnos.repositorios import ESTADOS
 from app.dominios.usuarios.dtos import usuario_response
 from app.dominios.usuarios.modelos import Usuario
-from app.dominios.usuarios.servicios import registrar_usuario
+from app.dominios.usuarios.servicios import (
+    asignar_modulo,
+    dar_de_baja,
+    liberar_modulo_si_choca,
+    modulo_ocupado,
+    normalizar_modulo,
+    registrar_usuario,
+)
 from app.horario import (
     a_iso_utc,
     ahora_local,
@@ -137,6 +145,9 @@ def panel():
                     "sede_direccion": (
                         agente.punto_asignado.direccion if agente.punto_asignado else None
                     ),
+                    "modulo": agente.modulo,
+                    "presencia": agente.presencia or "DISPONIBLE",
+                    "presencia_desde": a_iso_utc(agente.presencia_desde),
                 },
                 "error": error,
                 "en_horario": en_horario_de_atencion(),
@@ -158,6 +169,7 @@ def panel():
                     "en_riesgo": sum(
                         1 for t in cola if t["puntualidad"] in ("en_riesgo", "atrasado")
                     ),
+                    "por_preparar": len(pendientes([p["turno"] for p in proyeccion])),
                     "atendidos_hoy": sum(1 for t in mios_hoy if t.estado == "ATENDIDO"),
                     "no_asistio_hoy": sum(1 for t in mios_hoy if t.estado == "NO_ASISTIO"),
                     "promedio_hoy_segundos": _promedio_segundos(mios_hoy),
@@ -186,6 +198,26 @@ def cambiar_mi_sede():
         "mensaje": f"Ahora atiendes en {sede}.",
         "sede_id": agente.punto_asignado_id,
         "sede": sede,
+    }, 200
+
+
+@agentes_bp.put("/presencia")
+@requiere_rol("AGENTE")
+def cambiar_presencia_propia():
+    """El asesor indica qué está haciendo: disponible, pausa, almuerzo o fuera de turno."""
+    from app.dominios.auditoria.servicios import registrar
+    from app.dominios.usuarios.servicios import PRESENCIAS, cambiar_presencia
+
+    agente = db.session.get(Usuario, _agente_id())
+    datos = request.get_json(silent=True) or {}
+    anterior = agente.presencia or "DISPONIBLE"
+    cambiar_presencia(agente, datos.get("presencia"), bool(turno_activo(agente.id)))
+    if anterior != agente.presencia:
+        registrar("presencia_cambiada", f"{agente.nombre}: {PRESENCIAS[agente.presencia]}")
+    return {
+        "mensaje": f"Tu estado: {PRESENCIAS[agente.presencia]}.",
+        "presencia": agente.presencia,
+        "presencia_desde": a_iso_utc(agente.presencia_desde),
     }, 200
 
 
@@ -257,6 +289,40 @@ def devolver(turno_id):
     return _accion(devolver_a_cola, turno_id, mensaje="El turno volvió a la cola.")
 
 
+@agentes_bp.post("/turnos/<int:turno_id>/preparacion")
+@requiere_rol("AGENTE")
+def preparar(turno_id):
+    """Preparación previa: el asesor alista lo que pidió el ciudadano.
+
+    Cuerpo: {"estado": "EN_PREPARACION" | "LISTO" | "NOVEDAD" | "PENDIENTE",
+             "nota": "texto visible para el ciudadano"}
+    """
+    from app.dominios.auditoria.servicios import registrar
+
+    datos = request.get_json(silent=True) or {}
+    turno = registrar_preparacion(_agente_id(), turno_id, datos.get("estado"), datos.get("nota"))
+    texto = turno_response(turno)["preparacion"]
+    registrar(
+        "turno_preparado",
+        f"{turno.codigo}: {texto['texto'] if texto else 'Sin preparación'}",
+    )
+    mensajes = {
+        "LISTO": "Turno preparado: el ciudadano verá que todo está listo.",
+        "NOVEDAD": "Novedad registrada: el ciudadano la verá al consultar su turno.",
+        "EN_PREPARACION": "Marcado en preparación.",
+        "PENDIENTE": "Preparación reiniciada.",
+    }
+    return (
+        jsonify(
+            {
+                "mensaje": mensajes.get(turno.estado_preparacion, "Preparación actualizada."),
+                "turno": turno_response(turno),
+            }
+        ),
+        200,
+    )
+
+
 # =====================================================================
 # ADMIN  (/api/v1/admin/agentes)
 # =====================================================================
@@ -323,7 +389,11 @@ def _agente_dict(agente):
 @admin_agentes_bp.get("/")
 @requiere_rol("ADMIN", "SUPERVISOR")
 def listar_agentes():
-    agentes = Usuario.query.filter_by(rol="AGENTE").order_by(Usuario.nombre.asc()).all()
+    agentes = (
+        Usuario.query.filter(Usuario.rol == "AGENTE", Usuario.eliminado_en.is_(None))
+        .order_by(Usuario.nombre.asc())
+        .all()
+    )
     return jsonify({"total": len(agentes), "agentes": [_agente_dict(a) for a in agentes]}), 200
 
 
@@ -354,9 +424,16 @@ def crear_agente():
         if "@" not in correo or len(correo) > 120:
             raise ValueError("Ingresa un correo válido.")
         punto_id = _sede_valida(datos.get("punto_id"))
+        modulo = normalizar_modulo(datos.get("modulo"))
+        otro = modulo_ocupado(modulo, punto_id)
+        if otro:
+            raise ValueError(f"{modulo} ya está asignado a {otro.nombre} en esa sede.")
         agente = registrar_usuario(
             nombre, correo, datos.get("password", ""), rol="AGENTE", punto_id=punto_id
         )
+        if modulo:
+            agente.modulo = modulo
+            db.session.commit()
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
     from app.dominios.auditoria.servicios import registrar
@@ -368,7 +445,9 @@ def crear_agente():
 @admin_agentes_bp.put("/<int:usuario_id>")
 @requiere_rol("ADMIN")
 def actualizar_agente(usuario_id):
-    agente = Usuario.query.filter_by(id=usuario_id, rol="AGENTE").first()
+    agente = Usuario.query.filter(
+        Usuario.id == usuario_id, Usuario.rol == "AGENTE", Usuario.eliminado_en.is_(None)
+    ).first()
     if not agente:
         return jsonify({"error": "Agente no encontrado."}), 404
 
@@ -382,6 +461,10 @@ def actualizar_agente(usuario_id):
             agente.nombre = nombre
         if "punto_id" in datos:
             agente.punto_asignado_id = _sede_valida(datos["punto_id"])
+            if "modulo" not in datos:
+                liberar_modulo_si_choca(agente)
+        if "modulo" in datos:
+            asignar_modulo(agente, datos["modulo"])
         if "activo" in datos:
             if agente.protegida and not datos["activo"]:
                 raise ValueError("Cuenta protegida: no se puede desactivar.")
@@ -401,6 +484,19 @@ def actualizar_agente(usuario_id):
 
     registrar("usuario_editado", agente.correo)
     return jsonify({"mensaje": "Agente actualizado.", "agente": _agente_dict(agente)}), 200
+
+
+@admin_agentes_bp.delete("/<int:usuario_id>")
+@requiere_rol("ADMIN")
+def eliminar_agente(usuario_id):
+    """Baja definitiva del asesor. Conserva sus atenciones en el historial."""
+    from flask_jwt_extended import current_user
+
+    from app.dominios.auditoria.servicios import registrar
+
+    agente, correo = dar_de_baja(usuario_id, current_user.id, roles=("AGENTE",))
+    registrar("usuario_eliminado", f"{correo} ({agente.nombre})")
+    return jsonify({"mensaje": f"{agente.nombre} fue eliminado. Su historial se conserva."}), 200
 
 
 @admin_agentes_bp.post("/<int:usuario_id>/sede")
@@ -487,6 +583,36 @@ def obtener_metricas():
         ),
         200,
     )
+
+
+@admin_agentes_bp.get("/tablero")
+@requiere_rol("ADMIN", "SUPERVISOR")
+def tablero_ejecutivo():
+    """Tablero ejecutivo del periodo frente al periodo anterior (solo lectura)."""
+    from .tablero import construir_tablero, parsear_fecha
+
+    try:
+        dias = request.args.get("dias")
+        dias = int(dias) if dias else None
+        if dias is not None and not 1 <= dias <= 92:
+            raise ValueError("dias debe estar entre 1 y 92.")
+        punto_id = request.args.get("punto_id")
+        punto_id = int(punto_id) if punto_id else None
+        datos = construir_tablero(
+            parsear_fecha(request.args.get("desde")),
+            parsear_fecha(request.args.get("hasta")),
+            dias,
+            punto_id,
+        )
+    except ValueError as error:
+        return jsonify(
+            {
+                "error": str(error)
+                if "invalid literal" not in str(error)
+                else "Parámetros no válidos."
+            }
+        ), 400
+    return jsonify(datos), 200
 
 
 @admin_agentes_bp.get("/historial")
@@ -637,7 +763,13 @@ def en_vivo():
                     {
                         "nombre": a.nombre,
                         "turno": t.codigo if t else None,
-                        "estado": t.estado if t else "LIBRE",
+                        "estado": t.estado
+                        if t
+                        else (
+                            "LIBRE"
+                            if (a.presencia or "DISPONIBLE") == "DISPONIBLE"
+                            else a.presencia
+                        ),
                     }
                     for a in asesores
                     for t in [

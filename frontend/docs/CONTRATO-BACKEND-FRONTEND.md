@@ -55,8 +55,22 @@
 |---|---|
 | `listar(tipo, {todos})` · `crear` · `actualizar` · `eliminar` | `/sedes/` y `/tramites/`, con `?todos=1` |
 | `metricas(rango)` · `metricasPorSede` · `metricasPorTramite` | `GET /admin/agentes/metricas[/sedes\|/tramites]?desde&hasta` |
+| `tablero({ dias, punto_id })` | `GET /admin/agentes/tablero?dias&punto_id` (tablero ejecutivo; ADMIN y SUPERVISOR) |
+| `cambiarEstadoEquipo(id, estado, nota, documento)` (agente) | `PUT /equipos/{id}/estado` — `documento` obligatorio para `ENTREGADO` y para recibir una garantía |
 | `enVivo()` | `GET /admin/agentes/en-vivo`: `sedes[]`, `recientes[]` |
 | `historial(filtros)` | `GET /admin/agentes/historial?pagina&por_pagina&estado&punto_id&desde&hasta&buscar` |
 | `listarAgentes` · `crearAgente` · `actualizarAgente` | `/admin/agentes/` |
 | `listarUsuarios` · `crearUsuario` · `actualizarUsuario` · `restablecerClave` | `/admin/usuarios/` |
 | `auditoria(filtros)` | `GET /admin/usuarios/auditoria?pagina&por_pagina&accion` |
+
+## 3. Cambios de la entrega final (todos aditivos)
+
+| Función | Endpoint / campo |
+|---|---|
+| `agenteApi.preparar(turnoId, estado, nota)` | `POST /agente/turnos/{id}/preparacion` con `{estado: EN_PREPARACION·LISTO·NOVEDAD·PENDIENTE, nota}` → `{mensaje, turno}` |
+| `adminApi.eliminarAgente(id)` | `DELETE /admin/agentes/{id}` (baja lógica; 409 si tiene turno en curso) |
+| `adminApi.eliminarUsuario(id)` | `DELETE /admin/usuarios/{id}` (409 si es la propia cuenta, protegida o el último admin) |
+| Campos nuevos | `usuario.modulo` · `tramite.requiere_preparacion` · `turno.preparacion {estado, texto, nota, fecha, preparado_por}` · `turno.agente_modulo` · `sede.asesores_activos`, `sede.cupos_por_franja` (solo con `?todos=1` y sesión de panel) · `panel.agente.modulo` · `panel.resumen.por_preparar` · sala: `llamados[].modulo` y nombre completo |
+| Consulta pública | `turno.preparacion {estado, texto, nota, fecha}` (sin `preparado_por`) e `instrucciones` |
+
+Detalle y justificación: `docs/arquitectura/04-arquitectura-logica.md` §4.

@@ -1,4 +1,5 @@
 """Pruebas de aislamiento multiempresa del núcleo inicial."""
+
 from app.dominios.organizaciones.modelos import Organizacion
 from app.dominios.sedes.modelos import Punto
 from app.dominios.usuarios.modelos import Usuario
@@ -26,10 +27,12 @@ def _crear_organizacion(db, **kwargs):
 
 def test_sedes_publicas_quedan_aisladas_por_slug(client, db):
     empresa_b = _crear_organizacion(db)
-    db.session.add_all([
-        Punto(nombre="Sede FilaCero", organizacion_id=1, activo=True),
-        Punto(nombre="Sede Empresa B", organizacion_id=empresa_b.id, activo=True),
-    ])
+    db.session.add_all(
+        [
+            Punto(nombre="Sede FilaCero", organizacion_id=1, activo=True),
+            Punto(nombre="Sede Empresa B", organizacion_id=empresa_b.id, activo=True),
+        ]
+    )
     db.session.commit()
 
     respuesta_a = client.get("/api/v1/sedes/")
