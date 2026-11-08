@@ -171,6 +171,14 @@ de forma interactiva y actualiza la cuenta existente.
 | `python scripts/promover_admin.py correo@x.co [ADMIN\|SUPERVISOR\|AGENTE]` | Recupera el acceso de administrador |
 | `flask db upgrade` · `flask db history` | Migraciones |
 
+`--en-vivo` es una simulación interactiva para un entorno local/de demo; termina
+con error si `FLASK_ENV=production`. No es un proceso que Render deba iniciar junto
+con la API: conecta directamente a la base configurada, crea turnos y puede cambiar
+el estado de los asesores demo. No quites la protección ni apuntes esta simulación
+a los datos reales de producción. Para supervisar la operación real, usa
+`/admin/resumen`: consulta el estado de atención de cada sede y se actualiza cada
+15 segundos.
+
 ---
 
 ## Endpoints (54 rutas bajo `/api/v1`)

@@ -119,7 +119,7 @@ export default function Resumen({ titulo, soloLectura }) {
       adminApi.enVivo(),
     ]);
     return { t, vivo: v.sedes, recientesVivo: v.recientes };
-  }, 20000, [periodo, sede]);
+  }, 15000, [periodo, sede]);
 
   // Resalta las reservas que llegaron desde la última actualización.
   const vistos = useRef(null);
@@ -141,6 +141,10 @@ export default function Resumen({ titulo, soloLectura }) {
   const unDia = (t?.periodo?.dias || p.dias) === 1;
   const serieTotal = dias.map((d) => d.total);
   const serieAtendidos = dias.map((d) => d.atendidos);
+  const asesoresAhora = (datos?.vivo || []).flatMap((s) => s.asesores);
+  const asesoresAtendiendo = asesoresAhora.filter((a) => a.estado === "EN_ATENCION").length;
+  const asesoresLlamando = asesoresAhora.filter((a) => a.estado === "LLAMADO").length;
+  const asesoresLibres = asesoresAhora.filter((a) => a.estado === "LIBRE").length;
   const horas = (t?.por_hora || []).map((h) => ({
     clave: h.hora, valor: h.total,
     etiqueta: `${String(h.hora).padStart(2, "0")}:00 – ${String(h.hora + 1).padStart(2, "0")}:00`,
@@ -257,6 +261,12 @@ export default function Resumen({ titulo, soloLectura }) {
             <h2>Sedes ahora</h2>
             <span className="panel__nota">Se actualiza solo cada 15 segundos</span>
           </header>
+          <div className="mini-kpis" aria-label="Estado actual de asesores en sedes activas">
+            <div><strong>{datos ? asesoresAhora.length : "—"}</strong><span>asesores en sede</span></div>
+            <div><strong>{datos ? asesoresAtendiendo : "—"}</strong><span>atendiendo ahora</span></div>
+            <div><strong>{datos ? asesoresLlamando : "—"}</strong><span>llamando</span></div>
+            <div><strong>{datos ? asesoresLibres : "—"}</strong><span>libres para atender</span></div>
+          </div>
           <div className="tabla-envoltura">
             <table className="tabla tabla--vivo">
               <thead>

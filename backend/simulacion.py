@@ -496,7 +496,7 @@ def cargar_semana(
     hoy = ahora.date()
     utc = lambda d: d.astimezone(UTC).replace(tzinfo=None)  # noqa: E731
     pesos = [s[3] for s in SERVICIOS]
-    codigos = set()
+    codigos = {codigo for (codigo,) in Turno.query.with_entities(Turno.codigo).all()}
     totales = {"ATENDIDO": 0, "NO_ASISTIO": 0, "CANCELADO": 0, "ESPERANDO": 0}
 
     dias = []
