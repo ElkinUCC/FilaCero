@@ -26,7 +26,15 @@ def generar_codigo(celular, organizacion_id=1):
         and not config.get("PRODUCCION")
         and request.remote_addr in ("127.0.0.1", "::1")
     )
-    codigo = f"{secrets.randbelow(1_000_000):06d}"
+    modo_demo = config.get("OTP_DEMO_ENABLED")
+    if modo_demo:
+        celular_demo = str(config.get("OTP_DEMO_PHONE") or "")
+        if not hmac.compare_digest(str(celular), celular_demo):
+            raise ValueError("La demo gratis solo permite el celular de prueba configurado.")
+        codigo = str(config["OTP_DEMO_CODE"])
+    else:
+        codigo = f"{secrets.randbelow(1_000_000):06d}"
+
     with _candado:
         _codigos[(int(organizacion_id), celular)] = {
             "codigo": codigo,
@@ -34,13 +42,18 @@ def generar_codigo(celular, organizacion_id=1):
             "intentos": 0,
         }
 
-    if not modo_prueba:
+    if not (modo_prueba or modo_demo):
         _enviar_sms(celular, codigo)
         return None
     return codigo
 
 
 def verificar_codigo(celular, codigo, organizacion_id=1):
+    if current_app.config.get("OTP_DEMO_ENABLED") and not hmac.compare_digest(
+        str(celular), str(current_app.config.get("OTP_DEMO_PHONE") or "")
+    ):
+        raise ValueError("La demo gratis solo permite el celular de prueba configurado.")
+
     maximo = int(current_app.config.get("OTP_MAX_INTENTOS", 5))
     with _candado:
         clave = (int(organizacion_id), celular)

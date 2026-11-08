@@ -146,7 +146,7 @@ Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en
 ## Seguridad y configuración
 
 - No subir `backend/.env` ni `frontend/.env` al repositorio.
-- `FILACERO_OTP_TEST_MODE=true` es únicamente para desarrollo/pruebas; producción debe usar un proveedor SMS real y desactivar el modo de prueba.
+- `FILACERO_OTP_TEST_MODE=true` es únicamente para desarrollo local. Para una demo gratuita en producción, puede activarse `FILACERO_OTP_DEMO_ENABLED` con un único celular y código dedicados; no usar con números ni datos reales. La integración con SMS real requiere un proveedor.
 - En producción, configura HTTPS, secretos únicos, CORS restrictivo, base de datos administrada, copias de seguridad y monitoreo.
 - No conectar un agente de IA directamente a la base de datos. Las futuras integraciones deben pasar por servicios y herramientas autorizadas con permisos y auditoría.
 

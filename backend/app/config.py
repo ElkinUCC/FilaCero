@@ -149,6 +149,9 @@ class Config:
     # En modo prueba el código se devuelve en la respuesta (NO producción).
     # ------------------------------------------------------------------
     OTP_TEST_MODE = _bool("FILACERO_OTP_TEST_MODE", not PRODUCCION)
+    OTP_DEMO_ENABLED = _bool("FILACERO_OTP_DEMO_ENABLED", False)
+    OTP_DEMO_PHONE = os.getenv("FILACERO_OTP_DEMO_PHONE", "").strip()
+    OTP_DEMO_CODE = os.getenv("FILACERO_OTP_DEMO_CODE", "").strip()
     OTP_VIGENCIA_SEG = _int("OTP_VIGENCIA_SEG", 300)
     OTP_MAX_INTENTOS = _int("OTP_MAX_INTENTOS", 5)
 
@@ -180,6 +183,19 @@ class Config:
 
 def validar_configuracion(app):
     """Detiene el arranque en producción si la configuración es insegura."""
+    if app.config.get("OTP_DEMO_ENABLED"):
+        import re
+
+        celular_demo = str(app.config.get("OTP_DEMO_PHONE") or "")
+        codigo_demo = str(app.config.get("OTP_DEMO_CODE") or "")
+        if not re.fullmatch(r"3\d{9}", celular_demo):
+            raise RuntimeError(
+                "FILACERO_OTP_DEMO_PHONE debe ser un celular colombiano de prueba "
+                "de 10 dígitos."
+            )
+        if not re.fullmatch(r"\d{6}", codigo_demo):
+            raise RuntimeError("FILACERO_OTP_DEMO_CODE debe tener exactamente 6 dígitos.")
+
     if not app.config.get("PRODUCCION"):
         if len(app.config.get("JWT_SECRET_KEY") or "") < 32:
             import logging

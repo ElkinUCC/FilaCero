@@ -77,6 +77,8 @@ def solicitar_codigo_celular():
 
     try:
         codigo = otp.generar_codigo(celular, getattr(g, "organizacion_id", 1))
+    except ValueError as error:
+        return {"error": str(error)}, 403
     except RuntimeError:
         return {"error": "La verificación por SMS no está disponible en este momento."}, 503
 

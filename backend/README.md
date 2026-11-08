@@ -83,6 +83,23 @@ Excepciones de dominio (`app/errores.py`): `DatosInvalidosError` (400), `Credenc
 
 > Los datos de éxito van en la raíz y no dentro de `"data"`. Es una diferencia deliberada con la referencia, para no romper las pruebas del equipo (ver ADR-0009).
 
+### Verificación OTP en demo sin SMS
+
+Los SMS reales tienen costo. Para una demostración pública se puede activar un OTP fijo
+limitado a un único celular dedicado, sin enviar mensajes:
+
+```env
+FILACERO_OTP_TEST_MODE=false
+FILACERO_OTP_DEMO_ENABLED=true
+FILACERO_OTP_DEMO_PHONE=3001234567
+FILACERO_OTP_DEMO_CODE=123456
+```
+
+Configura un número reservado para la demo, no el de un cliente. La API solo acepta ese
+número y muestra el código al solicitarlo; cualquier otro celular se rechaza. Esto no
+verifica la posesión de un teléfono y no debe usarse con datos reales. Para volver al
+funcionamiento normal, desactiva `FILACERO_OTP_DEMO_ENABLED` y configura un proveedor SMS.
+
 ---
 
 ## Instalación rápida

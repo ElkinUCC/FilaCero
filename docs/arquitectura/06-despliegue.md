@@ -76,6 +76,11 @@ Cambios que exige pasar de §1 a §2 (todos de configuración, ninguno de códig
 con el dominio real, `PROXIES_CONFIABLES=1`, `DB_SSL_CA` y build `npm run build`. La API valida esto al arrancar
 y se niega a iniciar con configuración insegura.
 
+Para una demostración pública sin SMS, se puede activar `FILACERO_OTP_DEMO_ENABLED=true` y definir
+`FILACERO_OTP_DEMO_PHONE` y `FILACERO_OTP_DEMO_CODE`. Solo ese celular podrá verificarse y la API mostrará
+el código; debe ser un teléfono dedicado, nunca uno de clientes. Este modo no prueba la posesión del celular
+y no es apto para operar con datos reales. Para producción real se requiere integrar un proveedor SMS.
+
 > Con **varios procesos** de API, el candado en memoria de ADR-004 ya no basta por sí solo; la consistencia la
 > garantiza el `SELECT … FOR UPDATE` sobre la sede en MySQL, que sí es compartido entre procesos. Por eso
 > ADR-004 combina ambos mecanismos.
