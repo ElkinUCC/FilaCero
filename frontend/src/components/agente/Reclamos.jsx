@@ -67,7 +67,7 @@ export default function Reclamos({ onPendientes }) {
       <header className="taller__cabeza">
         <div>
           <h2>Reclamos de la sede</h2>
-          <p>Reclamos y consultas previas por chat. El asistente responde lo básico al instante; tú confirmas precios, fechas y diagnósticos.</p>
+          <p>Reclamos y consultas de clientes. Tu última respuesta es la que el cliente ve en “Consultar mi turno”.</p>
         </div>
         <div className="segmentos" role="tablist" aria-label="Filtrar reclamos">
           {FILTROS.map((f) => (

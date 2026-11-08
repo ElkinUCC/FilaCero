@@ -1,0 +1,50 @@
+# FilaCero en un solo comando (servidor propio o VPS):
+#   1) cp .env.docker.example .env                (claves de la base de datos)
+#      cp backend/.env.example backend/.env       (SECRET_KEY, JWT_SECRET_KEY, CORS...)
+#   2) docker compose up -d --build
+#   3) abre http://localhost  (agrega HTTPS con tu proveedor o un proxy como Caddy)
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-filacero_db}
+      MYSQL_USER: ${DB_USER:-filacero_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Define DB_ROOT_PASSWORD en .env}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - datos_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: "false"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-filacero_db}
+      DB_USER: ${DB_USER:-filacero_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PROXIES_CONFIABLES: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  datos_mysql:

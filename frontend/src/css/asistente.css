@@ -1,0 +1,121 @@
+/* =========================================
+   FILACERO · ASISTENTE IA (panel de conversación)
+   ========================================= */
+
+/* ---------- Botón flotante ---------- */
+.ia-fab {
+  position: fixed; z-index: 60; right: 22px; bottom: 22px;
+  display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px 0 8px;
+  border: 0; border-radius: 999px;
+  background: linear-gradient(120deg, #0f2a2e 0%, #135e63 60%, #1f7d74 100%); color: #fff;
+  font-size: 14.5px; font-weight: 700; letter-spacing: -.1px;
+  box-shadow: 0 12px 28px rgb(15 42 46 / 28%), 0 0 0 1px rgb(255 255 255 / 8%) inset;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.ia-fab:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgb(15 42 46 / 34%); }
+.ia-fab__icono {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--ambar); color: #0f2a2e; animation: ia-latido 3.2s ease-in-out infinite;
+}
+@keyframes ia-latido { 0%, 100% { box-shadow: 0 0 0 0 rgb(240 180 41 / 45%); } 50% { box-shadow: 0 0 0 8px rgb(240 180 41 / 0%); } }
+.ia-fab--oculto { opacity: 0; pointer-events: none; transform: scale(.9); }
+
+/* ---------- Panel ---------- */
+.ia-sombra { position: fixed; z-index: 69; inset: 0; background: rgb(15 42 46 / 18%); animation: ia-aparece .2s ease both; }
+.ia {
+  position: fixed; z-index: 70; right: 20px; bottom: 20px;
+  display: flex; flex-direction: column; width: min(430px, calc(100vw - 40px)); height: min(680px, calc(100vh - 40px));
+  border: 1px solid #dbe7e3; border-radius: 22px; background: #f7faf9; overflow: hidden;
+  box-shadow: 0 28px 64px rgb(15 42 46 / 26%), 0 4px 14px rgb(15 42 46 / 10%);
+  opacity: 0; pointer-events: none; transform: translateY(16px) scale(.98); transform-origin: bottom right;
+  transition: opacity .22s ease, transform .22s cubic-bezier(.2, .8, .2, 1);
+}
+.ia--abierto { opacity: 1; pointer-events: auto; transform: none; }
+@keyframes ia-aparece { from { opacity: 0; } }
+
+.ia__cabeza {
+  display: flex; align-items: center; gap: 11px; padding: 14px 12px 14px 16px;
+  background: linear-gradient(120deg, #0f2a2e, #135e63); color: #fff;
+}
+.ia__avatar { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: var(--ambar); color: #0f2a2e; }
+.ia__titulo { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.ia__titulo strong { font-size: 15.5px; letter-spacing: -.2px; }
+.ia__titulo small { display: inline-flex; align-items: center; gap: 6px; overflow: hidden; color: #b9d3cf; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.ia__punto { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #5fd39a; }
+.ia__punto--activo { background: var(--ambar); animation: ia-parpadeo 1s ease-in-out infinite; }
+@keyframes ia-parpadeo { 50% { opacity: .3; } }
+.ia__icono {
+  display: grid; flex: none; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px;
+  background: transparent; color: inherit; opacity: .85;
+}
+.ia__icono:hover { background: rgb(255 255 255 / 12%); opacity: 1; }
+
+/* ---------- Conversación ---------- */
+.ia__hilo { display: flex; flex: 1; flex-direction: column; gap: 14px; padding: 16px 14px 8px; overflow-y: auto; overscroll-behavior: contain; }
+.ia__bienvenida { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: auto 0; padding: 12px 18px; text-align: center; }
+.ia__bienvenida-icono { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: linear-gradient(140deg, #fff4d6, #ffe39a); color: #8a5a00; box-shadow: 0 8px 20px rgb(240 180 41 / 22%); }
+.ia__bienvenida h2 { font-size: 20px; letter-spacing: -.4px; }
+.ia__bienvenida p { max-width: 34ch; color: var(--tinta-2); font-size: 13.5px; line-height: 1.55; }
+
+.ia__msg { display: flex; gap: 8px; align-items: flex-end; animation: ia-msg .25s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ia-msg { from { opacity: 0; transform: translateY(6px); } }
+.ia__msg--usuario { justify-content: flex-end; }
+.ia__msg-avatar { display: grid; flex: none; place-items: center; width: 24px; height: 24px; margin-bottom: 2px; border-radius: 8px; background: #0f2a2e; color: var(--ambar); }
+.ia__burbuja { max-width: 88%; padding: 11px 13px; border-radius: 16px 16px 16px 5px; background: #fff; color: var(--tinta); font-size: 14px; line-height: 1.5; box-shadow: 0 1px 3px rgb(15 42 46 / 8%), 0 0 0 1px #e3ece9; overflow-wrap: anywhere; }
+.ia__msg--usuario .ia__burbuja { border-radius: 16px 16px 5px 16px; background: #135e63; color: #fff; box-shadow: none; }
+.ia__msg--error .ia__burbuja { background: var(--rojo-claro); color: var(--rojo); }
+.ia__bloque + .ia__bloque { margin-top: 8px; }
+.ia__bloque p { margin: 0; }
+.ia__bloque ul { display: grid; gap: 4px; margin: 6px 0 0; padding-left: 18px; }
+.ia__bloque li::marker { color: var(--petroleo); }
+.ia__bloque strong { color: #0d4a4f; font-weight: 750; }
+
+.ia__tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 6px; margin-top: 10px; }
+.ia__tarjeta { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 8px 10px; border-radius: 11px; background: #eef4f2; }
+.ia__tarjeta small { overflow: hidden; color: var(--tinta-3); font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.ia__tarjeta strong { color: var(--tinta); font-size: 16px; font-weight: 780; letter-spacing: -.3px; line-height: 1.2; overflow-wrap: anywhere; }
+.ia__tarjeta--bien { background: var(--verde-claro); } .ia__tarjeta--bien strong { color: var(--verde); }
+.ia__tarjeta--atencion { background: var(--naranja-claro); } .ia__tarjeta--atencion strong { color: var(--naranja); }
+.ia__tarjeta--alerta { background: var(--rojo-claro); } .ia__tarjeta--alerta strong { color: var(--rojo); }
+.ia__acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ia__fuente { display: block; margin-top: 8px; color: #8a9b9c; font-size: 10.5px; font-weight: 600; letter-spacing: .2px; }
+
+.ia__escribiendo { display: inline-flex; gap: 4px; padding: 14px 16px; }
+.ia__escribiendo i { width: 7px; height: 7px; border-radius: 50%; background: #9fb6b2; animation: ia-salto 1.1s ease-in-out infinite; }
+.ia__escribiendo i:nth-child(2) { animation-delay: .15s; }
+.ia__escribiendo i:nth-child(3) { animation-delay: .3s; }
+@keyframes ia-salto { 0%, 60%, 100% { transform: none; opacity: .5; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+/* ---------- Sugerencias y entrada ---------- */
+.ia__sugerencias { display: flex; gap: 6px; padding: 6px 14px 8px; overflow-x: auto; scrollbar-width: none; }
+.ia__sugerencias::-webkit-scrollbar { display: none; }
+.ia__sugerencias button {
+  flex: none; padding: 7px 12px; border: 1px solid #cfe0db; border-radius: 999px; background: #fff;
+  color: #135e63; font-size: 12.5px; font-weight: 650; white-space: nowrap; transition: background .15s, border-color .15s;
+}
+.ia__sugerencias button:hover { border-color: #135e63; background: #eef6f4; }
+.ia__form { display: flex; align-items: center; gap: 6px; margin: 0 12px 12px; padding: 5px 5px 5px 14px; border: 1px solid #d3e2de; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgb(15 42 46 / 5%); }
+.ia__form:focus-within { border-color: #135e63; box-shadow: 0 0 0 3px rgb(19 94 99 / 12%); }
+.ia__form input { flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; font-size: 14.5px; outline: none; }
+.ia__mic { color: var(--tinta-2); }
+.ia__mic:hover { background: var(--menta-2); }
+.ia__mic--on { background: var(--rojo-claro) !important; color: var(--rojo); animation: ia-parpadeo 1.2s ease-in-out infinite; }
+.ia__enviar { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: #135e63; color: #fff; transition: background .15s, opacity .15s; }
+.ia__enviar:hover:not(:disabled) { background: #0d4a4f; }
+.ia__enviar:disabled { opacity: .4; }
+
+/* ---------- Celular: hoja a pantalla completa ---------- */
+@media (max-width: 620px) {
+  .ia-fab { right: 14px; bottom: 14px; height: 52px; padding: 0 16px 0 7px; font-size: 13.5px; }
+  .ia { inset: 0; width: 100%; height: 100%; height: 100dvh; border: 0; border-radius: 0; transform-origin: bottom center; }
+  .ia__cabeza { padding-top: max(12px, env(safe-area-inset-top)); }
+  .ia__form { margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .ia__burbuja { max-width: 92%; }
+  .ia-sombra { display: none; }
+}
+@media (max-width: 380px) { .ia-fab__texto { display: none; } .ia-fab { padding: 0 7px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-fab__icono, .ia__punto--activo, .ia__escribiendo i, .ia__mic--on { animation: none; }
+  .ia, .ia__msg { transition: none; animation: none; }
+}

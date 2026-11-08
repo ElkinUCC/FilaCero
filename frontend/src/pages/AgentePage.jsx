@@ -11,6 +11,7 @@ import PrepararTurno, { InsigniaPreparacion } from "../components/agente/Prepara
 import Reclamos from "../components/agente/Reclamos";
 import VerificarCedula from "../components/agente/VerificarCedula";
 import { CambiarMiClave } from "../components/ui/CambiarClave";
+import AsistenteIA from "../components/ui/AsistenteIA";
 import Dropdown from "../components/ui/Dropdown";
 import Icon from "../components/ui/Icon";
 import { Confirmar } from "../components/ui/Modal";
@@ -486,7 +487,7 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
         <div className="ag__franja-chip">
           {franja ? (
             <>
-              <span>Franja {franja.inicio}–{franja.fin}</span>
+              <span><span className="ag__franja-etq">Franja </span>{franja.inicio}–{franja.fin}</span>
               <strong className={franjaRestante < 300 ? "urgente" : ""}>quedan {mmss(franjaRestante)}</strong>
             </>
           ) : <span>{p && !p.en_horario ? `Fuera de horario · ${p.horario?.hora_apertura}–${p.horario?.hora_cierre}` : "—"}</span>}
@@ -689,13 +690,13 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
                   {presencia !== "DISPONIBLE" && !pausaHasta ? (
                     <>
                       <h2>{PRESENCIAS[presencia]?.texto}</h2>
-                      <p>Desde las {horaDe(p?.agente?.presencia_desde)} · {p?.cola?.length || 0} persona(s) en la cola.</p>
+                      <p>Desde las {horaDe(p?.agente?.presencia_desde)} · {r.en_espera_hoy ?? 0} para hoy en la cola.</p>
                       <button type="button" className="enlace" onClick={() => cambiarPresencia("DISPONIBLE")}>Volver a disponible</button>
                     </>
                   ) : (
                     <>
                       <h2>Puesto libre</h2>
-                      <p>{p?.cola?.length ? `${p.cola.length} persona(s) en la cola.` : "Nadie en la cola por ahora."}</p>
+                      <p>{p?.cola?.length ? `${r.en_espera_hoy ?? 0} para hoy · ${p.cola.length} en total en la cola.` : "Nadie en la cola por ahora."}</p>
                     </>
                   )}
                 </div>
@@ -706,17 +707,38 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
             )}
           </section>
 
-          <section className="ag__dia" aria-label="Mi jornada">
-            <div><span>Atendidos hoy</span><strong><Cifra valor={r.atendidos_hoy} /></strong></div>
-            <div><span>No asistieron</span><strong><Cifra valor={r.no_asistio_hoy} /></strong></div>
-            <div><span>Promedio</span><strong>{duracion(r.promedio_hoy_segundos)}</strong></div>
-            <div><span>En su franja</span><strong><Cifra valor={r.puntualidad_pct} sufijo="%" /></strong></div>
-            <div><span>Dentro de {Math.round(maxSeg / 60)} min</span><strong><Cifra valor={r.dentro_tiempo_max_pct} sufijo="%" /></strong></div>
+          <section className="jornada" aria-labelledby="titulo-jornada">
+            <header className="jornada__cabeza">
+              <h2 id="titulo-jornada"><Icon name="grafica" size={16} /> Tu jornada de hoy</h2>
+              <span>{p?.agente?.sede || "—"}</span>
+            </header>
+            <div className="jornada__metricas">
+              <div className="jornada__metrica">
+                <span className="jornada__icono jornada__icono--ok"><Icon name="finalizado" size={17} /></span>
+                <strong><Cifra valor={r.atendidos_hoy} /></strong><span>Atendidos</span>
+              </div>
+              <div className="jornada__metrica">
+                <span className="jornada__icono jornada__icono--mal"><Icon name="ausente" size={17} /></span>
+                <strong><Cifra valor={r.no_asistio_hoy} /></strong><span>No asistieron</span>
+              </div>
+              <div className="jornada__metrica">
+                <span className="jornada__icono"><Icon name="reloj" size={17} /></span>
+                <strong>{duracion(r.promedio_hoy_segundos)}</strong><span>Tiempo promedio</span>
+              </div>
+              <div className="jornada__metrica">
+                <span className={`jornada__icono ${r.puntualidad_pct == null ? "" : r.puntualidad_pct >= 90 ? "jornada__icono--ok" : "jornada__icono--alerta"}`}><Icon name="calendario" size={17} /></span>
+                <strong><Cifra valor={r.puntualidad_pct} sufijo="%" /></strong><span>En su franja</span>
+              </div>
+              <div className="jornada__metrica">
+                <span className={`jornada__icono ${r.dentro_tiempo_max_pct == null ? "" : r.dentro_tiempo_max_pct >= 90 ? "jornada__icono--ok" : "jornada__icono--alerta"}`}><Icon name="rayo" size={17} /></span>
+                <strong><Cifra valor={r.dentro_tiempo_max_pct} sufijo="%" /></strong><span>Dentro de {Math.round(maxSeg / 60)} min</span>
+              </div>
+            </div>
           </section>
 
           {p?.recientes?.length > 0 && (
             <section className="ag__recientes">
-              <h3>Últimas atenciones</h3>
+              <h3><Icon name="lista" size={15} /> Últimas atenciones</h3>
               <ul>
                 {p.recientes.map((t) => (
                   <li key={t.id}>
@@ -815,6 +837,15 @@ export default function AgentePage({ usuario, onSalir, onUsuario }) {
           onListo={(r) => { setPreparar(null); avisar(r.mensaje); refrescar(); }}
         />
       )}
+      <AsistenteIA
+        titulo="Copiloto IA"
+        subtitulo={p?.agente?.sede ? `Tu cola de ${p.agente.sede} en tiempo real` : undefined}
+        onAccion={(a) => {
+          if (a.tipo === "llamar") { setSeccion("atencion"); llamar(a.turno_id); }
+          else if (a.tipo === "preparar") { setSeccion("atencion"); abrirPreparar(a.turno_id); }
+          else if (a.tipo === "seccion") setSeccion(a.destino);
+        }}
+      />
       {cambiarClave && <CambiarMiClave onCerrar={() => setCambiarClave(false)} onListo={(u) => { onUsuario?.(u); avisar("Tu contraseña fue actualizada."); }} />}
     </div>
   );

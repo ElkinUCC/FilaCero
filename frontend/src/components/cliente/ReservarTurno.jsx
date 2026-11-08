@@ -530,7 +530,7 @@ export default function ReservarTurno({ onResumen, onConfirmado }) {
           <button type="button" className={`wz__modo ${r.presencial === false ? "activo" : ""}`} onClick={() => set("presencial", false)}>
             <Icon name="enviar" size={20} />
             <strong>En línea</strong>
-            <small>Lo radicamos ya y te respondemos aquí. Sin desplazarte.</small>
+            <small>Lo radicamos ya y ves la respuesta en “Consultar mi turno”.</small>
           </button>
           <button type="button" className={`wz__modo ${r.presencial === true ? "activo" : ""}`} onClick={() => set("presencial", true)}>
             <Icon name="usuario" size={20} />

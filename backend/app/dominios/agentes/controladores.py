@@ -96,7 +96,11 @@ def _accion(funcion, *args, mensaje):
 def panel():
     """Consola del asesor en una sola llamada: reloj, franja, cola con
     proyección de puntualidad y recomendación del asistente."""
-    agente = db.session.get(Usuario, _agente_id())
+    return jsonify(construir_panel(db.session.get(Usuario, _agente_id()))), 200
+
+
+def construir_panel(agente):
+    """Datos de la consola del asesor (los reutiliza el asistente IA)."""
     activo = turno_activo(agente.id)
     ahora = ahora_local()
 
@@ -134,52 +138,41 @@ def panel():
         )
         cola.append(datos)
 
-    return (
-        jsonify(
-            {
-                "ahora": ahora.isoformat(timespec="seconds"),
-                "agente": {
-                    "nombre": agente.nombre,
-                    "sede_id": agente.punto_asignado_id,
-                    "sede": agente.punto_asignado.nombre if agente.punto_asignado else None,
-                    "sede_direccion": (
-                        agente.punto_asignado.direccion if agente.punto_asignado else None
-                    ),
-                    "modulo": agente.modulo,
-                    "presencia": agente.presencia or "DISPONIBLE",
-                    "presencia_desde": a_iso_utc(agente.presencia_desde),
-                },
-                "error": error,
-                "en_horario": en_horario_de_atencion(),
-                "horario": info_horario(),
-                "max_atencion_seg": duracion_max_atencion_min() * 60,
-                "franja_actual": (
-                    estado_franja_actual(agente.punto_asignado_id, ahora)
-                    if agente.punto_asignado_id
-                    else None
-                ),
-                "actual": turno_response(activo) if activo else None,
-                "recomendacion": (
-                    recomendar(agente, activo, proyeccion, ahora) if not error else None
-                ),
-                "cola": cola,
-                "resumen": {
-                    "en_espera": len(cola),
-                    "en_espera_hoy": sum(1 for t in cola if t["es_hoy"]),
-                    "en_riesgo": sum(
-                        1 for t in cola if t["puntualidad"] in ("en_riesgo", "atrasado")
-                    ),
-                    "por_preparar": len(pendientes([p["turno"] for p in proyeccion])),
-                    "atendidos_hoy": sum(1 for t in mios_hoy if t.estado == "ATENDIDO"),
-                    "no_asistio_hoy": sum(1 for t in mios_hoy if t.estado == "NO_ASISTIO"),
-                    "promedio_hoy_segundos": _promedio_segundos(mios_hoy),
-                    **cumplimiento(mios_hoy),
-                },
-                "recientes": [turno_response(t) for t in recientes],
-            }
+    return {
+        "ahora": ahora.isoformat(timespec="seconds"),
+        "agente": {
+            "nombre": agente.nombre,
+            "sede_id": agente.punto_asignado_id,
+            "sede": agente.punto_asignado.nombre if agente.punto_asignado else None,
+            "sede_direccion": (agente.punto_asignado.direccion if agente.punto_asignado else None),
+            "modulo": agente.modulo,
+            "presencia": agente.presencia or "DISPONIBLE",
+            "presencia_desde": a_iso_utc(agente.presencia_desde),
+        },
+        "error": error,
+        "en_horario": en_horario_de_atencion(),
+        "horario": info_horario(),
+        "max_atencion_seg": duracion_max_atencion_min() * 60,
+        "franja_actual": (
+            estado_franja_actual(agente.punto_asignado_id, ahora)
+            if agente.punto_asignado_id
+            else None
         ),
-        200,
-    )
+        "actual": turno_response(activo) if activo else None,
+        "recomendacion": (recomendar(agente, activo, proyeccion, ahora) if not error else None),
+        "cola": cola,
+        "resumen": {
+            "en_espera": len(cola),
+            "en_espera_hoy": sum(1 for t in cola if t["es_hoy"]),
+            "en_riesgo": sum(1 for t in cola if t["puntualidad"] in ("en_riesgo", "atrasado")),
+            "por_preparar": len(pendientes([p["turno"] for p in proyeccion])),
+            "atendidos_hoy": sum(1 for t in mios_hoy if t.estado == "ATENDIDO"),
+            "no_asistio_hoy": sum(1 for t in mios_hoy if t.estado == "NO_ASISTIO"),
+            "promedio_hoy_segundos": _promedio_segundos(mios_hoy),
+            **cumplimiento(mios_hoy),
+        },
+        "recientes": [turno_response(t) for t in recientes],
+    }
 
 
 @agentes_bp.put("/sede")
@@ -731,6 +724,11 @@ def metricas_por_tramite():
 @requiere_rol("ADMIN", "SUPERVISOR")
 def en_vivo():
     """Estado actual de cada sede activa y las últimas reservas que llegaron."""
+    return jsonify(construir_en_vivo()), 200
+
+
+def construir_en_vivo():
+    """Foto de la operación en este momento (la reutiliza el asistente IA)."""
     ahora = ahora_local()
     sedes = Punto.query.filter_by(activo=True).order_by(Punto.nombre).all()
     resultado = []
@@ -782,25 +780,20 @@ def en_vivo():
         )
 
     recientes = Turno.query.order_by(Turno.hora_solicitud.desc(), Turno.id.desc()).limit(8).all()
-    return (
-        jsonify(
+    return {
+        "ahora": ahora.isoformat(timespec="seconds"),
+        "sedes": resultado,
+        "recientes": [
             {
-                "ahora": ahora.isoformat(timespec="seconds"),
-                "sedes": resultado,
-                "recientes": [
-                    {
-                        "id": t.id,
-                        "codigo": t.codigo,
-                        "sede": t.punto.nombre if t.punto else None,
-                        "tramite": t.tramite.nombre if t.tramite else None,
-                        "fecha": t.franja.fecha.isoformat(),
-                        "hora": f"{t.franja.hora_inicio:%H:%M}",
-                        "estado": t.estado,
-                        "reservado": a_iso_utc(t.hora_solicitud),
-                    }
-                    for t in recientes
-                ],
+                "id": t.id,
+                "codigo": t.codigo,
+                "sede": t.punto.nombre if t.punto else None,
+                "tramite": t.tramite.nombre if t.tramite else None,
+                "fecha": t.franja.fecha.isoformat(),
+                "hora": f"{t.franja.hora_inicio:%H:%M}",
+                "estado": t.estado,
+                "reservado": a_iso_utc(t.hora_solicitud),
             }
-        ),
-        200,
-    )
+            for t in recientes
+        ],
+    }

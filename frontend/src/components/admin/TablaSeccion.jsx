@@ -48,7 +48,8 @@ export default function TablaSeccion({ columnas, filas, cargando, vacio, etiquet
               {f.celdas.map((celda, i) => (
                 <td
                   key={i}
-                  className={`al-${alinear[i]} ${i === f.celdas.length - 1 ? "acciones" : ""}`}
+                  data-label={typeof columnas[i] === "string" ? columnas[i] : ""}
+                  className={`al-${alinear[i]} ${i === 0 ? "principal" : ""} ${i === f.celdas.length - 1 ? "acciones" : ""}`}
                   title={typeof celda === "string" || typeof celda === "number" ? String(celda) : undefined}
                 >
                   {celda}

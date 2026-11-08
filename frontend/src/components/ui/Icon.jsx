@@ -53,6 +53,10 @@ const PATHS = {
   megafono: <><path d="M4 10.2v3.6a1 1 0 0 0 1 1h2.2L15 19V5L7.2 9.2H5a1 1 0 0 0-1 1Z" /><path d="m7.8 14.8 1.4 4.7h2.4l-1.1-3.9M18.5 9.5a3.5 3.5 0 0 1 0 5" /></>,
   atender: <><path d="M4.8 13.5V12a7.2 7.2 0 0 1 14.4 0v1.5" /><rect x="3.5" y="13" width="3.8" height="5.8" rx="1.4" /><rect x="16.7" y="13" width="3.8" height="5.8" rx="1.4" /><path d="M18.6 18.8c0 1.5-1.8 2.2-4.6 2.2h-1.5" /></>,
   finalizado: <><circle cx="12" cy="12" r="8.5" /><path d="m8.3 12.2 2.6 2.6 4.9-5.1" /></>,
+  // Asistente IA
+  chispa: <><path d="M12 3.5 13.8 9a2 2 0 0 0 1.2 1.2l5.5 1.8-5.5 1.8a2 2 0 0 0-1.2 1.2L12 20.5 10.2 15A2 2 0 0 0 9 13.8L3.5 12 9 10.2A2 2 0 0 0 10.2 9L12 3.5Z" /><path d="M19 3v3M17.5 4.5h3" /></>,
+  microfono: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" /></>,
+  borrar: <><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5" /></>,
 };
 
 export default function Icon({ name, size = 18, className = "", title, strokeWidth = 1.8 }) {

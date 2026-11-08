@@ -4,8 +4,10 @@
 
 ## Qué incluye
 
-- Portal público para reservar, consultar y cancelar turnos con verificación OTP.
-- Consola del asesor para llamar, iniciar y finalizar atenciones.
+- Portal público para reservar, consultar y cancelar turnos con verificación OTP (diseño pensado primero para celular: la consulta muestra una lista a la vez y el detalle del turno aparece arriba, sin desplazarse).
+- Consola del asesor para llamar, iniciar y finalizar atenciones, con asistente de despacho, jornada del día y cola ordenada por urgencia.
+- **Asistente FilaCero IA**: chat en el panel administrativo (analista de operación) y en la consola del asesor (copiloto). Responde en lenguaje natural con los datos reales, muestra indicadores, propone acciones con un clic (llamar, alistar, abrir sección) y acepta dictado por voz. Funciona sin internet con un motor local y, opcionalmente, redacta con Claude si se configura `ANTHROPIC_API_KEY`.
+- Diseño responsive revisado para celular (360 px en adelante), tableta y computador: tablas que pasan a tarjetas, KPIs sin recortes y menús adaptables.
 - Vista de sala para mostrar turnos llamados.
 - Panel administrativo con resumen operativo, sedes, trámites, asesores, usuarios, historial y actividad.
 - Backend organizado por dominios: organizaciones, usuarios, sedes, trámites, franjas, turnos, agentes y auditoría.
@@ -23,6 +25,8 @@
 
 ```text
 FilaCero/
+├── docker-compose.yml
+├── PRESENTACION.md        # resumen del proyecto y guion para la sustentación
 ├── backend/
 │   ├── app/
 │   ├── migrations/
@@ -116,7 +120,7 @@ Desde `backend/`, con el entorno virtual activo:
 python -m pytest tests/ -v
 ```
 
-La última ejecución reportada por el equipo para esta entrega fue **117 passed**. Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+Última ejecución de esta entrega: **168 passed** (incluye 11 pruebas nuevas del asistente IA en `tests/test_asistente_ia.py`). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
 
 ## Simulación de operación
 
@@ -133,6 +137,28 @@ python simulacion.py --help
 ```
 
 Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en una base de pruebas y revisa las opciones de confirmación antes de ejecutarlos.
+
+## Asistente FilaCero IA
+
+| Dónde | Quién | Qué responde |
+|---|---|---|
+| Panel `/admin` (botón «FilaCero IA») | Administrador y supervisor | Resumen del periodo, puntualidad, asistencia, cancelaciones, hora pico, sedes (por nombre), trámites, taller, reclamos, asesores en vivo, proyección de mañana y recomendaciones priorizadas. |
+| Consola `/agente` (botón «Copiloto IA») | Asesor | Quién sigue, qué hacer ahora, quién está en riesgo, qué alistar, cómo va su jornada, cuánto queda de la franja y el detalle de una persona por su nombre. |
+
+- API: `GET /api/v1/asistente/sugerencias` y `POST /api/v1/asistente/preguntar` (requieren sesión; el rol sale del token).
+- **Motor local** (por defecto): entiende español natural sin tildes ni signos, detecta varias intenciones por pregunta y entidades (sede, trámite, persona), y responde con cifras reales, fichas de indicadores, botones de acción y preguntas de seguimiento.
+- **Modo Claude** (opcional): con `ANTHROPIC_API_KEY` en `backend/.env`, Claude redacta la respuesta a partir de los mismos datos. Se envían solo indicadores y primeros nombres (sin celulares, cédulas ni apellidos). Si el proveedor falla o tarda, responde el motor local.
+- El asistente no tiene acceso directo a la base de datos: reutiliza los servicios del tablero, la vista en vivo y la consola, con el mismo aislamiento multiempresa y permisos.
+
+## Despliegue con Docker
+
+```bash
+cp .env.docker.example .env              # DB_PASSWORD y DB_ROOT_PASSWORD
+cp backend/.env.example backend/.env     # SECRET_KEY, JWT_SECRET_KEY, CORS_ALLOWED_ORIGINS
+docker compose up -d --build             # MySQL + API (waitress) + web (nginx)
+```
+
+La API aplica las migraciones al arrancar y se niega a iniciar en producción con secretos débiles, OTP de prueba activo, depuración encendida o CORS abierto. Agrega HTTPS con tu proveedor (o un proxy como Caddy) y activa la cabecera HSTS en `frontend/nginx.conf`.
 
 ## Roles principales
 
@@ -152,6 +178,6 @@ Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en
 
 ## Estado y alcance
 
-Esta entrega es una **versión funcional de desarrollo/demo**, no una certificación de seguridad ni una declaración de preparación para producción. La suite de 117 pruebas fue ejecutada en el entorno local del proyecto según el reporte recibido; no se debe interpretar como sustituto de pruebas de integración contra MySQL, pruebas de carga, revisión de dependencias o pentest.
+La aplicación está lista para desplegarse (Docker, validación de configuración de producción, migraciones, cabeceras de seguridad y 168 pruebas automatizadas). Las pruebas corren sobre SQLite; no sustituyen pruebas de integración contra MySQL, pruebas de carga, revisión de dependencias ni un pentest.
 
 Antes de operar con datos reales se recomienda completar: pruebas de aislamiento multiempresa con MySQL, claves foráneas compuestas para integridad entre tenants, revisión de permisos por endpoint, integración real de SMS, despliegue HTTPS y auditoría de seguridad independiente.

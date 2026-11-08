@@ -206,7 +206,7 @@ def hallazgos(datos):
     r = datos["reclamos"]
     if r["sin_atender"]:
         add("alerta", f"{r['sin_atender']} reclamos sin atender",
-            "El minichat ya respondió lo básico; asigna un asesor para cerrarlos.")
+            "Asigna un asesor para responderlos: el cliente ve la respuesta al consultar con su celular.")
     e = datos["equipos"]
     if e["listos_por_recoger"] >= 20:
         add("atencion", f"{e['listos_por_recoger']} equipos listos sin recoger",

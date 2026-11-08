@@ -179,6 +179,18 @@ class Config:
     LIMITE_OTP_POR_MINUTO = _int("LIMITE_OTP_POR_MINUTO", 5)
     LIMITE_PUBLICO_POR_MINUTO = _int("LIMITE_PUBLICO_POR_MINUTO", 60)
     RATE_LIMIT_ACTIVO = _bool("RATE_LIMIT_ACTIVO", True)
+    LIMITE_ASISTENTE_POR_MINUTO = _int("LIMITE_ASISTENTE_POR_MINUTO", 30)
+
+    # ------------------------------------------------------------------
+    # Asistente FilaCero IA
+    # Sin ANTHROPIC_API_KEY responde el motor local (gratis y sin internet).
+    # Con clave, Claude redacta las respuestas a partir de los mismos datos.
+    # IA_PROVEEDOR=local fuerza el motor local aunque haya clave.
+    # ------------------------------------------------------------------
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    IA_PROVEEDOR = os.getenv("IA_PROVEEDOR", "auto").strip().lower()
+    IA_MODELO = os.getenv("IA_MODELO", "claude-haiku-5-5").strip()
+    IA_TIMEOUT_SEG = _int("IA_TIMEOUT_SEG", 12)
 
 
 def validar_configuracion(app):

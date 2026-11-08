@@ -9,6 +9,7 @@ import Usuarios from "../components/admin/Usuarios";
 import Marca from "../components/layout/Marca";
 import { SaltarAlContenido } from "../components/ui/Accesibilidad";
 import { CambiarMiClave } from "../components/ui/CambiarClave";
+import AsistenteIA from "../components/ui/AsistenteIA";
 import Icon from "../components/ui/Icon";
 import { useToast } from "../hooks/useToast";
 import Enlace from "../components/layout/Enlace";
@@ -103,6 +104,10 @@ export default function AdminPage({ usuario, params, onSalir, onUsuario }) {
         {contenido}
       </main>
       {menu && <div className="adm__sombra" onClick={() => setMenu(false)} />}
+      <AsistenteIA
+        titulo="FilaCero IA"
+        onAccion={(a) => { if (a.tipo === "navegar" && a.destino?.startsWith("/admin")) navegar(a.destino); }}
+      />
       {cambiarClave && (
         <CambiarMiClave
           onCerrar={() => setCambiarClave(false)}

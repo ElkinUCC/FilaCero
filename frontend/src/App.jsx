@@ -15,6 +15,8 @@ import NotFoundPage from "./pages/NotFoundPage";
 import { resolveRoute } from "./router/guards";
 import { navegar, useRutaActual } from "./router/navegacion";
 import { matchRoute } from "./router/routes";
+// Última capa de estilos: va después de las hojas de cada página.
+import "./css/responsive.css";
 
 export default function App() {
   const ruta = useRutaActual();

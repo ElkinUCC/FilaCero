@@ -667,7 +667,7 @@
 @media (max-width: 1100px) {
   .tablero__fila, .tablero__fila--ancha, .tablero .rejilla-vivo { grid-template-columns: 1fr; }
 }
-.tablero .rejilla-vivo { grid-template-columns: minmax(0, 1fr) 320px; }
+@media (min-width: 1101px) { .tablero .rejilla-vivo { grid-template-columns: minmax(0, 1fr) 320px; } }
 .tablero .tabla--vivo th, .tablero .tabla--vivo td { padding-right: 8px; padding-left: 8px; }
 .tablero .tabla--vivo .ocupacion { min-width: 150px; }
 .mini__pista { min-width: 56px; }

@@ -1,0 +1,304 @@
+/* =====================================================================
+   FILACERO · CAPA FINAL RESPONSIVE
+   Se importa después de todas las hojas de página (App.jsx), así que aquí
+   viven las reglas que garantizan que ninguna vista se recorte en celular,
+   tableta o computador. Puntos de corte:
+     ≤ 1100 px  tableta / portátil pequeño
+     ≤ 760 px   celular grande
+     ≤ 420 px   celular pequeño (360–414 px)
+   ===================================================================== */
+
+/* ---------- Globales ---------- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+img, svg { max-width: 100%; }
+.tabla-envoltura { position: relative; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.sr {
+  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+/* Botones y campos con área táctil suficiente en pantallas táctiles. */
+@media (pointer: coarse) {
+  .btn, .icono-btn, .segmentos button { min-height: 40px; }
+  .icono-btn { min-width: 40px; }
+}
+
+/* =====================================================================
+   PANEL ADMINISTRATIVO
+   ===================================================================== */
+.adm__principal { min-width: 0; overflow-x: clip; }
+.tablero__kpis > * { min-width: 0; }
+.tarjeta__valor, .heroe__valor { overflow-wrap: anywhere; }
+
+@media (max-width: 1100px) {
+  .tablero .rejilla-vivo { grid-template-columns: 1fr; }
+}
+
+/* Encabezado: filtros en una fila que se adapta */
+@media (max-width: 760px) {
+  .adm__principal { padding: 12px 12px 28px; }
+  .adm__hamburguesa { position: sticky; top: 10px; z-index: 30; box-shadow: 0 4px 14px rgb(15 42 46 / 12%); }
+  .adm__cabeza h1 { font-size: 24px; }
+  .adm__cabeza p { font-size: 12.5px; }
+  .tablero__filtros { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; gap: 8px; justify-content: stretch; }
+  .tablero__filtros .dd { min-width: 0; width: 100%; }
+  .tablero__filtros .segmentos { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+  .tablero__filtros .segmentos button { min-width: 0; padding: 0 4px; }
+  .tablero__filtros > .estado { grid-column: 1 / -1; justify-self: start; }
+
+  /* KPIs: 2 columnas parejas, textos que nunca se cortan */
+  .tablero__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tablero__kpis .heroe { grid-column: 1 / -1; grid-row: auto; padding: 16px; }
+  .heroe__valor { font-size: 44px; }
+  .heroe__pie { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .heroe__pie dd { font-size: 18px; }
+  .tarjeta { padding: 12px 12px 10px; gap: 4px; }
+  .tarjeta__etiqueta { font-size: 11.5px; line-height: 1.25; }
+  .tarjeta__valor { font-size: 23px; }
+  .tarjeta__nota { font-size: 11px; line-height: 1.3; }
+  .delta { flex-wrap: wrap; font-size: 11.5px; line-height: 1.25; }
+  .delta small { display: none; }
+  .tarjeta .spark { height: 24px; }
+
+  .panel { padding: 14px 12px; border-radius: 14px; }
+  .panel__cabeza { gap: 4px 10px; }
+  .panel:not(.panel--tabla) .tabla-envoltura { margin: 0 -12px -14px; }
+  .panel:not(.panel--tabla) .tabla th:first-child,
+  .panel:not(.panel--tabla) .tabla td:first-child { padding-left: 12px; }
+  .leyenda--linea { margin-left: 0; width: 100%; order: 3; }
+  .mini-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mini-kpis strong { font-size: 19px; }
+  .barras li { grid-template-columns: minmax(0, 1fr) 70px auto; gap: 8px; }
+  .hallazgo { padding: 9px 10px; }
+
+  /* Sedes ahora: la tabla ancha pasa a tarjetas por sede */
+  .tabla--vivo, .tabla--vivo tbody, .tabla--vivo tr, .tabla--vivo th, .tabla--vivo td { display: block; white-space: normal; }
+  .tabla--vivo thead { display: none; }
+  .tabla--vivo tr { padding: 12px; border-top: 1px solid #e3ebe8; }
+  .tabla--vivo tbody tr:hover td, .tabla--vivo tbody tr:hover th { background: transparent; }
+  .tabla--vivo th[scope="row"] { padding: 0 0 8px !important; border: 0; font-size: 15px; }
+  .tabla--vivo td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0 !important; border: 0; font-size: 13px; }
+  .tabla--vivo td::before { flex: none; color: var(--tinta-3); font-size: 11.5px; font-weight: 650; }
+  .tabla--vivo td:nth-of-type(1)::before { content: "Franja en curso"; }
+  .tabla--vivo td:nth-of-type(2)::before { content: "Próximo turno"; }
+  .tabla--vivo td:nth-of-type(3)::before { content: "Esperan hoy"; }
+  .tabla--vivo td:nth-of-type(4)::before { content: "En riesgo"; }
+  .tabla--vivo td:nth-of-type(5)::before { content: "Asesores"; }
+  .tabla--vivo td[colspan]::before { content: none; }
+  .tabla--vivo .ocupacion { min-width: 0; width: 60%; }
+  .tabla--vivo .asesores { text-align: right; }
+  .tabla--vivo .asesores ul { text-align: left; }
+
+  /* Ranking de sedes: tarjetas compactas */
+  .tabla--ranking, .tabla--ranking tbody, .tabla--ranking tr, .tabla--ranking th, .tabla--ranking td { display: block; white-space: normal; }
+  .tabla--ranking thead { display: none; }
+  .tabla--ranking tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; padding: 12px; border-top: 1px solid #e3ebe8; }
+  .tabla--ranking th[scope="row"] { grid-column: 1 / -1; padding: 0 !important; border: 0; font-size: 14.5px; }
+  .tabla--ranking td { padding: 0 !important; border: 0; text-align: left !important; }
+  .tabla--ranking td::before { display: block; margin-bottom: 2px; color: var(--tinta-3); font-size: 11px; font-weight: 650; }
+  .tabla--ranking td:nth-of-type(1)::before { content: "Turnos"; }
+  .tabla--ranking td:nth-of-type(2)::before { content: "Asistencia"; }
+  .tabla--ranking td:nth-of-type(3)::before { content: "En su franja"; }
+  .tabla--ranking td:nth-of-type(4)::before { content: "Atención promedio"; }
+  .tabla--ranking td[colspan]::before { content: none; }
+  .tabla--ranking .mini { min-width: 0; }
+
+  /* Tabla estándar de secciones (Sedes, Trámites, Asesores, Usuarios,
+     Historial, Actividad): en celular cada fila es una tarjeta. */
+  .tabla--seccion { min-width: 0; table-layout: auto; }
+  .tabla--seccion colgroup, .tabla--seccion thead { display: none; }
+  .tabla--seccion, .tabla--seccion tbody, .tabla--seccion tr, .tabla--seccion td { display: block; width: 100%; }
+  .tabla--seccion tr { position: relative; padding: 12px 14px; border-bottom: 1px solid #e3ebe8; }
+  .tabla--seccion tbody tr:hover td { background: transparent; }
+  .tabla--seccion td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 !important; border: 0 !important; text-align: right !important; font-size: 13px; }
+  .tabla--seccion td::before { content: attr(data-label); flex: none; max-width: 45%; color: var(--tinta-3); font-size: 11.5px; font-weight: 650; text-align: left; }
+  .tabla--seccion td[data-label=""]::before { content: none; }
+  .tabla--seccion td.principal { justify-content: flex-start; padding: 0 44px 6px 0 !important; text-align: left !important; font-size: 14.5px; }
+  .tabla--seccion td.principal::before { content: none; }
+  .tabla--seccion td.acciones { width: 100%; justify-content: flex-end; gap: 6px; padding-top: 8px !important; }
+  .tabla--seccion td.acciones .icono-btn { opacity: 1; border: 1px solid #e0e9e6; }
+  .tabla--seccion td.acciones::before { content: none; }
+  .tabla--seccion td[colspan] { justify-content: center; text-align: center !important; }
+  .tabla--seccion td[colspan]::before { content: none; }
+  .tabla--seccion tr.inactivo td:not(:nth-last-child(-n + 2)) { opacity: 0.6; }
+  .enlace-detalle__flecha { opacity: 1; }
+
+  .barra-tabla { padding: 10px 12px; }
+  .barra-tabla > * { max-width: 100%; }
+  .barra-tabla--filtros > * { flex: 1 1 100%; }
+  .barra-tabla .segmentos { display: flex; width: 100%; overflow-x: auto; }
+  .barra-tabla .segmentos button { flex: 1 0 auto; }
+  .paginador { flex-wrap: wrap; gap: 8px; }
+}
+
+@media (max-width: 420px) {
+  .tablero__kpis { gap: 8px; }
+  .heroe__valor { font-size: 38px; }
+  .heroe__pie dt { font-size: 10px; }
+  .tarjeta__valor { font-size: 21px; }
+  .segmentos button { font-size: 12px; }
+}
+
+/* =====================================================================
+   CONSOLA DEL ASESOR
+   ===================================================================== */
+/* Pestañas: barra limpia, con contador y acceso al asistente IA */
+.ag__tabs {
+  position: sticky; top: 70px; z-index: 15; align-items: center; gap: 6px;
+  margin: 0; padding: 10px clamp(14px, 2.4vw, 34px);
+  border-bottom: 1px solid #dfe9e5; background: rgb(241 246 244 / 92%); backdrop-filter: blur(8px);
+}
+.ag__tabs button {
+  height: 40px; padding: 0 14px; border: 1px solid transparent; border-radius: 10px;
+  white-space: nowrap; flex: none;
+}
+.ag__tabs button.activo { border-color: #dbe7e3; border-bottom-color: #dbe7e3; background: #fff; box-shadow: 0 2px 8px rgb(20 55 55 / 7%), inset 0 -3px 0 var(--ambar); }
+.ag__tabs .ag__ia { margin-left: auto; }
+
+/* Jornada del asesor */
+.jornada { padding: 14px 16px 16px; border: 1px solid #e0eae6; border-radius: 16px; background: #fff; box-shadow: 0 4px 16px rgb(20 55 55 / 3%); }
+.jornada__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.jornada__cabeza h2 { display: inline-flex; align-items: center; gap: 7px; color: #183b3f; font-size: 14.5px; }
+.jornada__cabeza > span { color: var(--tinta-3); font-size: 12.5px; }
+.jornada__metricas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.jornada__metrica {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 9px;
+  min-width: 0; padding: 10px 12px; border-radius: 12px; background: #f4f8f6;
+}
+.jornada__metrica > strong { color: #163d40; font-size: 21px; font-weight: 760; letter-spacing: -.6px; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jornada__metrica > span:last-child { grid-column: 1 / -1; color: var(--tinta-3); font-size: 11.5px; line-height: 1.25; }
+.jornada__icono { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: #e3eeea; color: var(--petroleo); }
+.jornada__icono--ok { background: var(--verde-claro); color: var(--verde); }
+.jornada__icono--mal { background: #f3e7e7; color: #8c3a3a; }
+.jornada__icono--alerta { background: var(--naranja-claro); color: var(--naranja); }
+.ag__recientes h3 { display: flex; align-items: center; gap: 7px; }
+
+@media (max-width: 1350px) {
+  .jornada__metricas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Tableta: una columna y el orden pensado para atender rápido:
+   asistente → puesto → cola → jornada → últimas atenciones. */
+@media (max-width: 1050px) {
+  .ag__cuerpo { display: flex; flex-direction: column; }
+  .ag__principal { display: contents; }
+  .ag__principal > .asistente { order: 1; }
+  .ag__principal > .puesto { order: 2; }
+  .ag__cuerpo > .cola { order: 3; position: static; max-height: none; }
+  .ag__principal > .jornada { order: 4; }
+  .ag__principal > .ag__recientes { order: 5; }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .ag__barra { flex-wrap: wrap; height: auto; min-height: 64px; row-gap: 10px; padding: 10px 18px; }
+  .ag__franja-chip { order: 5; margin-left: 0; }
+  .ag__reloj { margin-left: auto; font-size: 24px; }
+  .ag__tabs { top: 0; position: relative; }
+}
+
+@media (max-width: 760px) {
+  .ag__barra {
+    display: grid; grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) 40px 40px 40px;
+    grid-template-areas: "marca sede sede voz clave salir" "pres pres franja franja franja franja";
+    gap: 8px; align-items: center; height: auto; padding: 10px 12px;
+  }
+  .ag__barra > .marca { grid-area: marca; }
+  .ag__barra .marca__nombre { display: none; }
+  .ag__sede { grid-area: sede; min-width: 0; padding-left: 10px; }
+  .ag__sede .dd { min-width: 0; }
+  .ag__sede small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ag__reloj { display: none; }
+  .ag__barra > .presencia { grid-area: pres; min-width: 0; }
+  .ag__franja-etq { display: none; }
+  .ag__barra .presencia__boton { width: 100%; justify-content: space-between; }
+  .ag__franja-chip { grid-area: franja; justify-content: space-between; gap: 6px; min-width: 0; margin: 0; padding: 7px 10px; font-size: 12.5px; white-space: nowrap; }
+  .ag__franja-chip > span { overflow: hidden; text-overflow: ellipsis; }
+  .ag__voz { grid-area: voz; justify-content: center; width: 40px; height: 38px; padding: 0; }
+  .ag__barra > .ag__salir { width: 40px; height: 38px; }
+  .ag__voz span { display: none; }
+  .ag__barra > .ag__salir:nth-last-child(2) { grid-area: clave; }
+  .ag__barra > .ag__salir:last-child { grid-area: salir; }
+  .ag__tabs { top: 0; position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px 12px; }
+  .ag__tabs::-webkit-scrollbar { display: none; }
+  .ag__tabs button { justify-content: center; gap: 5px; padding: 0 6px; font-size: 13px; }
+  .ag__cuerpo { gap: 12px; padding: 12px 12px 24px; }
+  .ag__seccion { padding: 12px 12px 28px; }
+
+  .asistente { grid-template-columns: auto minmax(0, 1fr); padding: 14px; }
+  .asistente__acciones { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .asistente__acciones .btn { width: 100%; justify-content: center; }
+
+  .puesto__libre { flex-wrap: wrap; }
+  .puesto__libre .btn--grande { width: 100%; justify-content: center; }
+  .puesto__acciones { display: grid; grid-template-columns: 1fr; }
+  .puesto__acciones .btn { width: 100%; justify-content: center; }
+  .puesto__datos { flex-wrap: wrap; }
+
+  .jornada { padding: 12px; }
+  .jornada__metricas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .jornada__metrica:last-child { grid-column: 1 / -1; }
+
+  /* Cola: hora | persona | acciones, y el estado debajo del nombre */
+  .cola { padding: 12px; }
+  .cola__item {
+    grid-template-columns: 46px minmax(0, 1fr) auto auto !important;
+    grid-template-areas: "hora info prep llamar" "hora punt punt punt";
+    row-gap: 6px; padding: 10px 6px;
+  }
+  .cola__item > .cola__hora { grid-area: hora; align-self: start; padding-top: 2px; }
+  .cola__item > .cola__info { grid-area: info; }
+  .cola__item > :nth-child(3) { grid-area: prep; }
+  .cola__item > .punt { grid-area: punt; justify-self: start; }
+  .cola__item > :last-child { grid-area: llamar; }
+  .cola__info strong, .cola__info small { white-space: normal; overflow-wrap: anywhere; }
+  .cola__franja-fila { flex-wrap: wrap; gap: 2px 10px; }
+  .cola__info .cola__equipo { display: block; }
+  .cola__info .cola__equipo svg { vertical-align: -2px; margin-right: 3px; }
+}
+
+@media (max-width: 420px) {
+  .ag__tabs button svg { display: none; }
+  .jornada__metrica > strong { font-size: 19px; }
+}
+
+/* =====================================================================
+   PORTAL DEL CIUDADANO
+   ===================================================================== */
+@media (max-width: 960px) {
+  .portal__contenido { padding: 18px 14px; }
+}
+@media (max-width: 420px) {
+  .portal__barra { padding: 0 12px; }
+  .portal__personal { padding: 0 10px; font-size: 12.5px; }
+  .portal__intro h1 { font-size: 21px; }
+  .wz__titulo { font-size: 19px; }
+  .wz__codigo-input { width: 100%; max-width: 220px; letter-spacing: 8px; }
+}
+
+/* =====================================================================
+   MODALES Y PANEL DE DETALLE: siempre dentro de la pantalla
+   ===================================================================== */
+@media (max-width: 620px) {
+  .modal, .panel-detalle, .detalle { max-width: 100vw; }
+}
+
+/* Tablero del taller (Equipos): en celular las columnas se deslizan de a una */
+@media (max-width: 760px) {
+  .taller__tablero {
+    grid-template-columns: repeat(4, 82%); scroll-snap-type: x mandatory; scroll-padding: 0 12px;
+    margin: 0 -12px; padding: 0 12px 8px; overscroll-behavior-x: contain;
+  }
+  .taller__col { scroll-snap-align: start; }
+  .taller__acciones { flex-wrap: wrap; }
+  .taller__acciones > * { flex: 1 1 100%; }
+  .bandeja, .bandeja__cuerpo { min-width: 0; }
+}
+
+/* Bandeja de reclamos del asesor: en celular las insignias bajan debajo del título */
+@media (max-width: 620px) {
+  .bandeja__cabeza { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 10px; padding: 12px; }
+  .bandeja__cabeza > .bandeja__icono { grid-row: 1 / span 2; align-self: start; }
+  .bandeja__cabeza > .bandeja__texto { grid-column: 2; }
+  .bandeja__cabeza > .fc-icon:last-child { grid-column: 3; grid-row: 1; }
+  .bandeja__cabeza > .punto-nuevo, .bandeja__cabeza > .prep, .bandeja__cabeza > .estado { grid-column: 2; justify-self: start; }
+  .bandeja__cabeza > .prep + .estado, .bandeja__cabeza > .punto-nuevo + .estado { margin-top: -2px; }
+}

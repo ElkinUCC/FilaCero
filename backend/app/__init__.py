@@ -113,6 +113,7 @@ def create_app(test_config=None):
     from app.dominios.usuarios.controladores import usuarios_bp
     from app.dominios.usuarios.modelos import Usuario  # noqa: F401
     from app.dominios.organizaciones.controladores import organizaciones_bp
+    from app.dominios.asistente.controladores import asistente_bp
 
     app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
     app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
@@ -128,6 +129,7 @@ def create_app(test_config=None):
     app.register_blueprint(organizaciones_bp, url_prefix="/api/v1/organizacion")
     app.register_blueprint(equipos_bp, url_prefix="/api/v1/equipos")
     app.register_blueprint(reclamos_bp, url_prefix="/api/v1/reclamos")
+    app.register_blueprint(asistente_bp, url_prefix="/api/v1/asistente")
 
     _registrar_manejadores(app)
 
