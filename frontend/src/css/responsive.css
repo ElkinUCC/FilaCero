@@ -1,6 +1,6 @@
 /* =====================================================================
    FILACERO · CAPA FINAL RESPONSIVE
-   Se importa después de todas las hojas de página (App.jsx), así que aquí
+   Se importa después de todas las hojas de página (ver index.html), así que aquí
    viven las reglas que garantizan que ninguna vista se recorte en celular,
    tableta o computador. Puntos de corte:
      ≤ 1100 px  tableta / portátil pequeño

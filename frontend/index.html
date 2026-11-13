@@ -2,13 +2,32 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FilaCero · Turnos</title>
     <meta name="theme-color" content="#0f2a2e" />
+    <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
+
+    <!-- Estilos: HTML + CSS + JavaScript puro (sin frameworks ni librerías). -->
+    <!-- El orden importa: base y componentes primero, cada página después y responsive al final. -->
+    <link rel="stylesheet" href="src/css/index.css" />
+    <link rel="stylesheet" href="src/css/ui.css" />
+    <link rel="stylesheet" href="src/css/cliente.css" />
+    <link rel="stylesheet" href="src/css/sala.css" />
+    <link rel="stylesheet" href="src/css/agente.css" />
+    <link rel="stylesheet" href="src/css/admin.css" />
+    <link rel="stylesheet" href="src/css/asistente.css" />
+    <link rel="stylesheet" href="src/css/paginas.css" />
+    <link rel="stylesheet" href="src/css/vanilla.css" />
+    <link rel="stylesheet" href="src/css/responsive.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <!-- Contenedor único del SPA: main.js pinta aquí la página de la ruta actual. -->
+    <div id="app"></div>
+
+    <!-- Avisos breves (toasts) y aviso de servidor lento. -->
+    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+
+    <!-- Configuración (URL del backend y organización) y punto de entrada. -->
+    <script type="module" src="src/js/main.js"></script>
   </body>
 </html>

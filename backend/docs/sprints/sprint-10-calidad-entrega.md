@@ -19,7 +19,7 @@ Preparar una versión demostrable y mantenible, verificando integración, reglas
 
 ## Arquitectura final
 FilaCero conserva una arquitectura de monolito modular:
-- **Frontend:** React.
+- **Frontend:** HTML + CSS + JavaScript puro (sin frameworks).
 - **Backend:** API REST con Flask.
 - **Dominios:** usuarios, sedes, trámites, franjas, turnos y agentes.
 - **Persistencia:** SQLAlchemy sobre MySQL.

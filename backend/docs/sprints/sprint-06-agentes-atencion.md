@@ -25,7 +25,7 @@ Permitir que los agentes gestionen la cola de turnos de su sede y ejecuten el ci
 
 ## Arquitectura
 ```text
-Agente -> React -> API Flask -> JWT/Rol -> Servicio de atención
+Agente -> Frontend JS -> API Flask -> JWT/Rol -> Servicio de atención
        -> SQLAlchemy -> MySQL
 ```
 

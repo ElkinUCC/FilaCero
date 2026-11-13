@@ -125,7 +125,7 @@ existentes (incluida SQLite) y MySQL, ejecuta `flask db upgrade` antes de usar
 - El contexto se obtiene del claim firmado `org_id` del JWT para usuarios autenticados.
 - Las rutas públicas reciben `X-Organization-Slug`; si no se envía, usan `DEFAULT_ORGANIZATION_SLUG`.
 - El ORM aplica filtros de organización automáticamente a consultas y operaciones masivas, y valida las escrituras.
-- El slug del frontend se configura con `VITE_ORGANIZATION_SLUG`.
+- El slug del frontend se configura en `ORGANIZATION_SLUG` de `frontend/src/js/config.js`.
 - La migración `f6b8c0d2e4a6` crea `organizaciones`, registra `filacero-demo` y asigna los datos existentes a esa organización.
 - Las sesiones anteriores a esta versión deben renovarse porque los JWT ahora incluyen `org_id`.
 
@@ -140,7 +140,7 @@ python scripts\crear_cuenta.py admin@cooperativa.com ADMIN "Admin Cooperativa" -
 El segundo comando crea la cuenta administradora en el tenant indicado; reemplaza `2` por el ID que informó el primer comando. Configura el despliegue frontend de esa organización con:
 
 ```env
-VITE_ORGANIZATION_SLUG=cooperativa-norte
+ORGANIZATION_SLUG: "cooperativa-norte"   // frontend/src/js/config.js
 ```
 
 `CUENTAS_PROTEGIDAS` evita que la simulación cambie o elimine esas cuentas, pero

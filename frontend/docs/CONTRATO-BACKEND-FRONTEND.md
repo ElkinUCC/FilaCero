@@ -2,7 +2,7 @@
 
 ## 1. Reglas generales
 
-- **Base:** `VITE_API_URL` (en desarrollo `http://127.0.0.1:5000/api/v1`).
+- **Base:** `API_URL` de `frontend/src/js/config.js` (en desarrollo `http://127.0.0.1:5000/api/v1`).
 - **Autenticación:** `Authorization: Bearer <access_token>`; lo agrega `http.js` si hay sesión. Las rutas públicas se llaman con `{ sinToken: true }`.
 - **Éxito:** `{"success": true, ...datos}`. Los datos van en la raíz (por ejemplo `turno`, `puntos` o `access_token`).
 - **Error:** `{"success": false, "error": "mensaje para la persona", "detalles"?: {"campo": ["..."]}}`. `formatApiError` muestra `error` y, si existe, el primer detalle.

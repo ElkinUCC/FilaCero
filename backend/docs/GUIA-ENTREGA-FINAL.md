@@ -47,12 +47,14 @@ python run.py
 
 ## 3. Frontend
 
-Sin dependencias nuevas:
+HTML + CSS + JavaScript puro, sin instalar nada:
 
 ```powershell
 cd frontend
-npm run dev
+python -m http.server 5173
 ```
+
+O abre `frontend/index.html` con Live Server de VS Code.
 
 Recarga con **Ctrl+F5**.
 

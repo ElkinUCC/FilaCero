@@ -17,7 +17,7 @@ Integrar los recorridos de cliente, agente y administrador con la API REST y con
 | HU-43 | Todos | Como usuario, quiero mensajes claros de carga, éxito y error. | Cada operación informa su estado y libera controles al terminar. |
 
 ## Alcance
-- Integración React con endpoints Flask.
+- Integración del frontend (HTML + CSS + JS puro) con endpoints Flask.
 - Gestión centralizada de solicitudes y JWT.
 - Flujo de reserva del cliente.
 - Manejo de estados de carga, error y resultados vacíos.

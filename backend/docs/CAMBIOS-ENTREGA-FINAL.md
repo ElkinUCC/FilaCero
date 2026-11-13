@@ -23,7 +23,7 @@ Migración `d2f4b6c8e0a1`. Pruebas: 155 en verde (+3).
 | Cédula para dejar y recoger | `usuarios.documento`. Recibir un equipo exige la cédula del titular; **entregar** la pide en un modal y el servidor la compara. Cédulas inventadas para todos los clientes de la simulación |
 | Códigos coherentes | Un solo formato visible: **TU-XXXXXX** (turno), **EQ-XXXXXX** (equipo), **RC-XXXXXX** (reclamo), en portal, consola, sala y panel; la consulta acepta el código corto |
 | Tablero ejecutivo (admin = supervisor sin edición) | `GET /admin/agentes/tablero` + Resumen nuevo: indicador principal con meta, 6 tarjetas con contador animado, variación vs. periodo anterior y tendencia; turnos por día (actual vs. anterior) con cruz y tooltip; demanda por hora; desempeño por sede; taller y reclamos; filtro por sede; Hoy/7/30/90 días; tabla y CSV |
-| Seguridad | Revisión STRIDE en `docs/arquitectura/11-seguridad.md`: verificación antes de buscar en consultas públicas (sin enumeración), cédula enmascarada, depurador solo en loopback, rango del tablero acotado; `pip-audit` y `npm audit` sin vulnerabilidades |
+| Seguridad | Revisión STRIDE en `docs/arquitectura/11-seguridad.md`: verificación antes de buscar en consultas públicas (sin enumeración), cédula enmascarada, depurador solo en loopback, rango del tablero acotado; `pip-audit` sin vulnerabilidades (el frontend no tiene dependencias) |
 | Manual | `docs/MANUAL_FilaCero.html`, mismo formato que el manual de referencia |
 
 Pruebas: 152 en verde (+5). ADR-010 revisado, ADR-015 nuevo, escenario E-1c en evolución.
@@ -33,7 +33,7 @@ Pruebas: 152 en verde (+5). ADR-010 revisado, ADR-015 nuevo, escenario E-1c en e
 | Pedido | Implementación |
 |---|---|
 | Quitar Accesibilidad | Menú retirado de portal, consola, panel y sala; se limpian preferencias guardadas. La voz del llamado del asesor se mantiene |
-| Vista del cliente más dinámica | `ReservarTurno.jsx` reescrito como **asistente paso a paso** con transiciones: ¿qué necesitas? → tu celular → (equipo / televisor / reclamo) → cuándo → confirmar. Horarios como botones (mañana, tarde, noche) |
+| Vista del cliente más dinámica | `reservarTurno.js` reescrito como **asistente paso a paso** con transiciones: ¿qué necesitas? → tu celular → (equipo / televisor / reclamo) → cuándo → confirmar. Horarios como botones (mañana, tarde, noche) |
 | Recoger un producto: buscar por celular y elegir cuál | Tras verificar el celular se consultan sus equipos (`POST /equipos/publico/mios`); solo los **LISTO** se pueden elegir, los demás muestran su avance; la sede se fija sola; el nombre se completa si ya es cliente |
 | Garantía: marca y fecha ≤ 1 año | Paso "Tu televisor": marcas, fecha de compra validada en vivo y en el servidor (365 días), falla. Al reservar se crea el equipo "Por recibir" |
 | Reclamos separados de garantía, en línea o en persona | Trámite "Reclamos": motivo, sede, equipo opcional, texto; **En línea** radica sin turno; **En persona** radica y reserva |
@@ -62,3 +62,14 @@ Pruebas: `tests/test_equipos_reclamos.py` (9 casos). Simulación: equipos, recla
 
 155 pruebas en verde · 50/50 comprobaciones de punta a punta contra MySQL · 0 sobreventas en la prueba de concurrencia ·
 15 ADR · documento de arquitectura en `docs/arquitectura/`.
+
+## Ajuste final: frontend sin frameworks (requisito del curso)
+
+| Cambio | Detalle |
+|---|---|
+| Frontend reescrito en HTML + CSS + JavaScript puro | Se eliminaron React, Vite, `package.json`, `node_modules` y `dist/`. Misma funcionalidad: portal, consola del asesor, panel, sala y asistente IA. Estructura igual a la referencia: `main.js`, `router/`, `pages/` (`XPage` + `mountXPage`), `components/`, `api/`, `auth/`, `utils/` |
+| Rutas con `#/` | Funcionan en cualquier servidor estático (Live Server, `python -m http.server`, nginx) |
+| Configuración | `frontend/src/js/config.js` reemplaza los antiguos `.env` de Vite |
+| Docker | `frontend/Dockerfile` ya no compila: nginx sirve los archivos tal cual |
+| Diagramas UML | `docs/diagramas/`: casos de uso, clases, entidad-relación, paquetes, arquitectura, objetos y dos de secuencia (PNG, SVG y PlantUML) |
+| Guion del video | `docs/entrega/GUION-VIDEO.md` |

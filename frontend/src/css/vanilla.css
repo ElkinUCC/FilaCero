@@ -1,0 +1,88 @@
+/* =========================================
+   FILACERO · AJUSTES DEL FRONTEND VANILLA
+   (desplegables nativos y repintado sin animaciones repetidas)
+   ========================================= */
+
+/* ---------- Desplegables nativos <select> con el estilo de los campos ---------- */
+.campo--select { padding-right: 8px; }
+.campo--select select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2351676b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.campo--select select:disabled { cursor: not-allowed; color: var(--tinta-3); }
+.campo--select:has(select:disabled) { background: var(--menta); }
+.campo--select select:focus-visible { outline: none; }
+label.dd { display: block; }
+
+/* Variante oscura para la barra de la consola del asesor */
+.campo--barra {
+  min-height: 40px;
+  border-color: #3c6a66;
+  background: rgb(255 255 255 / 6%);
+  color: #a9c1bd;
+}
+.campo--barra select {
+  height: 38px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 650;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a9c1bd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.campo--barra select option { color: var(--tinta); }
+.ag__sede .campo--barra { min-width: 210px; }
+
+/* Compacto para filtros de tablas y del tablero */
+.campo--compacto { min-height: 42px; }
+.campo--compacto select { height: 40px; }
+
+/* ---------- Repintado ----------
+   Las páginas se vuelven a pintar cuando llegan datos nuevos (cada pocos
+   segundos). La clase .repintado evita que las animaciones de entrada se
+   repitan en cada actualización; las animaciones de "aviso" se conservan. */
+.repintado .wz__paso,
+.repintado .wz__opcion,
+.repintado .wz__equipo,
+.repintado .wz__codigo,
+.repintado .wz__verificado,
+.repintado .wz__garantia,
+.repintado .wz__exito,
+.repintado .wz__hora-elegida,
+.repintado .ct__cel,
+.repintado .ficha--impresa,
+.repintado .puesto__contenido,
+.repintado .puesto__cierre,
+.repintado .ag__seccion,
+.repintado .bandeja__cuerpo,
+.repintado .chat__msg,
+.repintado .heroe,
+.repintado .tarjeta,
+.repintado .hallazgo,
+.repintado .graf__barra,
+.repintado .sala__codigo,
+.repintado .alerta {
+  animation: none !important;
+}
+.repintado .graf__trazo,
+.repintado .spark__linea {
+  animation: none !important;
+  stroke-dashoffset: 0;
+}
+.repintado .sello__circulo,
+.repintado .sello__check {
+  animation: none !important;
+  stroke-dashoffset: 0;
+}
+
+/* Mensajes del asistente ya mostrados: no se vuelven a animar */
+.ia__msg--visto { animation: none !important; }
+
+/* ---------- Pequeños ajustes ---------- */
+.saltar:focus { z-index: 100; }
+.graf { position: relative; }
+[hidden] { display: none !important; }
