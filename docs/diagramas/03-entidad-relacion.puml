@@ -1,0 +1,131 @@
+@startuml entidad-relacion
+!include _estilo.iuml
+title FilaCero · Modelo entidad-relación (MySQL 8 · InnoDB · utf8mb4)
+hide circle
+skinparam linetype ortho
+skinparam EntityBackgroundColor #F4F8F8
+skinparam EntityBorderColor #0F2A2E
+
+entity "organizaciones" as org {
+  * id : INT <<PK>>
+  --
+  * nombre : VARCHAR(160)
+  * slug : VARCHAR(80) <<UK>>
+  zona_horaria, idioma, moneda, plan
+  estado : VARCHAR(20)
+  configuracion : JSON
+}
+entity "usuarios" as usu {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  correo : VARCHAR(120) <<UK>>
+  celular : VARCHAR(20) <<IDX>>
+  documento : VARCHAR(20) <<IDX>>
+  * nombre : VARCHAR(100)
+  password_hash : VARCHAR(255)
+  * rol : VARCHAR(20)
+  punto_asignado_id : INT <<FK>>
+  modulo, presencia, activo
+  version_sesion : INT
+  eliminado_en : DATETIME
+}
+entity "puntos (sedes)" as pun {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * nombre : VARCHAR(100)
+  direccion : VARCHAR(200)
+  activo : BOOL
+}
+entity "tramites" as tra {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * nombre : VARCHAR(100)
+  tipo_flujo : VARCHAR
+  requiere_preparacion : BOOL
+  campos_solicitud : JSON
+}
+entity "franjas" as fra {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * punto_id : INT <<FK>>
+  * tramite_id : INT <<FK>>
+  * fecha : DATE <<IDX>>
+  hora_inicio, hora_fin : TIME
+  * capacidad : INT
+}
+entity "turnos" as tur {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * codigo : VARCHAR(30) <<UK>>
+  * estado : VARCHAR(30)
+  * usuario_id : INT <<FK>>
+  tramite_id, punto_id : INT <<FK>>
+  franja_id : INT <<FK, IDX>>
+  agente_id : INT <<FK, IDX>>
+  preparado_por_id : INT <<FK>>
+  equipo_id : INT <<FK>>
+  reclamo_id : INT <<FK>>
+  estado_preparacion, nota_preparacion
+  fecha_llamado, fecha_inicio, fecha_fin
+}
+entity "equipos" as equ {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * codigo : VARCHAR(20) <<UK>>
+  * cliente_id : INT <<FK>>
+  * punto_id : INT <<FK>>
+  registrado_por_id : INT <<FK>>
+  marca, modelo, serial, falla
+  origen, fecha_compra, estado
+}
+entity "reclamos" as rec {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * radicado : VARCHAR(20) <<UK>>
+  * cliente_id : INT <<FK>>
+  punto_id, equipo_id : INT <<FK>>
+  gestionado_por_id : INT <<FK>>
+  categoria, descripcion, presencial
+  estado, respuesta
+}
+entity "mensajes_reclamo" as men {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  * reclamo_id : INT <<FK>>
+  autor, autor_nombre, texto
+  leido_cliente, leido_asesor
+}
+entity "auditoria" as aud {
+  * id : INT <<PK>>
+  --
+  * organizacion_id : INT <<FK>>
+  usuario_id : INT <<FK>>
+  * accion : VARCHAR(40) <<IDX>>
+  detalle, ip, fecha
+}
+
+org ||--o{ usu
+org ||--o{ pun
+org ||--o{ tra
+pun ||--o{ fra
+tra ||--o{ fra
+fra ||--o{ tur
+usu ||--o{ tur : reserva
+usu |o--o{ tur : atiende
+pun |o--o{ usu : sede asignada
+usu ||--o{ equ : dueño
+pun ||--o{ equ
+equ |o--o{ tur
+usu ||--o{ rec : radica
+rec |o--o{ tur
+rec ||--o{ men
+usu |o--o{ aud
+@enduml

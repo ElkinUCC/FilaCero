@@ -438,21 +438,6 @@ def test_cors_solo_origen_permitido_y_cabeceras_seguras(app):
     assert ok.headers["X-Frame-Options"] == "DENY"
 
 
-def test_produccion_rechaza_configuracion_insegura():
-    with pytest.raises(RuntimeError):
-        create_app(
-            {
-                "PRODUCCION": True,
-                "SECRET_KEY": "corta",
-                "JWT_SECRET_KEY": "corta",
-                "SQLALCHEMY_DATABASE_URI": "sqlite://",
-            }
-        )
-
-
-# ---------------------------------------------------------------- admin
-
-
 def test_admin_crea_agente_y_edita_catalogo(app, base):
     cliente = app.test_client()
     h = token(base["admin"])

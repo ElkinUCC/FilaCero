@@ -17,7 +17,7 @@
 ## Tecnologías
 
 - Backend: Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow.
-- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, SPA con rutas `#/`). **Sin React, Angular, Vue ni ningún framework; sin Node, npm ni compilación.**
+- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, SPA con rutas `#/`). **Sin ningún framework ni librería de JavaScript; sin Node.js ni compilación.**
 - Base de datos: MySQL 8 (SQLite está disponible para pruebas automatizadas).
 - Pruebas: pytest.
 
@@ -25,7 +25,6 @@
 
 ```text
 FilaCero/
-├── docker-compose.yml
 ├── backend/                       # API Flask · monolito modular por capas en dominios
 │   ├── app/
 │   │   ├── __init__.py            # crear_app: extensiones, blueprints, errores
@@ -156,7 +155,7 @@ Desde `backend/`, con el entorno virtual activo:
 python -m pytest tests/ -v
 ```
 
-Última ejecución de esta entrega: **168 passed** (incluye 11 pruebas nuevas del asistente IA en `tests/test_asistente_ia.py`). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+Última ejecución de esta entrega: **164 passed** (incluye 11 pruebas del asistente IA en `tests/test_asistente_ia.py`). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
 
 ## Simulación de operación
 
@@ -186,15 +185,9 @@ Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en
 - **Modo Claude** (opcional): con `ANTHROPIC_API_KEY` en `backend/.env`, Claude redacta la respuesta a partir de los mismos datos. Se envían solo indicadores y primeros nombres (sin celulares, cédulas ni apellidos). Si el proveedor falla o tarda, responde el motor local.
 - El asistente no tiene acceso directo a la base de datos: reutiliza los servicios del tablero, la vista en vivo y la consola, con el mismo aislamiento multiempresa y permisos.
 
-## Despliegue con Docker
+## Ejecución en localhost
 
-```bash
-cp .env.docker.example .env              # DB_PASSWORD y DB_ROOT_PASSWORD
-cp backend/.env.example backend/.env     # SECRET_KEY, JWT_SECRET_KEY, CORS_ALLOWED_ORIGINS
-docker compose up -d --build             # MySQL + API (waitress) + web (nginx)
-```
-
-La API aplica las migraciones al arrancar y se niega a iniciar en producción con secretos débiles, OTP de prueba activo, depuración encendida o CORS abierto. Agrega HTTPS con tu proveedor (o un proxy como Caddy) y activa la cabecera HSTS en `frontend/nginx.conf`.
+FilaCero se ejecuta **solo en localhost**: MySQL 8, la API (`python run.py`, puerto 5000) y el frontend servido como archivos estáticos (`python -m http.server 5173`). No hay despliegue en internet.
 
 ## Roles principales
 
@@ -208,12 +201,12 @@ La API aplica las migraciones al arrancar y se niega a iniciar en producción co
 ## Seguridad y configuración
 
 - No subir `backend/.env` al repositorio (el frontend no guarda secretos).
-- `FILACERO_OTP_TEST_MODE=true` es únicamente para desarrollo local. Para una demo gratuita en producción, puede activarse `FILACERO_OTP_DEMO_ENABLED` con un único celular y código dedicados; no usar con números ni datos reales. La integración con SMS real requiere un proveedor.
-- En producción, configura HTTPS, secretos únicos, CORS restrictivo, base de datos administrada, copias de seguridad y monitoreo.
+- `FILACERO_OTP_TEST_MODE=true`: el código OTP se muestra en pantalla, solo para peticiones desde el mismo equipo; no se envían SMS reales.
+- Genera secretos propios con `python scripts/generate_secret.py`; CORS solo admite los orígenes de `CORS_ALLOWED_ORIGINS`.
 - No conectar un agente de IA directamente a la base de datos. Las futuras integraciones deben pasar por servicios y herramientas autorizadas con permisos y auditoría.
 
 ## Estado y alcance
 
-La aplicación está lista para desplegarse (Docker, validación de configuración de producción, migraciones, cabeceras de seguridad y 168 pruebas automatizadas). Las pruebas corren sobre SQLite; no sustituyen pruebas de integración contra MySQL, pruebas de carga, revisión de dependencias ni un pentest.
+El alcance de la entrega es una **demostración en localhost** (un equipo), con migraciones, cabeceras de seguridad y 164 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
 
-Antes de operar con datos reales se recomienda completar: pruebas de aislamiento multiempresa con MySQL, claves foráneas compuestas para integridad entre tenants, revisión de permisos por endpoint, integración real de SMS, despliegue HTTPS y auditoría de seguridad independiente.
+Quedan fuera del alcance (documentados como evolución): publicar el sistema en internet, envío real de SMS, HTTPS y alta disponibilidad.

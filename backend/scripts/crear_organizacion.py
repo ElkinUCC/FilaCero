@@ -54,7 +54,7 @@ def main():
         db.session.add(organizacion)
         db.session.commit()
         print(f"Organización creada: id={organizacion.id}, slug={organizacion.slug}")
-        print("Configura el frontend con VITE_ORGANIZATION_SLUG=" + organizacion.slug)
+        print(f'En frontend/src/js/config.js usa ORGANIZATION_SLUG: "{organizacion.slug}"')
 
 
 if __name__ == "__main__":

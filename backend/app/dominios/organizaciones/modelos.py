@@ -31,7 +31,7 @@ class Organizacion(db.Model):
 
 
 # Entorno de pruebas/desarrollo que usa db.create_all(): crea una organización
-# inicial reproducible. Producción la crea la migración Alembic.
+# inicial reproducible. Con MySQL la crea la migración Alembic.
 from sqlalchemy import event, insert
 
 

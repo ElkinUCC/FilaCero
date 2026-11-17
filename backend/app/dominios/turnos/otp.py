@@ -1,7 +1,7 @@
 """Verificación del celular con código de un solo uso.
 
-Almacén en memoria (una instancia). En producción conecte un proveedor SMS
-en `_enviar_sms` y, si hay varias instancias, guarde los códigos en Redis.
+Almacén en memoria (un solo proceso en localhost). En modo prueba el código se
+muestra en pantalla; el envío real por SMS (`_enviar_sms`) está fuera del alcance.
 """
 
 import hmac
@@ -21,19 +21,9 @@ def _enviar_sms(celular, codigo):  # pragma: no cover - integración futura
 
 def generar_codigo(celular, organizacion_id=1):
     config = current_app.config
-    modo_prueba = (
-        config.get("OTP_TEST_MODE")
-        and not config.get("PRODUCCION")
-        and request.remote_addr in ("127.0.0.1", "::1")
-    )
-    modo_demo = config.get("OTP_DEMO_ENABLED")
-    if modo_demo:
-        celular_demo = str(config.get("OTP_DEMO_PHONE") or "")
-        if not hmac.compare_digest(str(celular), celular_demo):
-            raise ValueError("La demo gratis solo permite el celular de prueba configurado.")
-        codigo = str(config["OTP_DEMO_CODE"])
-    else:
-        codigo = f"{secrets.randbelow(1_000_000):06d}"
+    # Modo prueba: solo para peticiones desde el mismo equipo (localhost).
+    modo_prueba = config.get("OTP_TEST_MODE") and request.remote_addr in ("127.0.0.1", "::1")
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
 
     with _candado:
         _codigos[(int(organizacion_id), celular)] = {
@@ -42,18 +32,13 @@ def generar_codigo(celular, organizacion_id=1):
             "intentos": 0,
         }
 
-    if not (modo_prueba or modo_demo):
+    if not modo_prueba:
         _enviar_sms(celular, codigo)
         return None
     return codigo
 
 
 def verificar_codigo(celular, codigo, organizacion_id=1):
-    if current_app.config.get("OTP_DEMO_ENABLED") and not hmac.compare_digest(
-        str(celular), str(current_app.config.get("OTP_DEMO_PHONE") or "")
-    ):
-        raise ValueError("La demo gratis solo permite el celular de prueba configurado.")
-
     maximo = int(current_app.config.get("OTP_MAX_INTENTOS", 5))
     with _candado:
         clave = (int(organizacion_id), celular)

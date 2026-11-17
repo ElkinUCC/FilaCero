@@ -26,7 +26,7 @@ artefactos realmente actualizados) y dos escenarios **analizados**.
 | Componente *Usuarios* | Sí | `modulo`, `eliminado_en`, servicios `asignar_modulo` y `dar_de_baja` |
 | Componente *Trámites* | Sí | `requiere_preparacion` |
 | Componente *Sedes* | Sí (menor) | Capacidad operativa en el listado del panel |
-| SPA | Sí | `useLlamadoPorVoz`, `PrepararTurno`, `TablaSeccion`, `PanelDetalle`, paleta del portal |
+| SPA | Sí | Llamado por voz (`utils/voz.js`), preparación del pedido (`agente/prepararTurno.js`), tabla uniforme del panel (`admin/tablaSeccion.js`) con detalle al clic (`ui/modal.js`), paleta del portal |
 | Persistencia | Sí | Migración aditiva y reversible `a7c9e1b3d5f7` |
 | Despliegue | No | Mismos nodos y procesos; un paso más: `flask db upgrade` |
 | Seguridad | Sí | Reglas de baja (no propia, no protegida, no último admin, no con turno en curso); auditoría `usuario_eliminado`, `turno_preparado` |
@@ -90,7 +90,45 @@ tablero ejecutivo, igual para el supervisor pero sin edición.
 | Seguridad | Revisión STRIDE y auditoría de dependencias — [11](11-seguridad.md) |
 | Contenedores, despliegue, ADR-004 | **Sin cambios** |
 
-Artefactos actualizados: ADR-010 (revisado), ADR-015 (nuevo), 11 (nuevo), pruebas (+5 casos: 152 en total). Iteración 4: ADR-016, migración `d2f4b6c8e0a1`, minichat, alertas y vista móvil (155 pruebas).
+Artefactos actualizados: ADR-010 (revisado), ADR-015 (nuevo), 11 (nuevo), pruebas (+5 casos: 152 en total). Iteración 4: ADR-016, migración `d2f4b6c8e0a1`, minichat, alertas y vista móvil (155 pruebas en ese momento; 164 en la entrega final).
+
+## E-1d · Frontend sin frameworks (ejecutado, entrega final)
+
+**Estímulo** (requisito del curso): el frontend debe construirse **sin frameworks** —solo HTML, CSS y
+JavaScript— como una SPA con la estructura del proyecto de referencia (*frontend-alojamientos*). La versión
+anterior de la interfaz usaba un framework de componentes con un paso de compilación.
+
+**Impacto por elemento de la arquitectura**:
+
+| Elemento | ¿Afectado? | Cambio proporcional |
+|---|---|---|
+| Estilo (monolito modular) | No | — |
+| Contenedores C2 | Solo la tecnología de *SPA FilaCero* | Mismos tres contenedores y mismas responsabilidades |
+| API FilaCero (C3), contrato `/api/v1` | **No** | Cero cambios en endpoints, DTO o reglas: la separación SPA ↔ API absorbió el cambio |
+| Persistencia | No | Sin migraciones |
+| SPA (C3) | Sí | `index.html` + `#app`; `src/js/` con `main.js`, `router/`, `pages/` (`XPage` + `mountXPage`), `components/`, `api/http.js`, `auth/`, `utils/` (`polling`, `voz`, `dom`); configuración en `src/js/config.js` |
+| Seguridad | Sí | El escape de HTML pasa a la plantilla `html``…``` de `utils/dom.js` (riesgo R-12); el frontend queda sin dependencias de terceros |
+| Arquitectura computacional y despliegue | Sí (simplifica) | Sin Node.js ni compilación: el proceso 3 es un servidor estático de Python |
+| Pruebas del backend | No | Sin cambios por la migración (164 en verde en la entrega final) |
+
+**Artefactos actualizados**: ADR-002 (revisado), ADR-009 y ADR-012 (notas), 01, 03 (C2 y C3 de la SPA), 04
+(§4.1, §4.3, §6), 05, 06, 07, 09 (T-12, R-12), 11, `frontend/docs/ARQUITECTURA-SPA-VANILLA.md`.
+
+**Lección**: es la mejor evidencia de modificabilidad del proyecto: se reemplazó por completo un contenedor y
+el resto de la arquitectura no se enteró.
+
+## E-1e · Alcance solo localhost (ejecutado, entrega final)
+
+**Estímulo**: la entrega se ejecuta y evalúa únicamente en localhost; los artefactos de publicación (contenedores,
+servidor web, nube) y el modo "producción" de la API no se usaban en la demostración.
+
+| Elemento | ¿Afectado? | Cambio proporcional |
+|---|---|---|
+| Lógica, C4 y módulos | No | — |
+| Despliegue (06) y ADR-012 | Sí | Solo el nodo local; las alternativas quedan como análisis en 05 §6 |
+| Configuración de la API | Sí (simplifica) | Sin `FLASK_ENV=production`, validación de producción, `ProxyFix`, TLS a la BD ni OTP de demo pública |
+| Seguridad del frontend | Sí | La CSP pasa de `nginx.conf` a una etiqueta `<meta>` en `index.html` |
+| Pruebas | Sí | Se retiran 4 pruebas que solo verificaban el modo producción: 164 en verde |
 
 ## E-2 · Crecimiento a 40 sedes y 200 asesores (analizado)
 

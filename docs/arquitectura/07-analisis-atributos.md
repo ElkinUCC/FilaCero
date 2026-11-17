@@ -24,7 +24,7 @@ convendría paginar o enviar diferencias (escenario E-2).
 | Táctica | Dónde |
 |---|---|
 | Datos confirmados solo tras `commit` en MySQL (durabilidad InnoDB) | servicios |
-| Clientes que **reintentan solos** y avisan "Sin conexión, reintentando" | `usePolling`, `Encabezado`, sala |
+| Clientes que **reintentan solos** y avisan "Sin conexión, reintentando" | `utils/polling.js`, `layout/encabezado.js`, sala |
 | Aviso de servidor lento (> 4 s) en toda la SPA | `api/http.js` |
 | *Health checks* `/health` y `/health/listo` (este último verifica la BD) | `app/__init__.py` |
 | Bitácora "best effort": si la auditoría falla, la operación principal continúa | `auditoria/servicios.registrar` |
@@ -45,15 +45,15 @@ convendría paginar o enviar diferencias (escenario E-2).
 | **D**enial of service | Límite de peticiones por IP; `MAX_CONTENT_LENGTH` 64 KB | `seguridad.limitar` |
 | **E**levation of privilege | Revocación inmediata por versión de sesión; cuentas protegidas; no se puede eliminar la propia cuenta ni al último administrador | `test_rotacion_y_cuentas_protegidas.py`, `test_admin_no_se_elimina_a_si_mismo` |
 
-Cabeceras: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`; CORS con lista blanca. Validación de arranque en
-producción (secretos, OTP de prueba, DEBUG, CORS).
-**Límite**: el JWT viaja en `localStorage` (riesgo XSS mitigado por React, sin `dangerouslySetInnerHTML`); el
+Cabeceras: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`; CORS con lista blanca. En el frontend, CSP en `index.html`. El código OTP de prueba solo
+se entrega a peticiones desde el mismo equipo y el depurador solo se activa si la API escucha en 127.0.0.1.
+**Límite**: el JWT viaja en `localStorage` (riesgo XSS mitigado en la SPA vanilla: la plantilla `html``…``` de `utils/dom.js` escapa toda interpolación y los pocos fragmentos marcados con `crudo()` se construyen con texto ya escapado; además la CSP de `index.html` usa `script-src 'self'`); el
 límite de peticiones está en memoria del proceso (con varios procesos debe pasar a un almacén compartido).
 La pantalla de sala muestra el nombre completo por decisión de usabilidad (ADR-008, configurable).
 
 ## 4. Costo
 
-| Concepto | Demo (actual) | Producción mínima |
+| Concepto | Entrega (localhost) | Referencia si se publicara (fuera de alcance) |
 |---|---|---|
 | Infraestructura | 0 (equipo propio) | VPS ≈ 5–12 USD/mes + MySQL administrado ≈ 0–15 USD/mes |
 | Licencias | 0 (todo software libre) | 0 |
@@ -61,7 +61,7 @@ La pantalla de sala muestra el nombre completo por decisión de usabilidad (ADR-
 | SMS | 0 (modo prueba) | ≈ 0,01–0,05 USD por OTP en Colombia (variable con el proveedor) |
 | Operación | Estudiante | Respaldos y parches: ≈ 2 h/mes |
 
-El mayor costo variable en producción sería el **SMS**, no la infraestructura (ver incertidumbre I-02).
+Si algún día se publicara, el mayor costo variable sería el **SMS**, no la infraestructura (ver incertidumbre I-02).
 
 ## 5. Escalabilidad
 
@@ -70,7 +70,7 @@ El mayor costo variable en producción sería el **SMS**, no la infraestructura 
 | Sedes y asesores | 4 sedes, 8 asesores | Datos: sin cambios de código (cupo = asesores × 3) | CPU de la API al crecer el polling |
 | Concurrencia de reservas | Serializada **por sede** | Sedes distintas reservan en paralelo | Una sede muy concurrida (bloqueo de la fila `puntos`) |
 | Organizaciones | Multiempresa en un esquema | Nuevas organizaciones con `crear_organizacion.py` | Tamaño de tablas compartidas |
-| Lectura en vivo | Polling | Más procesos detrás de nginx (horizontal) | Tráfico de la consola (46 KB / 5 s) |
+| Lectura en vivo | Polling | Más procesos de la API (fuera del alcance de la entrega) | Tráfico de la consola (46 KB / 5 s) |
 
 **Evidencia**: el throughput pasa de 113 a 128 req/s al subir de 40 a 100 usuarios: el proceso ya está en su
 techo de CPU. Escalar requiere **más procesos**, no más hilos. El diseño lo permite porque el estado vive en
@@ -89,7 +89,7 @@ MySQL (la API es sin estado salvo el límite de peticiones y el candado local, a
 ## 7. Mantenibilidad y verificabilidad
 
 - Estructura repetible por módulo (controlador/servicio/repositorio/modelo/DTO).
-- **155 pruebas** automatizadas (≈ 35 s), más 50 comprobaciones de punta a punta contra el servidor real.
+- **164 pruebas** automatizadas (≈ 40 s), más 50 comprobaciones de punta a punta contra el servidor real.
 - Migraciones versionadas y reversibles; la de esta entrega fue probada en subida y bajada.
-- Componentes de UI reutilizables (`TablaSeccion`, `PanelDetalle`) que **imponen** la regla de diseño del panel.
+- Componentes de UI reutilizables (`admin/tablaSeccion.js`, `ui/modal.js` con `abrirDetalle`) que **imponen** la regla de diseño del panel.
 - Deuda técnica declarada (R-07) con plan de corrección.

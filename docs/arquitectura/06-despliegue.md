@@ -11,8 +11,8 @@ flowchart TB
         direction TB
         subgraph EQ["«nodo» Equipo de demostración · Windows 10/11 · ≥4 GB RAM · 2+ núcleos"]
             direction LR
-            subgraph NODE["«entorno» Node.js 22"]
-                SPA["«artefacto» SPA FilaCero<br/>Vite dev server · :5173"]
+            subgraph WEB["«entorno» Servidor estático (python -m http.server / Live Server)"]
+                SPA["«artefacto» SPA FilaCero<br/>index.html · src/css · src/js (sin compilar) · :5173"]
             end
             subgraph PY["«entorno» Python 3.12+ (venv)"]
                 API["«artefacto» API FilaCero<br/>run.py (Flask) · :5000<br/>monolito modular por capas"]
@@ -22,11 +22,11 @@ flowchart TB
             end
         end
         subgraph NAV["«nodo» Navegadores (mismo equipo u otros PC de la LAN)"]
-            P1["Portal ciudadano /"]
-            P2["Consola del asesor /agente<br/>+ voz (Web Speech API)"]
-            P3["Panel /admin"]
+            P1["Portal ciudadano #/"]
+            P2["Consola del asesor #/agente<br/>+ voz (Web Speech API)"]
+            P3["Panel #/admin"]
         end
-        TV["«nodo» TV de la sede · navegador<br/>/sala?sede=ID"]
+        TV["«nodo» TV de la sede · navegador<br/>#/sala?sede=ID"]
     end
     SMS["«sistema externo» Proveedor SMS<br/>(no se usa en demo: OTP en pantalla)"]
 
@@ -34,7 +34,7 @@ flowchart TB
     NAV -- "HTTP/JSON :5000 · JWT o slug" --> API
     TV -- "HTTP :5173 y :5000" --> EQ
     API -- "TCP :3307 · PyMySQL · READ COMMITTED" --> BD
-    API -. "HTTPS (producción)" .-> SMS
+    API -. "no se usa en la demo" .-> SMS
 ```
 
 ### Correspondencia lógica ↔ física
@@ -43,44 +43,31 @@ flowchart TB
 |---|---|---|---|---|
 | Base de datos FilaCero | Esquema `filacero_db` (migraciones Alembic) | MySQL 8 | Equipo de demostración | 1 |
 | API FilaCero | Paquete `backend/app` + `run.py` | Python venv | Equipo de demostración | 2 (`flask --app run db upgrade` y `python run.py`) |
-| SPA FilaCero | `frontend/src` servido por Vite | Node.js | Equipo de demostración | 3 (`npm run dev`) |
-| — | Pantalla de sala | Navegador de la TV | TV de la sede | 4 (abrir `/sala?sede=ID`) |
+| SPA FilaCero | `frontend/index.html` + `src/css` + `src/js` (archivos estáticos, sin compilar) | Servidor estático de Python | Equipo de demostración | 3 (`cd frontend` y `python -m http.server 5173`) |
+| — | Pantalla de sala | Navegador de la TV | TV de la sede | 4 (abrir `http://<ip>:5173/#/sala?sede=ID`) |
 
-Para usar otros equipos de la LAN (por ejemplo una TV), arranque la API y Vite escuchando en la IP del equipo
-(`FLASK_HOST=0.0.0.0`, `npm run dev -- --host`), agregue el origen a `CORS_ALLOWED_ORIGINS` y apunte
-`VITE_API_URL` a esa IP.
+Para usar otros equipos de la LAN (por ejemplo una TV), arranque la API escuchando en la IP del equipo
+(`FLASK_HOST=0.0.0.0`) y el servidor estático con `python -m http.server 5173 --bind 0.0.0.0`, y agregue el origen
+`http://<ip>:5173` a `CORS_ALLOWED_ORIGINS`. `frontend/src/js/config.js` arma la dirección de la API con el mismo
+equipo desde el que se abrió la página, así que no hay que cambiarlo.
 
-## 2. Despliegue objetivo (producción, evolución)
+> La versión UML de este diagrama (nodos, entornos de ejecución y artefactos)
+> está en [`docs/diagramas/despliegue.png`](../diagramas/despliegue.png).
 
-Mismas unidades lógicas, distinta materialización. No se ejecuta en esta entrega; se deja definido para
-mostrar que la arquitectura lógica **no cambia** al pasar a producción (ADR-012).
+## 2. Alcance: solo localhost
 
-```mermaid
-flowchart LR
-    U["Navegadores<br/>ciudadanos · asesores · TV"] -- "HTTPS :443" --> NG
-    subgraph VM["«nodo» Servidor de aplicación (VPS 2 vCPU · 4 GB)"]
-        NG["nginx<br/>TLS · estáticos dist/ · proxy /api"]
-        W1["API FilaCero<br/>waitress proceso 1"]
-        W2["API FilaCero<br/>waitress proceso 2"]
-        NG -- "/api → :5000/:5001" --> W1 & W2
-    end
-    subgraph DB["«nodo» Base de datos administrada"]
-        BD[("MySQL 8<br/>respaldo diario · TLS")]
-    end
-    W1 & W2 -- "TLS :3306" --> BD
-    W1 & W2 -- "HTTPS" --> SMS["Proveedor SMS"]
-```
+La entrega se ejecuta y se demuestra **únicamente en localhost** (un equipo, tres procesos). No hay despliegue
+en internet ni en servidores: el repositorio no incluye contenedores, servidor web de producción ni configuración
+de nube. Las alternativas (contenedores, PaaS, VM) se compararon en [05 §6](05-arquitectura-fisica.md#6-alternativas-de-ejecución-comparadas)
+y se descartaron en [ADR-012](adr/ADR-012-despliegue-en-un-nodo.md).
 
-Cambios que exige pasar de §1 a §2 (todos de configuración, ninguno de código):
-`FLASK_ENV=production`, `FILACERO_OTP_TEST_MODE=false`, secretos de ≥ 32 caracteres, `CORS_ALLOWED_ORIGINS`
-con el dominio real, `PROXIES_CONFIABLES=1`, `DB_SSL_CA` y build `npm run build`. La API valida esto al arrancar
-y se niega a iniciar con configuración insegura.
+| Paso | Orden | Comprobación |
+|---|---|---|
+| 1 | Iniciar MySQL | El servicio escucha en el puerto de `backend/.env` (3307 en el equipo de demostración) |
+| 2 | `cd backend` · `flask --app run db upgrade` · `python run.py` | `http://127.0.0.1:5000/health` responde `{"status": "ok"}` |
+| 3 | `cd frontend` · `python -m http.server 5173` | `http://localhost:5173` muestra el portal |
+| 4 | Abrir `#/agente`, `#/admin` y `#/sala?sede=ID` | La consola, el panel y la sala se actualizan solos (polling) |
 
-Para una demostración pública sin SMS, se puede activar `FILACERO_OTP_DEMO_ENABLED=true` y definir
-`FILACERO_OTP_DEMO_PHONE` y `FILACERO_OTP_DEMO_CODE`. Solo ese celular podrá verificarse y la API mostrará
-el código; debe ser un teléfono dedicado, nunca uno de clientes. Este modo no prueba la posesión del celular
-y no es apto para operar con datos reales. Para producción real se requiere integrar un proveedor SMS.
-
-> Con **varios procesos** de API, el candado en memoria de ADR-004 ya no basta por sí solo; la consistencia la
-> garantiza el `SELECT … FOR UPDATE` sobre la sede en MySQL, que sí es compartido entre procesos. Por eso
-> ADR-004 combina ambos mecanismos.
+> Si la evolución exigiera **varios procesos** de API, el candado en memoria de ADR-004 dejaría de bastar por sí
+> solo; la consistencia la seguiría garantizando el `SELECT … FOR UPDATE` sobre la sede en MySQL. Por eso
+> ADR-004 combina ambos mecanismos (escenario E-2 en [10](10-evolucion.md)).

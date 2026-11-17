@@ -57,14 +57,6 @@ def create_app(test_config=None):
 
     validar_configuracion(app)
 
-    # Detrás de nginx: confiar en X-Forwarded-For solo del número de proxies
-    # configurado, para que el límite por IP use la IP real del cliente.
-    proxies = int(app.config.get("PROXIES_CONFIABLES", 0) or 0)
-    if proxies:
-        from werkzeug.middleware.proxy_fix import ProxyFix
-
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
-
     logging.basicConfig(
         level=os.getenv("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -156,10 +148,6 @@ def create_app(test_config=None):
         respuesta.headers.setdefault(
             "Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"
         )
-        if request.is_secure:
-            respuesta.headers.setdefault(
-                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
-            )
         return respuesta
 
     @app.get("/")

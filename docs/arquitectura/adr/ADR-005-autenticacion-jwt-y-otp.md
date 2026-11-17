@@ -13,7 +13,7 @@ necesita que eliminar, bloquear o cambiar de rol a alguien tenga efecto inmediat
 | JWT puro | Sin estado | No se puede revocar antes de que expire |
 | **JWT + `version_sesion` en BD** verificada por `requiere_rol` | Revocación inmediata, multi-cliente | Una consulta a `usuarios` por petición |
 | Ciudadano con cuenta y contraseña | Identidad fuerte | Fricción: abandono de la reserva |
-| **Ciudadano con OTP al celular** y token firmado por propósito | Sin cuenta; solo el dueño del celular ve o cancela | Costo de SMS en producción |
+| **Ciudadano con OTP al celular** y token firmado por propósito | Sin cuenta; solo el dueño del celular ve o cancela | Costo de SMS si se usara un proveedor real (en localhost el código se muestra en pantalla) |
 
 ## Decisión
 Personal: JWT de 60 min con claims `rol`, `org_id` y `ver`. Cambio de clave, rol, desactivación o **baja**

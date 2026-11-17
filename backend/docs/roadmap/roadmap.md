@@ -22,7 +22,7 @@
 | Prioridad | Tarea | Motivo | Referencia |
 |---|---|---|---|
 | Alta | Conectar un proveedor real de SMS con reintentos y tiempo límite | Hoy el OTP funciona en modo de prueba | `docs/arquitectura/09-evolucion.md` §9.2 |
-| Alta | Desplegar en un dominio con HTTPS | Usar la gente real | `docker-compose.yml`, `SECURITY.md` |
+| Fuera de alcance | Publicar en internet con HTTPS | Usar la gente real | Evolución analizada en `docs/arquitectura/10-evolucion.md` |
 | Alta | Respaldo diario de MySQL y prueba de restauración | Riesgo R7 | `05-computacional-y-despliegue.md` |
 | Media | Repetir la prueba de carga con MySQL en el servidor | Riesgo R6 | `simulacion.py --carga` |
 | Media | Mover OTP y límite por IP a Redis | Poder tener varias instancias | ADR-0004, riesgo R3 |

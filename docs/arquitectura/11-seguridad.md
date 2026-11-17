@@ -19,7 +19,7 @@ aceptado** con su mitigación y su camino de evolución.
 | # | STRIDE | Hallazgo / cambio | Control |
 |---|---|---|---|
 | S-7 | Divulgación | Consulta "por código" sin pedir celular | El código de verificación solo llega al celular registrado en el turno y se muestra enmascarado; sin ese SMS no hay datos. Límite de 5 solicitudes por minuto contra el barrido de códigos |
-| S-8 | Manipulación / divulgación | Minichat público | Solo con token OTP vigente del celular dueño; el radicado debe pertenecer a ese celular; mensajes de máximo 600 caracteres; React escapa el contenido |
+| S-8 | Manipulación / divulgación | Minichat público | Solo con token OTP vigente del celular dueño; el radicado debe pertenecer a ese celular; mensajes de máximo 600 caracteres; la SPA escapa el contenido con la plantilla `html``…``` (`utils/dom.js`) |
 
 ## 2. Controles que ya existían y se verificaron
 
@@ -30,9 +30,9 @@ aceptado** con su mitigación y su camino de evolución.
 | Autorización por rol en cada endpoint (`@requiere_rol`) y por sede para equipos, reclamos y preparación (`409` a otra sede) | controladores y servicios |
 | Ciudadano sin cuenta: OTP de 6 dígitos + token firmado con propósito, organización y vigencia | `turnos/otp.py`, `turnos/controladores.py` |
 | Límite de peticiones por IP en OTP, consulta y radicación | `app/seguridad.py` (`limitar`) |
-| Cabeceras: `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options`, `nosniff` en la API; CSP estricta en `nginx.conf` del frontend | `app/__init__.py`, `frontend/nginx.conf` |
-| CORS con lista blanca de orígenes; en producción se rechaza `*` | `app/config.py` |
-| Arranque en producción bloqueado si hay secretos cortos, OTP de prueba o `DEBUG` | `app/config.py` (`validar_configuracion`) |
+| Cabeceras: `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options`, `nosniff` en la API; CSP estricta en el frontend (`<meta>` en `index.html`) | `app/__init__.py`, `frontend/index.html` |
+| CORS con lista blanca de orígenes (`CORS_ALLOWED_ORIGINS`) | `app/config.py` |
+| Código OTP de prueba solo para peticiones desde el mismo equipo; depurador solo en 127.0.0.1; aviso si la clave JWT es corta | `turnos/otp.py`, `run.py`, `app/config.py` |
 | Aislamiento multiempresa por `organizacion_id` en cada consulta | ADR-006 |
 | Celular y serial enmascarados en las vistas públicas | DTO públicos |
 | Bitácora de acciones sensibles (entregas, bajas, cambios de rol) | módulo `auditoria` |
@@ -42,27 +42,25 @@ aceptado** con su mitigación y su camino de evolución.
 | Herramienta | Alcance | Resultado |
 |---|---|---|
 | `pip-audit -r requirements.txt` | 16 paquetes de ejecución con versión fija | **0 vulnerabilidades conocidas** |
-| `npm audit` | dependencias del frontend (producción y desarrollo) | **0 vulnerabilidades** |
+| Frontend | HTML + CSS + JavaScript puro, **sin dependencias de terceros** | No hay paquetes que auditar (superficie de cadena de suministro = 0) |
 
-Repetir antes de cada entrega: `pip-audit -r requirements.txt` y `npm audit`.
+Repetir antes de cada entrega: `pip-audit -r requirements.txt`.
 
 ## 4. Riesgos aceptados (con mitigación y evolución)
 
 | Riesgo | Por qué se acepta hoy | Mitigación actual | Evolución |
 |---|---|---|---|
-| JWT guardado en `localStorage` | SPA sin servidor propio de sesiones; despliegue en un nodo | Expiración de 60 min, revocación por versión de sesión, CSP estricta contra XSS, React escapa el contenido | Cookie `HttpOnly` + `SameSite=Strict` con token CSRF |
+| JWT guardado en `localStorage` | SPA sin servidor propio de sesiones; despliegue en un nodo | Expiración de 60 min, revocación por versión de sesión, CSP estricta contra XSS, la plantilla `html``…``` escapa el contenido | Cookie `HttpOnly` + `SameSite=Strict` con token CSRF |
 | Límite de peticiones en memoria | Un solo proceso (ADR-012) | Suficiente en localhost | Redis compartido al escalar a varias instancias |
-| Modo de prueba del OTP (el código se muestra en pantalla) | Demostración sin proveedor de SMS | Prohibido en producción por `validar_configuracion` | Integrar proveedor SMS/WhatsApp |
+| Modo de prueba del OTP (el código se muestra en pantalla) | Demostración en localhost sin proveedor de SMS | Solo se muestra a peticiones desde el mismo equipo | Integrar proveedor SMS/WhatsApp (fuera de alcance) |
 | Cédula en texto plano en la base | Se necesita comparar al entregar | Nunca se expone por la API; acceso a la base restringido | Guardar hash con sal (comparación sin leerla) o cifrado en reposo |
-| HTTP sin TLS en localhost | Demostración local | La cabecera HSTS está lista (comentada) en `nginx.conf` | TLS en el proxy al publicar |
+| HTTP sin TLS | La entrega es solo en localhost / LAN del aula | Tráfico por loopback o red local; nada se publica en internet | TLS si algún día se publicara (fuera de alcance) |
 | Archivo `backend/.env` con secretos en la carpeta del proyecto | Necesario para correr | Está en `.gitignore` y **no** viaja en el paquete de entrega | Si alguna vez se compartió, rotar `SECRET_KEY`, `JWT_SECRET_KEY` y la contraseña de MySQL |
 
 ## 5. Cómo verificarlo
 
 ```powershell
 cd backend
-python -m pytest tests/ -q                 # 155 passed
+python -m pytest tests/ -q                 # 164 passed
 pip-audit -r requirements.txt              # No known vulnerabilities found
-cd ..\frontend
-npm audit                                  # found 0 vulnerabilities
 ```

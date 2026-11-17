@@ -36,4 +36,4 @@ conexiones MySQL (en `create_app`). Cada consulta ve lo confirmado por quien lib
 - (−) `READ COMMITTED` permite lecturas no repetibles dentro de una transacción: aceptable porque ninguna regla
   lee dos veces el mismo dato esperando que no cambie; las decisiones críticas se toman con el bloqueo tomado.
 - (−) Las reservas de una misma sede se procesan en fila (latencia adicional de milisegundos en picos).
-- Lección registrada: **las pruebas de concurrencia deben correr sobre el mismo motor de producción**.
+- Lección registrada: **las pruebas de concurrencia deben correr sobre el mismo motor que usa la demostración (MySQL)**.

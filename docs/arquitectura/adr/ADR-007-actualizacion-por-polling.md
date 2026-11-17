@@ -13,7 +13,7 @@ La sala, la consola y el panel deben reflejar cambios en segundos. El despliegue
 | Server-Sent Events | Más simple que WebSockets | Conexión abierta por cliente en un servidor de hilos |
 
 ## Decisión
-`usePolling` con intervalos según urgencia: sala 4 s, consola 5 s, asesores 10 s, resumen 15 s, historial,
+`crearSondeo()` (`src/js/utils/polling.js`) con intervalos según urgencia: sala 4 s, consola 5 s, asesores 10 s, resumen 15 s, historial,
 usuarios y portal 20 s, catálogo 30 s. Indicador "En vivo / Sin conexión, reintentando".
 
 ## Consecuencias

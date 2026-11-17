@@ -1,12 +1,13 @@
 # Validación manual del frontend
 
-Con el backend en `:5000` (datos de `simulacion.py --cargar`) y `npm run dev` en `:5173`.
+Con el backend en `:5000` (datos de `simulacion.py --cargar`) y el frontend servido con `python -m http.server 5173`
+(desde `frontend/`) o Live Server. Las rutas de la SPA usan `#/`: por ejemplo `http://localhost:5173/#/admin/usuarios`.
 
-## 1. Portal del ciudadano (`/`)
+## 1. Portal del ciudadano (`#/`)
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
-| 1.1 | Abrir `/` | Una sola pantalla sin scroll en el portátil; horario "Todos los días, 00:00 a 23:59" | |
+| 1.1 | Abrir `#/` | Una sola pantalla sin scroll en el portátil; horario "Todos los días, 00:00 a 23:59" | |
 | 1.2 | Elegir sede y servicio | Se cargan las horas sin botón; cada una muestra sus cupos | |
 | 1.3 | Escribir el celular → Verificar | Aparece el código de prueba; al escribirlo queda "Verificado" | |
 | 1.4 | Confirmar turno | Código grande `XXXXXX`; la ficha de la izquierda se completa | |
@@ -17,17 +18,17 @@ Con el backend en `:5000` (datos de `simulacion.py --cargar`) y `npm run dev` en
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
-| 2.1 | Sin sesión, abrir `/admin/usuarios` | Vuelve a `/?ingresar=1` con el acceso del personal abierto | |
-| 2.2 | Abrir `/no-existe` | Página 404 con "Ir a reservar un turno" | |
-| 2.3 | Entrar como administrador | Llega a `/admin`; la URL cambia con cada sección | |
+| 2.1 | Sin sesión, abrir `#/admin/usuarios` | Vuelve a `#/?ingresar=1` con el acceso del personal abierto | |
+| 2.2 | Abrir `#/no-existe` | Página 404 con "Ir a reservar un turno" | |
+| 2.3 | Entrar como administrador | Llega a `#/admin`; la URL cambia con cada sección | |
 | 2.4 | Botón *atrás* del navegador | Vuelve a la sección anterior | |
-| 2.5 | Abrir `/admin/xyz` | 404 dentro del panel | |
-| 2.6 | Entrar como asesor y abrir `/admin` | 403 "No tienes permiso…"; **la sesión sigue**; "Ir a mi inicio" → `/agente` | |
-| 2.7 | Supervisor abre `/admin/usuarios` | 403 dentro del panel; el menú no muestra "Seguridad" | |
-| 2.8 | Cuenta con clave temporal | Solo puede ver `/cambiar-clave` hasta cambiarla | |
+| 2.5 | Abrir `#/admin/xyz` | 404 dentro del panel | |
+| 2.6 | Entrar como asesor y abrir `#/admin` | 403 "No tienes permiso…"; **la sesión sigue**; "Ir a mi inicio" → `#/agente` | |
+| 2.7 | Supervisor abre `#/admin/usuarios` | 403 dentro del panel; el menú no muestra "Seguridad" | |
+| 2.8 | Cuenta con clave temporal | Solo puede ver `#/cambiar-clave` hasta cambiarla | |
 | 2.9 | Cerrar sesión en otra pestaña | La siguiente consulta devuelve al portal (401) | |
 
-## 3. Panel (`/admin`)
+## 3. Panel (`#/admin`)
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
@@ -37,7 +38,7 @@ Con el backend en `:5000` (datos de `simulacion.py --cargar`) y `npm run dev` en
 | 3.4 | Usuarios → restablecer clave | La clave temporal se muestra una vez, con botón de copiar | |
 | 3.5 | Actividad | Aparecen los eventos que acabas de hacer | |
 
-## 4. Consola del asesor (`/agente`)
+## 4. Consola del asesor (`#/agente`)
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
@@ -45,18 +46,18 @@ Con el backend en `:5000` (datos de `simulacion.py --cargar`) y `npm run dev` en
 | 4.2 | Llamar siguiente → Iniciar → Finalizar | Avisos "Turno llamado." y luego "Puesto libre" | |
 | 4.3 | Reservar desde el portal en otra pestaña | Aviso de turno nuevo en la consola | |
 
-## 5. Sala (`/sala?sede=1`)
+## 5. Sala (`#/sala?sede=1`)
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
 | 5.1 | Llamar un turno desde la consola | La sala muestra el código y, con voz activa, lo anuncia | |
-| 5.2 | Revisar los datos | Sin nombres completos ni celulares | |
+| 5.2 | Revisar los datos | Nombre completo de la persona llamada y su módulo; **nunca** el celular (ADR-008) | |
 
 ## 6. Accesibilidad
 
 | # | Acción | Esperado | ✓ |
 |---|---|---|---|
 | 6.1 | Tab al cargar | El primer foco es "Saltar al contenido" | |
-| 6.2 | Accesibilidad → Texto grande / Alto contraste | Cambia toda la interfaz y se recuerda | |
+| 6.2 | Abrir el portal | Usa la paleta de alto contraste por defecto (el menú de accesibilidad se retiró en la iteración 2) | |
 | 6.3 | Desplegables con teclado | Flechas, Enter y Escape funcionan | |
 | 6.4 | axe DevTools | 0 violaciones | |

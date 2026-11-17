@@ -196,7 +196,7 @@ def resolver_organizacion_peticion(app):
             )
             organizacion = Organizacion.query.filter_by(slug=slug).first()
             # Compatibilidad para instalaciones antiguas recién migradas en
-            # pruebas/desarrollo. Producción debe tenerla creada por Alembic.
+            # pruebas/desarrollo. Con MySQL la crea la migración Alembic.
             if organizacion is None and slug == "filacero-demo":
                 organizacion = Organizacion(
                     id=1,

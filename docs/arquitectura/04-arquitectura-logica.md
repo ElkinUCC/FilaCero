@@ -9,7 +9,7 @@ solo conoce la API pública `/api/v1`.
 ```mermaid
 flowchart TB
     subgraph Presentacion["Capa de presentación"]
-        SPA["SPA FilaCero<br/>pages · components · hooks"]
+        SPA["SPA FilaCero (HTML + CSS + JS, sin frameworks)<br/>router · pages · components · api · utils"]
         CTRL["Controladores HTTP (Blueprints Flask)<br/>usuarios · sedes · tramites · franjas · turnos · agentes · organizaciones"]
     end
     subgraph Aplicacion["Capa de aplicación / negocio"]
@@ -54,6 +54,13 @@ flowchart TB
 > construyen consultas en el controlador. Funcionan y están probados, pero violan la regla 1. Se registran
 > como riesgo R-07 en [09](09-tradeoffs-riesgos.md) con su plan de corrección (mover a `agentes/repositorios.py`).
 
+> **Excepción declarada a la regla 2 (acoplamiento por modelo)**: algunos módulos importan el **modelo** de otro
+> para contar o validar, con importación diferida para no crear ciclos de arranque: `franjas` y `usuarios` leen
+> `turnos.modelos.Turno` (cupos ocupados, turno en curso), `sedes` lee `franjas.modelos.Franja` y
+> `turnos.preparacion` usa `agentes.repositorios.obtener_agente`. Es un ciclo lógico `turnos ↔ agentes` aceptado
+> dentro del mismo proceso (trade-off T-12 y riesgo R-11 en [09](09-tradeoffs-riesgos.md)); el plan es exponer
+> esas consultas en `turnos/repositorios.py`. El [diagrama de paquetes](../diagramas/README.md) muestra todas las dependencias.
+
 ## 2. Módulos, responsabilidades y límites
 
 | Módulo | Responsabilidad | Dueño de las tablas | No debe |
@@ -68,6 +75,7 @@ flowchart TB
 | `equipos` | Órdenes de servicio de los equipos de los clientes; reglas de garantía (≤ 1 año) y de entrega (solo LISTO y del mismo celular) | `equipos` | Conocer el despacho |
 | `reclamos` | Radicar, gestionar y responder reclamos | `reclamos` | Reservar turnos (lo hace `turnos`) |
 | `auditoria` | Bitácora de acciones sensibles | `auditoria` | Interrumpir la operación si falla (registro "best effort") |
+| `asistente` (FilaCero IA) | Analista del panel y copiloto del asesor: responde con datos reales reutilizando los servicios de `agentes`, `turnos`, `reclamos` y `franjas`; motor local y, opcionalmente, Claude | — (módulo de aplicación sin persistencia propia) | Acceder directamente a la base de datos ni saltarse permisos o el aislamiento multiempresa |
 
 ## 3. Ciclo de vida del turno (con preparación previa)
 
@@ -107,7 +115,7 @@ llamado o en atención, y queda registrada (quién, cuándo, mensaje) para el hi
 | Autenticación | `Authorization: Bearer <JWT>` para personal; `X-Organization-Slug` para peticiones públicas |
 | Errores | JSON uniforme `{"error": "...", "success": false}` con código HTTP semántico (400/401/403/404/409/429) |
 | Actualización en vivo | Polling: sala 4 s, consola 5 s, asesores 10 s, resumen 15 s, historial/usuarios/portal 20 s, catálogo 30 s |
-| Cliente único | `frontend/src/api/http.js` (ningún componente usa `fetch` directamente) |
+| Cliente único | `frontend/src/js/api/http.js` (ningún componente usa `fetch` directamente); URL y organización en `frontend/src/js/config.js` |
 
 Endpoints agregados en la entrega final:
 
@@ -132,12 +140,12 @@ para el panel); `resumen.por_preparar` en la consola.
 ### 4.2 API ↔ Proveedor SMS
 
 Interfaz `turnos/otp.py`. En localhost (`FILACERO_OTP_TEST_MODE=true`) el código se devuelve en la respuesta
-para la demostración; en producción la app **se niega a arrancar** si el modo prueba está activo
-(`validar_configuracion`).
+para la demostración, y **solo** a peticiones hechas desde el mismo equipo (127.0.0.1). El envío real por SMS
+(`_enviar_sms`) es el punto de extensión identificado y queda fuera del alcance de la entrega.
 
 ### 4.3 SPA ↔ Navegador (Web Speech API)
 
-El anuncio por voz no pasa por el servidor: `hooks/useLlamadoPorVoz.js` construye la frase
+El anuncio por voz no pasa por el servidor: `frontend/src/js/utils/voz.js` construye la frase
 ("Turno 1 2 0 4 8 9. *Nombre completo*, por favor acercarse al Módulo 2") y usa `speechSynthesis`. Ver ADR-009.
 
 ## 5. Persistencia
@@ -151,57 +159,89 @@ erDiagram
     TRAMITES ||--o{ FRANJAS : ofrece
     FRANJAS ||--o{ TURNOS : contiene
     USUARIOS ||--o{ TURNOS : "reserva (ciudadano)"
-    USUARIOS ||--o{ TURNOS : "atiende (asesor)"
-    USUARIOS ||--o{ TURNOS : "prepara (asesor)"
-    PUNTOS ||--o{ USUARIOS : "sede asignada"
-    USUARIOS ||--o{ AUDITORIA : genera
+    USUARIOS |o--o{ TURNOS : "atiende (asesor)"
+    USUARIOS |o--o{ TURNOS : "prepara (asesor)"
+    PUNTOS |o--o{ USUARIOS : "sede asignada"
+    USUARIOS |o--o{ AUDITORIA : genera
     USUARIOS ||--o{ EQUIPOS : "es dueño (cliente)"
     PUNTOS ||--o{ EQUIPOS : recibe
     EQUIPOS |o--o{ TURNOS : "se entrega en"
     USUARIOS ||--o{ RECLAMOS : radica
     RECLAMOS |o--o{ TURNOS : "se sigue en"
+    RECLAMOS ||--o{ MENSAJES_RECLAMO : "minichat"
 
+    ORGANIZACIONES {
+        int id PK
+        string nombre
+        string slug UK
+        string zona_horaria
+        string plan
+        string estado
+        json configuracion
+    }
     USUARIOS {
         int id PK
         int organizacion_id FK
         string nombre
         string correo UK
         string celular
+        string documento "cédula"
         string rol "ADMIN|SUPERVISOR|AGENTE|CLIENTE"
         bool activo
         int punto_asignado_id FK
-        string modulo "nuevo"
-        string presencia "iteración 2"
-        string documento "iteración 3 · cédula"
-        datetime eliminado_en "nuevo · baja lógica"
+        string modulo
+        string presencia
         int version_sesion
+        datetime eliminado_en "baja lógica"
+    }
+    PUNTOS {
+        int id PK
+        int organizacion_id FK
+        string nombre
+        string direccion
+        bool activo
     }
     TRAMITES {
         int id PK
+        int organizacion_id FK
         string nombre
+        string tipo_flujo
+        bool requiere_preparacion
         json campos_solicitud
         int tiempo_estimado
-        bool requiere_preparacion "nuevo"
+    }
+    FRANJAS {
+        int id PK
+        int organizacion_id FK
+        int punto_id FK
+        int tramite_id FK
+        date fecha
+        time hora_inicio
+        time hora_fin
+        int capacidad
     }
     TURNOS {
         int id PK
+        int organizacion_id FK
         string codigo UK
         string estado
-        json respuestas_solicitud
+        int usuario_id FK
         int franja_id FK
         int agente_id FK
-        string estado_preparacion "nuevo"
-        text nota_preparacion "nuevo"
-        datetime fecha_preparacion "nuevo"
-        int preparado_por_id FK "nuevo"
-        int equipo_id FK "iteración 2"
-        int reclamo_id FK "iteración 2"
+        int preparado_por_id FK
+        int equipo_id FK
+        int reclamo_id FK
+        string estado_preparacion
+        text nota_preparacion
+        json respuestas_solicitud
     }
     EQUIPOS {
         int id PK
+        int organizacion_id FK
         string codigo UK
         int cliente_id FK
         int punto_id FK
+        int registrado_por_id FK
         string marca
         string origen "REPARACION|GARANTIA"
         date fecha_compra
@@ -209,20 +249,43 @@ erDiagram
     }
     RECLAMOS {
         int id PK
+        int organizacion_id FK
         string radicado UK
         int cliente_id FK
+        int equipo_id FK
+        int gestionado_por_id FK
         string categoria
         bool presencial
         string estado "RADICADO|EN_GESTION|RESUELTO"
         text respuesta
     }
+    MENSAJES_RECLAMO {
+        int id PK
+        int organizacion_id FK
+        int reclamo_id FK
+        string autor "CLIENTE|ASESOR|ASISTENTE"
+        text texto
+        bool leido_cliente
+        bool leido_asesor
+    }
+    AUDITORIA {
+        int id PK
+        int organizacion_id FK
+        int usuario_id FK
+        string accion
+        string detalle
+        string ip
+        datetime fecha
+    }
 ```
+
+> Versión UML completa (con tipos SQL e índices): [`docs/diagramas/entidad-relacion.png`](../diagramas/entidad-relacion.png).
 
 | Aspecto | Decisión y justificación |
 |---|---|
 | Motor | MySQL 8 InnoDB: transacciones ACID y bloqueo de fila, necesarios para RAR-01 (ADR-003) |
 | Aislamiento | `READ COMMITTED` en MySQL (ADR-004 revisado) |
-| Esquema | Versionado con Alembic: 13 migraciones encadenadas; las nuevas `a7c9e1b3d5f7` y `b8d0f2a4c6e9` son **aditivas** (tablas nuevas y columnas nulas o con valor por defecto) y reversibles |
+| Esquema | Versionado con Alembic: 15 migraciones encadenadas; las de la entrega final (`a7c9e1b3d5f7`, `b8d0f2a4c6e9`, `c1e3a5b7d9f0`, `d2f4b6c8e0a1`) son **aditivas** (tablas nuevas y columnas nulas o con valor por defecto) y reversibles |
 | Multiempresa | Columna `organizacion_id` en cada tabla de negocio + filtro automático del ORM (ADR-006) |
 | Integridad histórica | Nada que tenga turnos se borra físicamente: sedes y trámites se desactivan; cuentas se dan de baja lógica (ADR-011) |
 | Pruebas | SQLite en memoria para la suite automatizada; la suite de concurrencia real se ejecuta contra MySQL con `simulacion.py --carga` |
@@ -235,5 +298,6 @@ erDiagram
 | Autorización | `@requiere_rol(...)` | Verifica el rol **vigente en base de datos**, no solo el del token |
 | Límite de peticiones | `@limitar(...)` | Ventana por IP en memoria (login, OTP, público) |
 | Auditoría | `auditoria/servicios.registrar` | Login, cambios de cuentas, catálogo, rotación de sede, preparación, bajas, equipos, reclamos y presencia |
-| Accesibilidad | `useAccesibilidad`, CSS | Texto grande, alto contraste, lector de pantalla (`aria-live`), voz |
-| Configuración | `config.py` + `.env` | Validación estricta si `FLASK_ENV=production` |
+| Accesibilidad | `utils/voz.js`, `ui/modal.js`, CSS | Paleta de alto contraste por defecto en el portal, regiones `aria-live`, foco atrapado en ventanas, navegación por teclado, llamado por voz |
+| Configuración | `config.py` + `.env` (API) · `src/js/config.js` (SPA) | Valores por defecto pensados para localhost; aviso si `JWT_SECRET_KEY` es corta |
+| Protección XSS en la SPA | `utils/dom.js` + CSP en `index.html` | La plantilla `html``…``` escapa toda interpolación; la política `script-src 'self'` (etiqueta `<meta>`) impide scripts en línea o de otros sitios |

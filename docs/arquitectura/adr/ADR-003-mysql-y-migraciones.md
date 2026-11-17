@@ -11,7 +11,7 @@ El esquema cambia en cada sprint y debe aplicarse sin perder datos en el equipo 
 |---|---|---|
 | **MySQL 8 InnoDB + Alembic** | ACID, bloqueo de fila, conocido, gratuito; migraciones reversibles | Requiere instalar el servidor |
 | PostgreSQL | Mejor soporte de tipos y aislamiento | No es el estándar del curso/equipo |
-| SQLite en producción | Cero instalación | Bloquea toda la base en escrituras; ocultó el defecto de concurrencia (ADR-004) |
+| SQLite como base de la demostración | Cero instalación | Bloquea toda la base en escrituras; ocultó el defecto de concurrencia (ADR-004) |
 | NoSQL documental | Esquema flexible | Sin transacciones multi-documento simples para el cupo |
 
 ## Decisión

@@ -22,7 +22,7 @@ el celular ni otros datos. Queda **configurable**: `SALA_NOMBRE_COMPLETO=false` 
 ## Consecuencias
 - (+) Coherencia entre pantalla, voz y consola del asesor.
 - (−) Mayor exposición de un dato personal en un espacio físico. Mitigación: aviso de tratamiento de datos al
-  reservar (pendiente para producción, I-03), interruptor de configuración y prueba automática que garantiza que
+  reservar (pendiente, I-03), interruptor de configuración y prueba automática que garantiza que
   el celular jamás aparece en la sala.
 - Revisión documentada: prueba `test_pantalla_de_sala_no_expone_datos_personales` actualizada y nueva prueba
   `test_pantalla_de_sala_puede_abreviar_nombres`.

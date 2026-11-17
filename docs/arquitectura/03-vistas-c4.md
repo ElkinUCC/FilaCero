@@ -26,11 +26,11 @@ C4Context
 
     System_Ext(sms, "Proveedor SMS", "Entrega el código OTP al celular (simulado en modo prueba)")
 
-    Rel(ciudadano, filacero, "Reserva, consulta y cancela", "HTTPS")
-    Rel(asesor, filacero, "Llama, atiende, prepara", "HTTPS")
-    Rel(admin, filacero, "Administra y supervisa", "HTTPS")
-    Rel(tv, filacero, "Ve el turno llamado (la TV consulta cada 4 s)", "HTTPS")
-    Rel(filacero, sms, "Envía código OTP", "HTTPS/API")
+    Rel(ciudadano, filacero, "Reserva, consulta y cancela", "HTTP")
+    Rel(asesor, filacero, "Llama, atiende, prepara", "HTTP")
+    Rel(admin, filacero, "Administra y supervisa", "HTTP")
+    Rel(tv, filacero, "Ve el turno llamado (la TV consulta cada 4 s)", "HTTP")
+    Rel(filacero, sms, "Envía código OTP", "HTTP (simulado)")
 ```
 
 | Origen | Destino | Interacción |
@@ -53,31 +53,31 @@ C4Container
     Person_Ext(tv, "Público en sala de espera")
 
     System_Boundary(fc, "FilaCero") {
-        Container(spa, "SPA FilaCero", "React 19 + Vite", "Portal ciudadano, consola del asesor (con llamado por voz), panel administrativo y pantalla de sala")
+        Container(spa, "SPA FilaCero", "HTML + CSS + JavaScript puro (módulos ES), sin frameworks", "Portal ciudadano, consola del asesor (con llamado por voz), panel administrativo y pantalla de sala")
         Container(api, "API FilaCero", "Python 3.12+, Flask 3, SQLAlchemy 2 · monolito modular por capas", "Reglas de negocio, seguridad, multiempresa, auditoría. REST/JSON en /api/v1")
         ContainerDb(bd, "Base de datos FilaCero", "MySQL 8 (InnoDB)", "Organizaciones, usuarios, sedes, trámites, franjas, turnos, auditoría")
     }
 
     System_Ext(sms, "Proveedor SMS", "OTP")
 
-    Rel(ciudadano, spa, "Usa", "HTTPS")
-    Rel(asesor, spa, "Usa", "HTTPS")
-    Rel(admin, spa, "Usa", "HTTPS")
-    Rel(tv, spa, "Ve /sala?sede=ID en la TV", "HTTPS")
-    Rel(spa, api, "Llama", "JSON/HTTPS · JWT Bearer o X-Organization-Slug")
+    Rel(ciudadano, spa, "Usa", "HTTP")
+    Rel(asesor, spa, "Usa", "HTTP")
+    Rel(admin, spa, "Usa", "HTTP")
+    Rel(tv, spa, "Ve #/sala?sede=ID en la TV", "HTTP")
+    Rel(spa, api, "Llama", "JSON/HTTP · JWT Bearer o X-Organization-Slug")
     Rel(api, bd, "Lee y escribe", "SQL/TCP 3306 · PyMySQL")
-    Rel(api, sms, "Envía OTP", "HTTPS")
+    Rel(api, sms, "Envía OTP", "HTTP")
     UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
 ```
 
 | Contenedor | Tecnología | Responsabilidad | Se comunica con |
 |---|---|---|---|
-| **SPA FilaCero** | React 19, Vite, sin librerías de estado ni enrutador externos | Presentación, navegación por History API, guardas de rol, voz (Web Speech API), accesibilidad | API FilaCero (REST JSON) |
+| **SPA FilaCero** | HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`), **sin frameworks ni librerías**, sin compilación | Presentación, navegación por rutas `#/` (`hashchange`), guardas de rol, voz (Web Speech API), escape de HTML contra XSS | API FilaCero (REST JSON) |
 | **API FilaCero** | Flask 3, SQLAlchemy 2, Flask-JWT-Extended, Marshmallow, Alembic | Toda regla de negocio y de seguridad; nunca confía en la SPA | Base de datos FilaCero, Proveedor SMS |
 | **Base de datos FilaCero** | MySQL 8 / InnoDB, `utf8mb4` | Persistencia transaccional; bloqueos de fila para cupos | — |
 
 Notas de coherencia:
-- La **pantalla de sala no es otro contenedor**: es una ruta pública (`/sala?sede=ID`) de la misma SPA, abierta en una TV.
+- La **pantalla de sala no es otro contenedor**: es una ruta pública (`#/sala?sede=ID`) de la misma SPA, abierta en una TV.
 - El **llamado por voz** no es un servicio: es una capacidad del navegador usada por la SPA (ADR-009).
 - La API es **un solo proceso desplegable**; los módulos internos se ven en C3.
 
@@ -87,7 +87,7 @@ Notas de coherencia:
 C4Component
     title API FilaCero · Componentes (monolito modular por capas)
 
-    Container(spa, "SPA FilaCero", "React")
+    Container(spa, "SPA FilaCero", "HTML + CSS + JS")
     ContainerDb(bd, "Base de datos FilaCero", "MySQL 8")
 
     Container_Boundary(api, "API FilaCero") {
@@ -139,38 +139,46 @@ Cada módulo de dominio repite la misma **estructura por capas**:
 
 ## C3 · Componentes de la SPA FilaCero
 
+La SPA no usa frameworks: es HTML + CSS + JavaScript puro organizado en las mismas capas del proyecto de
+referencia (*frontend-alojamientos*). Detalle en [`frontend/docs/ARQUITECTURA-SPA-VANILLA.md`](../../frontend/docs/ARQUITECTURA-SPA-VANILLA.md).
+
 ```mermaid
 flowchart LR
-    subgraph SPA["SPA FilaCero (React)"]
+    subgraph SPA["SPA FilaCero (HTML + CSS + JS, sin frameworks)"]
         direction LR
-        R[router/<br/>routes + guards] --> P[pages/<br/>Portal · Agente · Admin · Sala]
-        P --> C[components/<br/>cliente · agente · admin · ui]
-        P --> H[hooks/<br/>usePolling · useLlamadoPorVoz · useAccesibilidad]
+        M[main.js<br/>render de la ruta actual] --> R[router/<br/>routes · guards · navegacion]
+        R --> P[pages/<br/>Portal · Agente · Admin · Sala · 403 · 404]
+        P --> C[components/<br/>cliente · agente · admin · ui · layout]
+        P --> U[utils/<br/>polling · voz · dom · formatters]
         C --> A[api/*.api.js<br/>un archivo por área]
-        H --> A
+        C --> U
         A --> X[api/http.js<br/>cliente HTTP único]
         AU[auth/<br/>sesión y permisos] --> R
         AU --> X
+        CF[config.js<br/>API_URL · ORGANIZATION_SLUG] --> X
     end
     X -->|JSON · JWT| API[(API FilaCero)]
-    H -.->|Web Speech API| N[[Navegador]]
+    U -.->|Web Speech API| N[[Navegador]]
 ```
 
 | Componente SPA | Responsabilidad |
 |---|---|
-| `router/` | Tabla de rutas y guardas por rol (`/`, `/sala`, `/agente`, `/admin/:seccion`) |
-| `pages/` | Una página por vista principal; compone componentes |
-| `components/admin/TablaSeccion` + `ui/PanelDetalle` | Patrón uniforme del panel: tabla de 6 columnas (un dato por columna) y detalle al hacer clic |
-| `components/agente/PrepararTurno` | Preparación previa del pedido |
-| `components/cliente/ReservarTurno` | Asistente de reserva: pasos según el tipo de trámite (entrega, garantía, reclamo, general) |
-| `components/agente/Equipos`, `Reclamos`, `Presencia` | Tablero del taller, bandeja de reclamos y estado del asesor en la consola |
-| `hooks/useLlamadoPorVoz` | Anuncio y repetición cada 20 s del turno llamado |
+| `main.js` | Escucha `hashchange`, resuelve la ruta y pinta `XPage()` en `#app`; ejecuta la limpieza de la página anterior (sondeos, relojes, voz) |
+| `router/` | Tabla de rutas y guardas por rol (`#/`, `#/sala`, `#/agente`, `#/admin/:seccion`, `#/cambiar-clave`); decide página, redirección, 403 o 404 |
+| `pages/` | Una página por vista principal con el patrón `XPage()` (HTML) + `mountXPage()` (eventos y datos) |
+| `components/admin/tablaSeccion.js` + `ui/modal.js` (`abrirDetalle`) | Patrón uniforme del panel: tabla de 6 columnas (un dato por columna) y detalle al hacer clic |
+| `components/agente/prepararTurno.js` | Preparación previa del pedido |
+| `components/cliente/reservarTurno.js` | Asistente de reserva: pasos según el tipo de trámite (entrega, garantía, reclamo, general) |
+| `components/agente/equipos.js`, `reclamos.js`, `presencia.js` | Tablero del taller, bandeja de reclamos con minichat y estado del asesor en la consola |
+| `utils/voz.js` | Anuncio y repetición cada 20 s del turno llamado (Web Speech API) |
+| `utils/polling.js` | `crearSondeo()`: consulta periódica que se pausa con la pestaña oculta y conserva el último dato si falla |
+| `utils/dom.js` | Plantilla `html``…``` que **escapa toda interpolación** (protección contra XSS) |
 | `api/http.js` | Único punto que usa `fetch`: token, slug de organización, errores, aviso de servidor lento |
 
 ## Trazabilidad C2 ↔ código ↔ despliegue
 
 | Contenedor | Código | Unidad ejecutable | Nodo (ver [06](06-despliegue.md)) |
 |---|---|---|---|
-| SPA FilaCero | `frontend/src` | Servidor Vite (`npm run dev`) en demo · `dist/` + nginx en producción | Equipo de demostración |
+| SPA FilaCero | `frontend/index.html`, `frontend/src/js`, `frontend/src/css` | Archivos estáticos sin compilar servidos con `python -m http.server 5173` (o Live Server) | Equipo de demostración |
 | API FilaCero | `backend/app` | Proceso Python (`python run.py` o `waitress-serve run:app`) | Equipo de demostración |
 | Base de datos FilaCero | `backend/migrations` | Servicio `mysqld` | Equipo de demostración |

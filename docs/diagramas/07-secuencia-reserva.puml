@@ -1,0 +1,44 @@
+@startuml secuencia-reserva
+!include _estilo.iuml
+title FilaCero · Secuencia: reservar turno con OTP sin sobreventa (RAR-01, RAR-02)
+autonumber
+actor Ciudadano
+participant "SPA\nreservarTurno.js" as SPA
+participant "http.js" as H
+participant "turnos.controladores" as C
+participant "turnos.otp" as O
+participant "turnos.servicios" as S
+database "MySQL" as DB
+participant "Proveedor SMS" as SMS
+
+Ciudadano -> SPA : elige trámite, sede y franja
+SPA -> H : solicitarCodigo(celular)
+H -> C : POST /turnos/publico/solicitar-codigo\nX-Organization-Slug
+C -> O : generar OTP (rate limit por IP)
+O -> SMS : enviar código
+note right : en demo el código se muestra\n(FILACERO_OTP_TEST_MODE)
+Ciudadano -> SPA : escribe el código
+SPA -> H : verificarCodigo
+H -> C : POST /turnos/publico/verificar-codigo
+C --> SPA : token OTP de propósito único
+SPA -> H : reservar(franja, datos)
+H -> C : POST /turnos/publico (token OTP)
+C -> S : crear_turno(...)
+activate S
+S -> S : candado en memoria por sede
+S -> DB : BEGIN (READ COMMITTED)
+S -> DB : SELECT puntos … FOR UPDATE
+S -> DB : contar turnos activos de la franja
+alt hay cupo
+  S -> DB : INSERT turnos (estado=ESPERANDO)
+  S -> DB : COMMIT
+  S --> C : turno
+  C --> SPA : 201 {codigo TU-XXXXXX}
+else franja llena
+  S -> DB : ROLLBACK
+  S --> C : ConflictoError
+  C --> SPA : 409 "La franja ya no tiene cupos"
+end
+deactivate S
+SPA --> Ciudadano : confirmación o mensaje
+@enduml

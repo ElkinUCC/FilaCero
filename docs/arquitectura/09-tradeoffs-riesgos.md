@@ -15,6 +15,8 @@
 | T-09 | Historia íntegra | La baja no es reversible desde la UI | Integridad de indicadores y auditoría | 011 |
 | T-10 | Costo cero y demo sin red | Disponibilidad de un solo equipo | Es una demostración académica | 012 |
 | T-11 | Panel uniforme (6 columnas, detalle al clic) | Un clic adicional para ver el detalle | Pedido del docente: vistas menos cargadas | — |
+| T-12 | Frontend sin frameworks: cero dependencias, sin compilación, cumple el requisito del curso | Más código propio (repintado, delegación de eventos, escape de HTML) y sin escape automático | La SPA es pequeña (53 módulos) y la estructura por capas de la referencia la mantiene ordenada | 002 |
+| T-13 | Módulos que leen el modelo de otro (`franjas`/`usuarios` → `Turno`, `turnos` ↔ `agentes`) con importación diferida | Un ciclo lógico entre módulos del mismo proceso | Evita duplicar consultas de conteo; dentro de un monolito el costo de cambio es bajo y las pruebas lo protegen | 001 |
 
 ## 2. Riesgos
 
@@ -24,14 +26,16 @@ Probabilidad (P) e impacto (I): Alta / Media / Baja.
 |---|---|---|---|---|---|
 | R-01 | Sobreventa de cupos por concurrencia en MySQL | M | A | Bloqueo por sede + `FOR UPDATE` + `READ COMMITTED`; prueba de carga real | **Mitigado en esta entrega** (se detectó 18/6, ahora 6/6) |
 | R-02 | Falla del único nodo durante la presentación | B | A | Ensayo previo, guion de verificación (`simulacion.py --url`), datos recargables con un comando | Aceptado |
-| R-03 | Pérdida de datos sin respaldo | M | M | En producción: respaldo diario de la BD administrada; en demo: `simulacion.py --cargar` regenera los datos | Aceptado (demo) |
-| R-04 | Exposición de datos personales (nombre en sala, token en `localStorage`) | M | M | Celular nunca en sala; DTO públicos; `SALA_NOMBRE_COMPLETO` configurable; React escapa HTML | Mitigado parcialmente |
-| R-05 | Saturación de CPU si crecen sedes y polling | B (hoy) | M | Escalar procesos detrás de nginx; `ETag`/SSE (E-2) | Monitoreado |
+| R-03 | Pérdida de datos sin respaldo | M | M | `simulacion.py --cargar` regenera los datos de la demostración; respaldo manual con `mysqldump` antes de presentar | Aceptado (localhost) |
+| R-04 | Exposición de datos personales (nombre en sala, token en `localStorage`) | M | M | Celular nunca en sala; DTO públicos; `SALA_NOMBRE_COMPLETO` configurable; la plantilla `html``…``` escapa HTML y la CSP bloquea scripts en línea | Mitigado parcialmente |
+| R-05 | Saturación de CPU si crecen sedes y polling | B (hoy) | M | Escalar procesos de la API; `ETag`/SSE (E-2, fuera de alcance) | Monitoreado |
 | R-06 | Fuga entre organizaciones por una consulta fuera del ORM | B | A | Filtro automático; prohibición de SQL crudo; `test_multiempresa.py` | Mitigado |
 | R-07 | Deuda técnica: consultas en controladores de métricas | A | B | Mover a `agentes/repositorios.py` sin cambiar el contrato | Abierto (planificado) |
 | R-08 | Navegador sin voz en español o que bloquea el audio | M | B | Botón "Repetir", estado visible en pantalla, el clic en "Llamar" habilita el audio | Mitigado |
 | R-09 | Límite de peticiones en memoria no compartido entre procesos | B (hoy) | M | Con varios procesos, mover a almacén compartido (Redis o tabla) | Aceptado (un proceso) |
 | R-10 | Olvidar `flask db upgrade` tras actualizar el código | M | A | Guía de actualización con el paso explícito; la migración es aditiva y segura de repetir | Mitigado |
+| R-11 | Ciclo lógico `turnos ↔ agentes` y lecturas de modelos ajenos (T-13) dificultan extraer un módulo como servicio independiente | B | M | Importación diferida; dependencias visibles en el diagrama de paquetes; plan: exponer las consultas en `turnos/repositorios.py` | Aceptado (planificado) |
+| R-12 | Un desarrollador olvida usar `html``…``` e inserta texto del usuario con `innerHTML` (XSS) en la SPA sin framework | B | A | Convención única en `utils/dom.js`, revisión de `crudo()` e `innerHTML`, CSP `script-src 'self'` | Mitigado |
 
 ## 3. Supuestos
 

@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)](https://flask.palletsprojects.com/)
-[![Tests](https://img.shields.io/badge/Tests-117%20reported%20passing-brightgreen.svg)](tests)
+[![Tests](https://img.shields.io/badge/Tests-164%20passing-brightgreen.svg)](tests)
 [![Code style](https://img.shields.io/badge/code%20style-black%20%2B%20ruff-000000.svg)](pyproject.toml)
 
 ---
@@ -16,7 +16,6 @@ La API está organizada **por dominios**. Cada dominio tiene sus propias capas, 
 ```
 backend/
 ├── run.py                      # Punto de entrada: python run.py
-├── wsgi.py                     # Producción: waitress-serve wsgi:app
 ├── simulacion.py               # Verificación, carga de datos demo y prueba de carga
 ├── requirements.txt            # Dependencias con versión fija
 ├── requirements-dev.txt        # + pytest, pip-audit, black, ruff
@@ -24,7 +23,7 @@ backend/
 ├── .env.example                # Plantilla (el .env real NO se sube)
 ├── app/
 │   ├── __init__.py             # Factory crear_app(): extensiones, blueprints, manejadores
-│   ├── config.py               # Config desde .env + validación para producción
+│   ├── config.py               # Config desde .env (localhost)
 │   ├── errores.py              # Excepciones de dominio + manejador global
 │   ├── seguridad.py            # requiere_rol, limitar, contraseñas, celular
 │   ├── horario.py              # Horario demo 24/7, franjas automáticas, CUPO POR SEDE
@@ -83,22 +82,11 @@ Excepciones de dominio (`app/errores.py`): `DatosInvalidosError` (400), `Credenc
 
 > Los datos de éxito van en la raíz y no dentro de `"data"`. Es una diferencia deliberada con la referencia, para no romper las pruebas del equipo (ver ADR-0009).
 
-### Verificación OTP en demo sin SMS
+### Verificación OTP en localhost
 
-Los SMS reales tienen costo. Para una demostración pública se puede activar un OTP fijo
-limitado a un único celular dedicado, sin enviar mensajes:
-
-```env
-FILACERO_OTP_TEST_MODE=false
-FILACERO_OTP_DEMO_ENABLED=true
-FILACERO_OTP_DEMO_PHONE=3001234567
-FILACERO_OTP_DEMO_CODE=123456
-```
-
-Configura un número reservado para la demo, no el de un cliente. La API solo acepta ese
-número y muestra el código al solicitarlo; cualquier otro celular se rechaza. Esto no
-verifica la posesión de un teléfono y no debe usarse con datos reales. Para volver al
-funcionamiento normal, desactiva `FILACERO_OTP_DEMO_ENABLED` y configura un proveedor SMS.
+FilaCero no envía SMS reales. Con `FILACERO_OTP_TEST_MODE=true` (valor por defecto) la API genera el código
+de 6 dígitos y lo devuelve en la respuesta **solo** si la petición viene del mismo equipo (127.0.0.1); el
+portal lo muestra en pantalla para completar la demostración.
 
 ---
 
@@ -137,7 +125,7 @@ python scripts\crear_organizacion.py --nombre "Cooperativa Norte" --slug coopera
 python scripts\crear_cuenta.py admin@cooperativa.com ADMIN "Admin Cooperativa" --organizacion-id 2
 ```
 
-El segundo comando crea la cuenta administradora en el tenant indicado; reemplaza `2` por el ID que informó el primer comando. Configura el despliegue frontend de esa organización con:
+El segundo comando crea la cuenta administradora en el tenant indicado; reemplaza `2` por el ID que informó el primer comando. Configura el frontend de esa organización con:
 
 ```env
 ORGANIZATION_SLUG: "cooperativa-norte"   // frontend/src/js/config.js
@@ -158,7 +146,7 @@ de forma interactiva y actualiza la cuenta existente.
 | Comando | Qué hace |
 |---|---|
 | `python run.py` | Levanta la API en desarrollo |
-| `python -m pytest tests/ -v` | Ejecuta la suite automatizada (117 aprobadas en la última ejecución reportada) |
+| `python -m pytest tests/ -v` | Ejecuta la suite automatizada (164 aprobadas en la última ejecución) |
 | `python -m pytest tests/test_contrato_y_errores.py -v` | Pruebas de un solo tema |
 | `ruff check .` · `black .` | Estilo y formato (100 columnas) |
 | `pip-audit -r requirements.txt` | Vulnerabilidades en dependencias |
@@ -168,16 +156,14 @@ de forma interactiva y actualiza la cuenta existente.
 | `python simulacion.py --en-vivo --cada 10 --por-ciclo 3` | Crea y atiende automáticamente hasta 3 reservas demo cada 10 segundos; no toma turnos ajenos |
 | `python simulacion.py --en-vivo --solo-reservas` | Crea reservas sin atención automática |
 | `python simulacion.py --carga --url http://127.0.0.1:5000` | Prueba de carga y de sobrecupo |
+| `python simulacion.py --cuentas [--probar-clave] [--desbloquear]` | Revisa las cuentas de `CUENTAS_PROTEGIDAS`: si existen, su rol, si están bloqueadas y (opcional) si la contraseña coincide |
 | `python scripts/promover_admin.py correo@x.co [ADMIN\|SUPERVISOR\|AGENTE]` | Recupera el acceso de administrador |
 | `flask db upgrade` · `flask db history` | Migraciones |
 
-`--en-vivo` es una simulación interactiva para un entorno local/de demo; termina
-con error si `FLASK_ENV=production`. No es un proceso que Render deba iniciar junto
-con la API: conecta directamente a la base configurada, crea turnos y puede cambiar
-el estado de los asesores demo. No quites la protección ni apuntes esta simulación
-a los datos reales de producción. Para supervisar la operación real, usa
-`/admin/resumen`: consulta el estado de atención de cada sede y se actualiza cada
-15 segundos.
+`--en-vivo` es una simulación interactiva para la demostración en localhost:
+conecta directamente a la base configurada, crea turnos y puede cambiar el estado
+de los asesores demo. Para supervisar la operación, usa `#/admin/resumen`: consulta
+el estado de atención de cada sede y se actualiza cada 15 segundos.
 
 ---
 

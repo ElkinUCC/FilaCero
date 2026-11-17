@@ -1,0 +1,32 @@
+@startuml despliegue
+!include _estilo.iuml
+title FilaCero · Diagrama de despliegue UML (solo localhost)
+
+node "«device» Equipo de demostración\nWindows 10/11 · ≥ 4 GB RAM · 2+ núcleos" as EQ {
+  node "«execution environment»\nServidor estático\n(python -m http.server / Live Server)" as WS {
+    artifact "index.html\nsrc/css/*.css\nsrc/js/**/*.js" as A1
+  }
+  node "«execution environment»\nPython 3.12 venv" as PY {
+    artifact "backend/app + run.py\n(Flask) :5000" as A2
+  }
+  node "«execution environment»\nMySQL 8 Server" as MY {
+    database "filacero_db :3307" as A3
+  }
+}
+node "«device» Navegador\n(Chrome / Edge)" as NAV {
+  artifact "SPA en ejecución\n+ Web Speech API" as A4
+}
+node "«device» TV de la sede\n(navegador)" as TVN
+
+NAV --> WS : HTTP :5173 (descarga estáticos)
+NAV --> PY : HTTP/JSON :5000 (CORS)
+TVN --> PY : polling cada 4 s
+PY --> MY : TCP · PyMySQL
+
+note bottom of EQ
+  Tres procesos en un solo equipo. No hay contenedores,
+  servidor web de producción ni nube (ADR-012).
+  Orden: 1) MySQL  2) flask db upgrade + python run.py
+  3) python -m http.server 5173
+end note
+@enduml

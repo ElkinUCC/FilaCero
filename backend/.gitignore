@@ -1,18 +1,4 @@
-﻿__pycache__/
-*.py[cod]
-*.bak
-.venv/
-venv/
-.env
-.pytest_cache/
-*.db
-.env.usuario
-
-# Python
-.ruff_cache/
-.env.*
-!.env.example
-# Secrets and local configuration
+# Secretos y configuración local
 .env
 .env.*
 !.env.example
@@ -22,14 +8,11 @@ venv/
 .venv/
 __pycache__/
 *.py[cod]
+*.bak
 .pytest_cache/
 .ruff_cache/
 
-# Node
-node_modules/
-dist/
-
-# Local databases and logs
+# Bases de datos locales y registros
 *.db
 *.sqlite
 *.log

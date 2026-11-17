@@ -28,7 +28,7 @@ Aburrá, 8 asesores, atención todos los días en franjas de 30 minutos.
 | Pantalla de sala para TV por sede | Envío real de SMS (modo prueba en localhost; ver supuestos) |
 | Panel administrativo: resumen en vivo, sedes, trámites, asesores, usuarios y permisos, historial, actividad | Alta disponibilidad multi-nodo (se analiza como evolución) |
 | Equipos de clientes (recepción → reparación → listo → entregado), garantía (≤ 1 año) y reclamos en línea o en persona | Inventario de repuestos y facturación |
-| Multiempresa (varias organizaciones aisladas en la misma instalación) | Despliegue en producción (la demostración es en localhost) |
+| Multiempresa (varias organizaciones aisladas en la misma instalación) | Despliegue en internet o en servidores (la entrega se ejecuta **solo en localhost**) |
 
 ## 3. Actores
 
@@ -38,7 +38,7 @@ Aburrá, 8 asesores, atención todos los días en franjas de 30 minutos.
 | **Asesor** | Personal (rol `AGENTE`) | Atender la cola sin salirse de la franja; preparar pedidos antes de la llegada | Consola del asesor |
 | **Administrador** | Personal (rol `ADMIN`) | Configurar sedes, trámites, asesores y permisos; supervisar | Panel administrativo |
 | **Supervisor** | Personal (rol `SUPERVISOR`) | Consultar operación e indicadores (solo lectura) | Panel administrativo |
-| **Público en sala de espera** | Personas en la sede (vía TV con navegador) | Ver y escuchar qué turno se llama y a qué módulo acercarse | Vista pública `/sala` |
+| **Público en sala de espera** | Personas en la sede (vía TV con navegador) | Ver y escuchar qué turno se llama y a qué módulo acercarse | Vista pública `#/sala` |
 | **Proveedor SMS** | Sistema externo | Entregar el código OTP al celular | API HTTP (simulado en modo prueba) |
 
 ## 4. Restricciones
@@ -46,7 +46,7 @@ Aburrá, 8 asesores, atención todos los días en franjas de 30 minutos.
 | Tipo | Restricción | Consecuencia arquitectónica |
 |---|---|---|
 | Académica | Monolito modular por capas, profesional, demostrable en **localhost** | Un proceso backend, módulos de dominio con capas internas; sin microservicios (ADR-001, ADR-012) |
-| Tecnológica | Python/Flask, React/Vite, MySQL 8 | Stack conocido por el equipo; SQLAlchemy + Alembic |
+| Tecnológica | Python/Flask, MySQL 8; frontend **sin frameworks** (HTML + CSS + JavaScript puro), exigencia del curso | SQLAlchemy + Alembic en el backend; SPA vanilla con módulos ES, sin compilación (ADR-002) |
 | Operativa | Equipo de 1 desarrollador, sin presupuesto de nube | Costo de infraestructura ≈ 0; despliegue en un nodo (ADR-012) |
 | De negocio | Atención máxima de 10 min ⇒ 3 cupos por asesor y franja | Regla de capacidad centralizada en `app/horario.py` |
 | Legal | Ley 1581 de 2012 (protección de datos personales, Colombia) | Mínimos datos del ciudadano (nombre + celular), celular enmascarado en vistas públicas, nunca en la sala (ADR-008) |

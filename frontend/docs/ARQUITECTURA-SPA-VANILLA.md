@@ -2,7 +2,7 @@
 
 ## 1. Por qué JavaScript *vanilla*
 
-El curso exige un frontend **sin frameworks** (ni React, ni Angular, ni Vue). FilaCero se escribe con lo que
+El curso exige un frontend **sin frameworks** de JavaScript. FilaCero se escribe con lo que
 trae el navegador: HTML5, CSS3, módulos ES (`import`/`export`), `fetch`, `localStorage`, la API de historial
 (`hashchange`), `ResizeObserver` (gráficas) y Web Speech API (voz del llamado). No hay `package.json`,
 `node_modules` ni paso de compilación. La organización por capas es la misma del proyecto de referencia

@@ -1,6 +1,6 @@
 # FilaCero · Frontend (HTML + CSS + JavaScript puro)
 
-SPA sin frameworks: **no usa React, Angular, Vue ni librerías**, no necesita Node.js, npm ni compilación.
+SPA sin frameworks: **no usa ningún framework ni librería de JavaScript**; no necesita Node.js, gestores de paquetes ni compilación.
 El navegador carga `index.html`, los estilos de `src/css/` y los módulos ES de `src/js/`.
 
 ## Cómo ejecutarlo
@@ -16,7 +16,7 @@ python -m http.server 5173
 Abre `http://localhost:5173`. También sirve la extensión **Live Server** de VS Code (`http://127.0.0.1:5500`).
 
 El origen que uses debe estar en `CORS_ALLOWED_ORIGINS` de `backend/.env`.
-La URL de la API y la organización están en `src/js/config.js`.
+La URL de la API (se calcula sola a partir del equipo: `http://<equipo>:5000/api/v1`) y la organización están en `src/js/config.js`.
 
 ## Estructura
 
@@ -24,7 +24,6 @@ La URL de la API y la organización están en `src/js/config.js`.
 frontend/
 ├── index.html                  # contenedor único #app + hojas de estilo + main.js
 ├── public/favicon.svg
-├── nginx.conf · Dockerfile     # despliegue con Docker (nginx sirve los archivos tal cual)
 └── src/
     ├── css/                    # index (tokens) · ui · cliente · agente · admin · sala · asistente · responsive
     └── js/

@@ -15,7 +15,7 @@ se repita "por favor *turno/nombre*, acercarse a la taquilla/módulo X" mientras
 | Anunciar solo desde la TV de sala | Un parlante central | El docente lo pidió en la consola; duplicaría si ambos hablan |
 
 ## Decisión
-Hook `useLlamadoPorVoz` en la SPA: al pasar el turno a `LLAMADO` anuncia "Turno 1 2 0 4 8 9. *Nombre completo*,
+Módulo `src/js/utils/voz.js` de la SPA (usado por la consola del asesor): al pasar el turno a `LLAMADO` anuncia "Turno 1 2 0 4 8 9. *Nombre completo*,
 por favor acercarse al Módulo 2" (concordancia "al módulo"/"a la taquilla"), repite cada 20 s, se detiene al
 iniciar la atención, devolver o marcar no asistió, y tiene tope de 9 repeticiones (3 min = tiempo máximo de
 llegada). Botones **Repetir** y **Silenciar**; preferencia guardada por navegador. La TV de sala solo muestra

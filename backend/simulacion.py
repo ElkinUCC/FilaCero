@@ -34,6 +34,13 @@ Un solo archivo para todo lo que necesitas antes de la demo:
        python simulacion.py --url http://127.0.0.1:5000        # contra el servidor
                                                                 # (requiere --cargar antes)
 
+  6) REVISAR LAS CUENTAS PROTEGIDAS (no modifica nada salvo con --desbloquear)
+       python simulacion.py --cuentas                  # existe, rol, activa, bloqueada...
+       python simulacion.py --cuentas --probar-clave   # además prueba la contraseña
+       python simulacion.py --cuentas --desbloquear    # quita el bloqueo por intentos fallidos
+     Para crear una cuenta protegida o cambiarle la contraseña:
+       python scripts/crear_cuenta.py correo@filacero.co ADMIN "Nombre"
+
 El negocio simulado: TecniVisión, 4 sedes, 2 administradores, 1 supervisor y 8 asesores.
 Atención todos los días, 24 horas, en franjas de 30 min, máximo
 10 min por persona (3 cupos por asesor y franja). Los clientes son
@@ -939,13 +946,48 @@ def _rotar_asesores(db, datos, base, fecha, hoy, rnd):
     return cambios
 
 
-def _guardar_protegidas(app):
-    """Copia (con su hash) las cuentas de CUENTAS_PROTEGIDAS antes de borrar."""
+def _correos_protegidos(app):
+    return [c.strip().lower() for c in app.config.get("CUENTAS_PROTEGIDAS", []) if c.strip()]
+
+
+def _parecidas(correo):
+    """Cuentas del personal con el mismo usuario y otro dominio (p. ej. .com vs .co)."""
     from app.dominios.usuarios.modelos import Usuario
 
-    correos = app.config.get("CUENTAS_PROTEGIDAS", [])
+    usuario = correo.split("@", 1)[0]
+    return [
+        u.correo
+        for u in Usuario.query.filter(Usuario.correo.like(f"{usuario}@%")).all()
+        if u.correo.lower() != correo and u.rol != "CLIENTE"
+    ]
+
+
+def _guardar_protegidas(app):
+    """Copia (con su hash) las cuentas de CUENTAS_PROTEGIDAS antes de borrar y
+    avisa de las que no existen: esas NO se pueden conservar."""
+    from app.dominios.usuarios.modelos import Usuario
+
+    correos = _correos_protegidos(app)
     if not correos:
         return []
+    encontradas = Usuario.query.filter(Usuario.correo.in_(correos)).all()
+    existentes = {u.correo.lower() for u in encontradas}
+    for correo in correos:
+        if correo in existentes:
+            continue
+        print(
+            f"  {AMBAR}⚠ {correo} está en CUENTAS_PROTEGIDAS pero no existe en esta base "
+            f"de datos: no hay nada que conservar.{FIN}"
+        )
+        for otra in _parecidas(correo):
+            print(
+                f"    {AMBAR}Existe {otra} (¿es la misma con otro dominio?). "
+                f"Esa cuenta NO está protegida y se borrará.{FIN}"
+            )
+        print(
+            f"    {GRIS}Créala después con: python scripts/crear_cuenta.py {correo} "
+            f'ADMIN "Tu nombre"{FIN}'
+        )
     return [
         {
             "nombre": u.nombre,
@@ -953,8 +995,12 @@ def _guardar_protegidas(app):
             "rol": u.rol,
             "password_hash": u.password_hash,
             "sede": u.punto_asignado.nombre if u.punto_asignado else None,
+            "modulo": u.modulo,
+            "celular": u.celular,
+            "documento": u.documento,
+            "debe_cambiar_clave": bool(u.debe_cambiar_clave),
         }
-        for u in Usuario.query.filter(Usuario.correo.in_(correos)).all()
+        for u in encontradas
     ]
 
 
@@ -975,10 +1021,118 @@ def _restaurar_protegidas(db, copias):
         usuario.rol = c["rol"]
         usuario.password_hash = c["password_hash"]
         usuario.activo = True
+        usuario.eliminado_en = None
+        usuario.debe_cambiar_clave = c.get("debe_cambiar_clave", False)
+        # La recarga no debe dejar la cuenta bloqueada por intentos anteriores.
+        usuario.intentos_fallidos = 0
+        usuario.bloqueado_hasta = None
+        usuario.celular = c.get("celular")
+        usuario.documento = c.get("documento")
         usuario.punto_asignado_id = sede.id if (sede and c["rol"] == "AGENTE") else None
+        if c["rol"] == "AGENTE":
+            usuario.modulo = c.get("modulo") or "Módulo 3"
+            usuario.presencia = "DISPONIBLE"
     db.session.commit()
     for c in copias:
         print(f"  {VERDE}✓{FIN} Cuenta protegida conservada: {c['correo']} ({c['rol']})")
+
+
+def comando_cuentas(args):
+    """Diagnóstico de CUENTAS_PROTEGIDAS: por qué una cuenta no puede entrar."""
+    import getpass
+
+    from app import create_app, db
+    from app.dominios.usuarios.modelos import Usuario
+    from app.seguridad import verificar_password
+
+    app = create_app()
+    with app.app_context():
+        from flask import g
+
+        try:
+            organizacion = _preparar_organizacion_simulacion(app, db)
+        except RuntimeError as error:
+            print(f"{ROJO}No se pudo revisar: {error}{FIN}")
+            return 1
+        g.organizacion_id = organizacion.id
+        g.organizacion = organizacion
+        correos = _correos_protegidos(app)
+        print(
+            f"Base de datos: {NEGRITA}{_descripcion_bd(app)}{FIN} · "
+            f"organización '{organizacion.nombre}'"
+        )
+        if not correos:
+            print(
+                f"{AMBAR}CUENTAS_PROTEGIDAS está vacía en backend/.env.{FIN}\n"
+                "Agrega, por ejemplo: "
+                "CUENTAS_PROTEGIDAS=elkinadmin@filacero.co,elkinagente@filacero.co"
+            )
+            return 1
+        ahora = datetime.now(UTC).replace(tzinfo=None)
+        problemas = 0
+        for correo in correos:
+            print(f"\n{NEGRITA}{correo}{FIN}")
+            u = Usuario.query.filter_by(correo=correo).first()
+            if u is None:
+                problemas += 1
+                print(f"  {ROJO}✗ No existe en esta base de datos.{FIN}")
+                for otra in _parecidas(correo):
+                    print(
+                        f"  {AMBAR}Existe {otra}: revisa si escribiste otro dominio "
+                        f"(.co / .com).{FIN}"
+                    )
+                print(
+                    f"  {GRIS}Créala: python scripts/crear_cuenta.py {correo} ADMIN \"Tu nombre\"\n"
+                    f'  (para asesor: ... {correo} AGENTE "Tu nombre" "Sede Centro"){FIN}'
+                )
+                continue
+            sede = u.punto_asignado.nombre if u.punto_asignado else "—"
+            print(f"  {VERDE}✓{FIN} Existe · rol {u.rol} · sede {sede} · módulo {u.modulo or '—'}")
+            if not u.activo or u.eliminado_en:
+                problemas += 1
+                print(
+                    f"  {ROJO}✗ Está desactivada o dada de baja.{FIN} "
+                    "Reactívala con crear_cuenta.py."
+                )
+            if not u.password_hash:
+                problemas += 1
+                print(f"  {ROJO}✗ No tiene contraseña.{FIN} Asígnala con crear_cuenta.py.")
+            if u.bloqueado_hasta and u.bloqueado_hasta > ahora:
+                minutos = int((u.bloqueado_hasta - ahora).total_seconds() // 60) + 1
+                if args.desbloquear:
+                    u.bloqueado_hasta = None
+                    u.intentos_fallidos = 0
+                    db.session.commit()
+                    print(f"  {VERDE}✓ Estaba bloqueada ({minutos} min); ya se desbloqueó.{FIN}")
+                else:
+                    problemas += 1
+                    print(
+                        f"  {ROJO}✗ Bloqueada {minutos} min por intentos fallidos.{FIN} "
+                        "Espera o usa --desbloquear."
+                    )
+            elif u.intentos_fallidos:
+                print(
+                    f"  {AMBAR}· Lleva {u.intentos_fallidos} intento(s) fallido(s) seguidos.{FIN}"
+                )
+            if u.debe_cambiar_clave:
+                print(f"  {AMBAR}· Tiene clave temporal: al entrar te pedirá cambiarla.{FIN}")
+            if args.probar_clave and u.password_hash:
+                clave = getpass.getpass("  Escribe la contraseña para probarla (no se ve): ")
+                if verificar_password(clave, u.password_hash):
+                    print(f"  {VERDE}✓ La contraseña es correcta.{FIN}")
+                else:
+                    problemas += 1
+                    print(
+                        f"  {ROJO}✗ Esa contraseña NO coincide.{FIN} Cámbiala con: "
+                        f'python scripts/crear_cuenta.py {correo} {u.rol} "{u.nombre}"'
+                        + (f' "{sede}"' if u.rol == "AGENTE" and sede != "—" else "")
+                    )
+        print()
+        if problemas:
+            print(f"{AMBAR}{problemas} problema(s) encontrado(s).{FIN}")
+            return 1
+        print(f"{VERDE}Las cuentas protegidas están listas para entrar.{FIN}")
+        return 0
 
 
 def _descripcion_bd(app):
@@ -1013,9 +1167,6 @@ def comando_cargar(args, solo_borrar=False):
 
     app = create_app()
     with app.app_context():
-        if app.config.get("PRODUCCION"):
-            print(f"{ROJO}Por seguridad la simulación no se ejecuta con FLASK_ENV=production.{FIN}")
-            return 1
         host = db.engine.url.host
         base_remota = _base_es_remota(db.engine.url)
         if base_remota and not args.permitir_borrar_remoto:
@@ -1065,6 +1216,29 @@ def comando_cargar(args, solo_borrar=False):
                 return 1
 
         nombre_organizacion = organizacion.nombre
+        # Si una cuenta protegida no existe pero hay una igual con otro dominio
+        # (.com / .co), lo más probable es un error en el .env: se cancela para
+        # no borrar la cuenta real.
+        from app.dominios.usuarios.modelos import Usuario
+
+        en_riesgo = [
+            (correo, otra)
+            for correo in _correos_protegidos(app)
+            if not Usuario.query.filter_by(correo=correo).first()
+            for otra in _parecidas(correo)
+        ]
+        if en_riesgo:
+            for correo, otra in en_riesgo:
+                print(
+                    f"{ROJO}Se canceló: {correo} está en CUENTAS_PROTEGIDAS pero no existe, "
+                    f"y sí existe {otra}.{FIN}"
+                )
+            print(
+                "Corrige CUENTAS_PROTEGIDAS en backend/.env (o crea la cuenta con "
+                "scripts/crear_cuenta.py) y vuelve a ejecutar. No se modificó nada.\n"
+                "Revisa el estado con: python simulacion.py --cuentas"
+            )
+            return 1
         protegidas = _guardar_protegidas(app)
         tablas = borrar_todo(db, organizacion.id)
         print(
@@ -1113,6 +1287,11 @@ def comando_cargar(args, solo_borrar=False):
         for _n, correo, i in ASESORES:
             clave = "(clave conservada)" if correo.lower() in correos_protegidos else CLAVE_ASESOR
             print(f"  Asesor         {correo:<32} {clave}  ({SEDES[i][0]})")
+        demo = {c.lower() for _n, c in ADMINS} | {c.lower() for _n, c in SUPERVISORES}
+        demo |= {c.lower() for _n, c, _i in ASESORES}
+        for c in protegidas:
+            if c["correo"].lower() not in demo:
+                print(f"  Protegida      {c['correo']:<32} (tu contraseña)  ({c['rol']})")
         print(
             f"\n{NEGRITA}Cliente de la demostración{FIN}  {CLIENTE_DEMO[0]} · celular "
             f"{CLIENTE_DEMO[1]} · cédula {CLIENTE_DEMO[2]} "
@@ -1147,19 +1326,44 @@ def _agentes_demo_automaticos():
     ]
 
 
+def _cerrar_vinculos(db, turno, agente_id):
+    """Al terminar la atención, el equipo o el reclamo del turno avanzan como en la sede."""
+    ahora = datetime.now(UTC).replace(tzinfo=None)
+    if turno.equipo is not None:
+        equipo = turno.equipo
+        if equipo.estado == "LISTO":
+            equipo.estado, equipo.fecha_entrega = "ENTREGADO", ahora
+            equipo.nota = NOTAS_EQUIPO["ENTREGADO"]
+        elif equipo.estado == "POR_RECIBIR":
+            equipo.estado, equipo.registrado_por_id = "RECIBIDO", agente_id
+            equipo.nota = NOTAS_EQUIPO["RECIBIDO"]
+        equipo.fecha_actualizacion = ahora
+    if turno.reclamo is not None and turno.reclamo.estado != "RESUELTO":
+        reclamo = turno.reclamo
+        reclamo.estado, reclamo.gestionado_por_id = "RESUELTO", agente_id
+        reclamo.respuesta = "Revisamos tu caso en sede y quedó solucionado."
+        reclamo.fecha_respuesta = ahora
+    db.session.commit()
+
+
 def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
-    """Avanza únicamente reservas creadas por esta ejecución de --en-vivo."""
+    """Avanza únicamente reservas creadas por esta ejecución de --en-vivo:
+    alistar (si el trámite lo requiere) → llamar → atender → finalizar, y a
+    veces la persona no llega."""
     from app.dominios.agentes.servicios import (
         finalizar_atencion,
         iniciar_atencion,
         llamar_turno,
+        marcar_no_asistio,
     )
     from app.dominios.turnos.modelos import Turno
+    from app.dominios.turnos.preparacion import registrar_preparacion
 
     if not trabajos or not agentes:
         return
 
-    ids_agentes = [agente.id for agente in agentes]
+    nombres = {agente.id: agente.nombre for agente in agentes}
+    ids_agentes = list(nombres)
     activos = Turno.query.filter(
         Turno.agente_id.in_(ids_agentes),
         Turno.estado.in_(("LLAMADO", "EN_ATENCION")),
@@ -1171,6 +1375,7 @@ def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
         if turno is None:
             trabajos.pop(turno_id)
             continue
+        visible = turno.codigo_corto or turno.codigo
 
         if trabajo["estado"] == "ESPERANDO":
             if turno.estado != "ESPERANDO":
@@ -1187,10 +1392,19 @@ def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
             )
             if agente is None:
                 continue
+            # Preparación previa: el asesor deja listo el pedido antes de llamar.
+            if turno.estado_preparacion in ("PENDIENTE", "EN_PREPARACION"):
+                try:
+                    registrar_preparacion(agente.id, turno.id, "LISTO", rnd.choice(NOTAS_LISTO))
+                    ocupados.add(agente.id)
+                    print(f"  {GRIS}✎ {agente.nombre} alista el pedido de {visible}{FIN}")
+                except ValueError:
+                    db.session.rollback()
+                continue
             try:
                 llamar_turno(agente.id, turno.id)
             except ValueError as error:
-                print(f"  {AMBAR}⚠ No se pudo llamar {turno.codigo}: {error}{FIN}")
+                print(f"  {AMBAR}⚠ No se pudo llamar {visible}: {error}{FIN}")
                 trabajos.pop(turno_id)
                 continue
             trabajo.update(
@@ -1199,38 +1413,102 @@ def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
                 siguiente_en=instante + rnd.uniform(2, 5),
             )
             ocupados.add(agente.id)
-            print(f"  {AMBAR}↗ {agente.nombre} llama {turno.codigo}{FIN}")
+            print(f"  {AMBAR}↗ {agente.nombre} llama {visible}{FIN}")
             continue
 
         if turno.agente_id != trabajo["agente_id"]:
-            print(f"  {AMBAR}⚠ Se detuvo la simulación de {turno.codigo}: cambió su asesor.{FIN}")
+            print(f"  {AMBAR}⚠ Se detuvo la simulación de {visible}: cambió su asesor.{FIN}")
             trabajos.pop(turno_id)
             continue
 
         if instante < trabajo["siguiente_en"]:
             continue
 
+        nombre = nombres.get(trabajo["agente_id"], "El asesor")
         try:
             if trabajo["estado"] == "LLAMADO" and turno.estado == "LLAMADO":
+                if trabajo.get("no_asiste"):
+                    marcar_no_asistio(trabajo["agente_id"], turno_id)
+                    trabajos.pop(turno_id)
+                    print(f"  {GRIS}✗ {visible} no llegó: {nombre} lo marca como no asistió{FIN}")
+                    continue
                 iniciar_atencion(trabajo["agente_id"], turno_id)
                 trabajo.update(
                     estado="EN_ATENCION",
                     siguiente_en=instante + rnd.uniform(18, 32),
                 )
-                print(f"  {VERDE}● {trabajo['agente_id']} atiende {turno.codigo}{FIN}")
+                print(f"  {VERDE}● {nombre} atiende {visible}{FIN}")
             elif trabajo["estado"] == "EN_ATENCION" and turno.estado == "EN_ATENCION":
                 finalizar_atencion(trabajo["agente_id"], turno_id)
+                _cerrar_vinculos(db, turno, trabajo["agente_id"])
                 trabajos.pop(turno_id)
-                print(f"  {VERDE}✓ Turno {turno.codigo} atendido{FIN}")
+                print(f"  {VERDE}✓ {visible} atendido por {nombre}{FIN}")
             else:
                 print(
-                    f"  {AMBAR}⚠ Se detuvo la simulación de {turno.codigo}: "
+                    f"  {AMBAR}⚠ Se detuvo la simulación de {visible}: "
                     f"estado inesperado ({turno.estado}).{FIN}"
                 )
                 trabajos.pop(turno_id)
         except ValueError as error:
-            print(f"  {AMBAR}⚠ No se pudo avanzar {turno.codigo}: {error}{FIN}")
+            print(f"  {AMBAR}⚠ No se pudo avanzar {visible}: {error}{FIN}")
             trabajos.pop(turno_id)
+
+
+def _liberar_asesores_trabados(db, agentes, minutos=10):
+    """Una ejecución anterior detenida a la fuerza pudo dejar asesores demo con un
+    turno "llamado" o "en atención". Si lleva más de 10 min (el máximo por regla),
+    se cierra para que el asesor vuelva a quedar disponible."""
+    from app.dominios.agentes.servicios import finalizar_atencion, marcar_no_asistio
+    from app.dominios.turnos.modelos import Turno
+
+    limite = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=minutos)
+    trabados = Turno.query.filter(
+        Turno.agente_id.in_([a.id for a in agentes]),
+        Turno.estado.in_(("LLAMADO", "EN_ATENCION")),
+        Turno.fecha_llamado < limite,
+    ).all()
+    for turno in trabados:
+        try:
+            if turno.estado == "EN_ATENCION":
+                finalizar_atencion(turno.agente_id, turno.id)
+                _cerrar_vinculos(db, turno, turno.agente_id)
+            else:
+                marcar_no_asistio(turno.agente_id, turno.id)
+        except ValueError:
+            db.session.rollback()
+    if trabados:
+        print(
+            f"  {GRIS}Se liberaron {len(trabados)} asesor(es) que quedaron atendiendo "
+            f"en una ejecución anterior.{FIN}"
+        )
+
+
+def _cerrar_atenciones_abiertas(db, trabajos):
+    """Al detener --en-vivo no deja asesores "atendiendo" para siempre: termina las
+    atenciones en curso y devuelve a la cola los turnos que solo estaban llamados."""
+    from app.dominios.agentes.servicios import devolver_a_cola, finalizar_atencion
+    from app.dominios.turnos.modelos import Turno
+
+    cerradas = devueltas = 0
+    for turno_id, trabajo in list(trabajos.items()):
+        turno = db.session.get(Turno, turno_id)
+        if turno is None or "agente_id" not in trabajo:
+            continue
+        try:
+            if turno.estado == "EN_ATENCION":
+                finalizar_atencion(trabajo["agente_id"], turno_id)
+                _cerrar_vinculos(db, turno, trabajo["agente_id"])
+                cerradas += 1
+            elif turno.estado == "LLAMADO":
+                devolver_a_cola(trabajo["agente_id"], turno_id)
+                devueltas += 1
+        except ValueError:
+            db.session.rollback()
+    if cerradas or devueltas:
+        print(
+            f"  {GRIS}Cierre ordenado: {cerradas} atención(es) finalizada(s), "
+            f"{devueltas} turno(s) devuelto(s) a la cola.{FIN}"
+        )
 
 
 def _registrar_sesion_agentes(db, agentes, accion, detalle):
@@ -1282,7 +1560,7 @@ def _mostrar_tablero_operativo(Turno, agentes, trabajos, ids_turnos, creadas, in
         turno = ocupados.get(agente.id)
         if turno:
             estado = "LLAMANDO" if turno.estado == "LLAMADO" else "ATENDIENDO"
-            print(f"  {VERDE}●{FIN} {agente.nombre:<24} {estado:<12} {turno.codigo}")
+            print(f"  {VERDE}●{FIN} {agente.nombre:<24} {estado:<12} {turno.codigo_corto}")
         else:
             print(f"  {GRIS}○{FIN} {agente.nombre:<24} DISPONIBLE")
     print()
@@ -1304,9 +1582,6 @@ def comando_en_vivo(args):
     app = create_app()
     rnd = random.Random()
     with app.app_context():
-        if app.config.get("PRODUCCION"):
-            print(f"{ROJO}El modo en vivo no se ejecuta con FLASK_ENV=production.{FIN}")
-            return 1
         from flask import g
 
         try:
@@ -1323,6 +1598,8 @@ def comando_en_vivo(args):
             return 1
         agentes_sesion = [] if args.solo_reservas else _agentes_demo_automaticos()
         if agentes_sesion:
+            _liberar_asesores_trabados(db, agentes_sesion)
+        if agentes_sesion:
             _registrar_sesion_agentes(
                 db, agentes_sesion, "login", "Inicio de jornada · simulación FilaCero"
             )
@@ -1338,6 +1615,7 @@ def comando_en_vivo(args):
             + f"Tablero de consola cada {args.tablero_cada}s · duración: "
             + (f"{args.duracion}s\n" if args.duracion else "indefinida\n")
         )
+        pesos = {nombre: peso for nombre, _d, _m, peso in SERVICIOS}
         creadas = 0
         turnos_simulados = []
         trabajos_atencion = {}
@@ -1350,7 +1628,9 @@ def comando_en_vivo(args):
                 for _ in range(args.por_ciclo):
                     ahora = ahora_local()
                     sede = rnd.choice(sedes)
-                    servicio = rnd.choice(servicios)
+                    servicio = rnd.choices(
+                        servicios, weights=[pesos.get(s.nombre, 5) for s in servicios]
+                    )[0]
                     turno = None
                     nombre = ""
                     for fecha in (hoy_local(), hoy_local() + timedelta(days=1)):
@@ -1384,6 +1664,12 @@ def comando_en_vivo(args):
                         if turno:
                             break
                     if turno:
+                        # Igual que en el portal: la entrega lleva su equipo listo,
+                        # la garantía su televisor por recibir y el reclamo su radicado.
+                        _simular_vinculos(
+                            turno, servicio, cliente, sede, [], rnd, ahora_local()
+                        )
+                        db.session.commit()
                         creadas += 1
                         turnos_simulados.append(turno.id)
                         turnos_simulados = turnos_simulados[-100:]
@@ -1391,9 +1677,10 @@ def comando_en_vivo(args):
                             trabajos_atencion[turno.id] = {
                                 "estado": "ESPERANDO",
                                 "punto_id": sede.id,
+                                "no_asiste": rnd.random() < 0.06,
                             }
                         print(
-                            f"  {VERDE}●{FIN} {ahora:%H:%M:%S}  {turno.codigo}  "
+                            f"  {VERDE}●{FIN} {ahora:%H:%M:%S}  {turno.codigo_corto}  "
                             f"{sede.nombre:<16} {servicio.nombre[:26]:<26} "
                             f"{turno.franja.fecha:%d/%m} {turno.franja.hora_inicio:%H:%M}  "
                             f"{GRIS}{nombre}{FIN}"
@@ -1430,7 +1717,7 @@ def comando_en_vivo(args):
                         cancelado.estado = "CANCELADO"
                         db.session.commit()
                         trabajos_atencion.pop(cancelado.id, None)
-                        print(f"  {GRIS}○ {cancelado.codigo} canceló su turno{FIN}")
+                        print(f"  {GRIS}○ {cancelado.codigo_corto} canceló su turno{FIN}")
                 ahora_mono = time.monotonic()
                 if not args.solo_reservas and ahora_mono - ultimo_tablero >= args.tablero_cada:
                     db.session.expire_all()
@@ -1448,6 +1735,8 @@ def comando_en_vivo(args):
         except KeyboardInterrupt:
             print(f"\n{AMBAR}Interrupción solicitada por el usuario.{FIN}")
         finally:
+            if trabajos_atencion:
+                _cerrar_atenciones_abiertas(db, trabajos_atencion)
             if agentes_sesion:
                 _registrar_sesion_agentes(
                     db, agentes_sesion, "logout", "Fin de jornada · simulación FilaCero"
@@ -2125,6 +2414,15 @@ def main():
     )
     parser.add_argument("--carga", action="store_true", help="Prueba de carga contra --url")
     parser.add_argument(
+        "--cuentas", action="store_true", help="Revisa las cuentas de CUENTAS_PROTEGIDAS"
+    )
+    parser.add_argument(
+        "--probar-clave", action="store_true", help="Con --cuentas: prueba la contraseña"
+    )
+    parser.add_argument(
+        "--desbloquear", action="store_true", help="Con --cuentas: quita el bloqueo por intentos"
+    )
+    parser.add_argument(
         "--usuarios", type=int, default=30, help="Usuarios simultáneos en la prueba de carga"
     )
     parser.add_argument("--segundos", type=int, default=20, help="Duración de la prueba de carga")
@@ -2170,6 +2468,8 @@ def main():
     if args.turnos < 0:
         parser.error("--turnos no puede ser negativo.")
 
+    if args.cuentas:
+        return comando_cuentas(args)
     if args.en_vivo:
         return comando_en_vivo(args)
 

@@ -1,7 +1,7 @@
 /**
  * Cliente HTTP único de FilaCero (fetch nativo del navegador).
  *
- * - Base: CONFIG.API_URL (http://127.0.0.1:5000/api/v1 en desarrollo).
+ * - Base: CONFIG.API_URL (http://127.0.0.1:5000/api/v1 en localhost).
  * - Agrega "Authorization: Bearer <token>" si hay sesión.
  * - Sin sesión envía "X-Organization-Slug" (organización de las reservas públicas).
  * - 401 con sesión: cierra la sesión en toda la app (evento global).

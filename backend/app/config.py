@@ -20,55 +20,35 @@ def _int(nombre, defecto):
 
 
 def _url_base_de_datos():
-    """DATABASE_URL tal como la entregan los proveedores en la nube (Aiven,
-    Railway...): 'mysql://usuario:clave@host:puerto/bd?ssl-mode=REQUIRED'.
-    Se adapta al conector PyMySQL y se activa TLS si el proveedor lo exige."""
+    """DATABASE_URL opcional (por ejemplo SQLite para mostrar pantallas sin MySQL).
+    Si es MySQL se adapta al conector PyMySQL y se fuerza utf8mb4."""
     url = os.getenv("DATABASE_URL")
     if not url:
-        return None, False
-    exige_tls = "ssl-mode=required" in url.lower() or "sslmode=require" in url.lower()
+        return None
     if url.startswith("mysql://"):
         url = "mysql+pymysql://" + url[len("mysql://") :]
-    if "?" in url and url.startswith("mysql"):
-        base, consulta = url.split("?", 1)
-        parametros = [
-            p
-            for p in consulta.split("&")
-            if p and not p.lower().startswith(("ssl-mode", "sslmode"))
-        ]
-        url = base + ("?" + "&".join(parametros) if parametros else "")
     if url.startswith("mysql") and "charset=" not in url:
         url += ("&" if "?" in url else "?") + "charset=utf8mb4"
-    return url, exige_tls
+    return url
 
 
-def _opciones_motor(exige_tls):
-    """pool_pre_ping/recycle: las BD en la nube cierran conexiones inactivas.
-    TLS: con DB_SSL_CA (ruta al certificado del proveedor) se verifica el
-    servidor; con solo DB_SSL=true la conexión va cifrada sin verificarlo."""
-    opciones = {"pool_pre_ping": True, "pool_recycle": 280}
-    ca = os.getenv("DB_SSL_CA")
-    if ca:
-        opciones["connect_args"] = {"ssl": {"ca": ca}}
-    elif exige_tls or _bool("DB_SSL", False):
-        opciones["connect_args"] = {"ssl": {"check_hostname": False}}
-    return opciones
+def _opciones_motor():
+    """pool_pre_ping/recycle: evita usar conexiones que MySQL cerró por inactividad."""
+    return {"pool_pre_ping": True, "pool_recycle": 280}
 
 
-_URL_BD, _TLS_BD = _url_base_de_datos()
+_URL_BD = _url_base_de_datos()
 
 
 class Config:
     # ------------------------------------------------------------------
     # Entorno
     # ------------------------------------------------------------------
-    # FLASK_ENV=production activa validaciones estrictas de seguridad.
-    ENTORNO = os.getenv("FLASK_ENV", "development").lower()
-    PRODUCCION = ENTORNO == "production"
-    DEBUG = _bool("FLASK_DEBUG", not PRODUCCION)
+    # FilaCero se ejecuta solo en localhost (ADR-012).
+    DEBUG = _bool("FLASK_DEBUG", True)
 
     # ------------------------------------------------------------------
-    # Secretos (en producción son obligatorios y deben ser largos)
+    # Secretos (genera los tuyos con scripts/generate_secret.py)
     # ------------------------------------------------------------------
     SECRET_KEY = os.getenv("SECRET_KEY") or "solo-desarrollo-cambiar-secret-key-filacero"
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or "solo-desarrollo-cambiar-jwt-key-filacero"
@@ -105,7 +85,7 @@ class Config:
         f"{DB_NAME}?charset={DB_CHARSET}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = _opciones_motor(_TLS_BD)
+    SQLALCHEMY_ENGINE_OPTIONS = _opciones_motor()
 
     # Limita el tamaño de los cuerpos JSON (protección básica DoS).
     MAX_CONTENT_LENGTH = 64 * 1024
@@ -146,12 +126,9 @@ class Config:
 
     # ------------------------------------------------------------------
     # Verificación por celular
-    # En modo prueba el código se devuelve en la respuesta (NO producción).
+    # En modo prueba (localhost) el código se devuelve en la respuesta para la demo.
     # ------------------------------------------------------------------
-    OTP_TEST_MODE = _bool("FILACERO_OTP_TEST_MODE", not PRODUCCION)
-    OTP_DEMO_ENABLED = _bool("FILACERO_OTP_DEMO_ENABLED", False)
-    OTP_DEMO_PHONE = os.getenv("FILACERO_OTP_DEMO_PHONE", "").strip()
-    OTP_DEMO_CODE = os.getenv("FILACERO_OTP_DEMO_CODE", "").strip()
+    OTP_TEST_MODE = _bool("FILACERO_OTP_TEST_MODE", True)
     OTP_VIGENCIA_SEG = _int("OTP_VIGENCIA_SEG", 300)
     OTP_MAX_INTENTOS = _int("OTP_MAX_INTENTOS", 5)
 
@@ -160,8 +137,8 @@ class Config:
     MINUTOS_BLOQUEO = _int("MINUTOS_BLOQUEO", 15)
 
     # Registro público de cuentas con contraseña (los clientes no lo necesitan:
-    # reservan con su celular). Desactivado por defecto en producción.
-    REGISTRO_PUBLICO = _bool("REGISTRO_PUBLICO", not PRODUCCION)
+    # reservan con su celular).
+    REGISTRO_PUBLICO = _bool("REGISTRO_PUBLICO", True)
 
     # Cuentas protegidas (correos separados por coma): no se pueden desactivar
     # ni cambiar de rol o correo desde el panel, y la simulación las conserva
@@ -169,10 +146,6 @@ class Config:
     CUENTAS_PROTEGIDAS = [
         c.strip().lower() for c in os.getenv("CUENTAS_PROTEGIDAS", "").split(",") if c.strip()
     ]
-
-    # Número de proxies de confianza delante de Flask (nginx = 1). Necesario
-    # para que el límite por IP use la IP real del cliente.
-    PROXIES_CONFIABLES = _int("PROXIES_CONFIABLES", 0)
 
     # Límites de peticiones (por IP)
     LIMITE_LOGIN_POR_MINUTO = _int("LIMITE_LOGIN_POR_MINUTO", 10)
@@ -194,46 +167,11 @@ class Config:
 
 
 def validar_configuracion(app):
-    """Detiene el arranque en producción si la configuración es insegura."""
-    if app.config.get("OTP_DEMO_ENABLED"):
-        import re
+    """Avisa al arrancar si las claves locales son demasiado cortas."""
+    if len(app.config.get("JWT_SECRET_KEY") or "") < 32:
+        import logging
 
-        celular_demo = str(app.config.get("OTP_DEMO_PHONE") or "")
-        codigo_demo = str(app.config.get("OTP_DEMO_CODE") or "")
-        if not re.fullmatch(r"3\d{9}", celular_demo):
-            raise RuntimeError(
-                "FILACERO_OTP_DEMO_PHONE debe ser un celular colombiano de prueba "
-                "de 10 dígitos."
-            )
-        if not re.fullmatch(r"\d{6}", codigo_demo):
-            raise RuntimeError("FILACERO_OTP_DEMO_CODE debe tener exactamente 6 dígitos.")
-
-    if not app.config.get("PRODUCCION"):
-        if len(app.config.get("JWT_SECRET_KEY") or "") < 32:
-            import logging
-
-            logging.getLogger("filacero").warning(
-                "JWT_SECRET_KEY tiene menos de 32 caracteres. Genera una con: "
-                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
-            )
-        return
-
-    problemas = []
-    for clave in ("SECRET_KEY", "JWT_SECRET_KEY"):
-        valor = app.config.get(clave) or ""
-        if len(valor) < 32 or valor.startswith("solo-desarrollo"):
-            problemas.append(f"{clave} debe tener al menos 32 caracteres aleatorios.")
-
-    if app.config.get("OTP_TEST_MODE"):
-        problemas.append(
-            "FILACERO_OTP_TEST_MODE no puede estar activo en producción."
+        logging.getLogger("filacero").warning(
+            "JWT_SECRET_KEY tiene menos de 32 caracteres. Genera una con: "
+            'python -c "import secrets; print(secrets.token_urlsafe(48))"'
         )
-
-    if app.config.get("DEBUG"):
-        problemas.append("FLASK_DEBUG debe estar desactivado en producción.")
-
-    if "*" in app.config.get("CORS_ALLOWED_ORIGINS", []):
-        problemas.append("CORS_ALLOWED_ORIGINS no puede ser '*' en producción.")
-
-    if problemas:
-        raise RuntimeError("Configuración insegura para producción:\n- " + "\n- ".join(problemas))
