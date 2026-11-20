@@ -141,7 +141,7 @@ controladores, servicios, repositorios, DTO y modelos en el backend.
 | SPA (C3) | Sí | Bootstrap 5.3.9 local + `bootstrap-tema.css`; clases de Bootstrap en botones, tablas, alertas, avisos, spinners, grilla de formularios y validación (`.is-invalid`); `.modal` propio renombrado a `.ventana`; fuente local |
 | API (C3) | Sí (interno) | Consultas fuera de los controladores: `agentes/consultas.py`, `agentes/admin_servicios.py`, `usuarios/admin_servicios.py`, `turnos/sala.py`, `organizaciones/servicios.py`, repositorios y DTO nuevos. Contrato `/api/v1` sin cambios de forma |
 | Persistencia | Sí (corrección) | Las bajadas (`downgrade`) de `7fb57bf505c3` y `c3e5a7b9d1f2` fallaban en MySQL al borrar índices de llaves foráneas (error 1553); ahora se eliminan las tablas directamente. Ciclo completo subida → bajada → subida probado en MariaDB 10.11 |
-| Pruebas | Sí | +45 pruebas de arquitectura (`test_arquitectura_capas.py`): 209 en verde |
+| Pruebas | Sí | +58 pruebas de arquitectura (`test_arquitectura_capas.py`): 222 en verde |
 
 **Artefactos actualizados**: ADR-017 (nuevo), ADR-001 y ADR-002 (notas), 03, 04, 07, 09 (R-07 cerrado, T-14), 11,
 diagrama de componentes, README.

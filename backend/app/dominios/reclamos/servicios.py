@@ -15,7 +15,7 @@ from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 
 from .dtos import CATEGORIAS, ESTADOS_RECLAMO
 from .modelos import MensajeReclamo, Reclamo
-from .repositorios import existe_radicado, obtener
+from .repositorios import existe_radicado, obtener, por_cliente, por_sede
 
 DESCRIPCION_MIN = 15
 DESCRIPCION_MAX = 1500
@@ -188,3 +188,21 @@ def marcar_leidos(reclamos, lado):
                 m.leido_asesor = cambios = True
     if cambios:
         db.session.commit()
+
+
+# ----------------------------------------------------------------------
+# Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
+# ----------------------------------------------------------------------
+
+
+def obtener_reclamo(reclamo_id):
+    return obtener(reclamo_id)
+
+
+def reclamos_de_cliente(cliente_id):
+    return por_cliente(cliente_id)
+
+
+def reclamos_de_sede(punto_id=None, estado=None):
+    """Bandeja: reclamos de una sede (asesor) o de todas (panel)."""
+    return por_sede(punto_id, estado)

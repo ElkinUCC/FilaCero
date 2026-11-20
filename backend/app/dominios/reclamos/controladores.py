@@ -13,13 +13,20 @@ from flask_jwt_extended import current_user
 
 from app.dominios.auditoria.servicios import registrar as auditar
 from app.dominios.turnos.otp import celular_del_token
-from app.dominios.usuarios.repositorios import buscar_por_celular
-from app.dominios.usuarios.servicios import registrar_cliente_publico
+from app.dominios.usuarios.servicios import cliente_por_celular, registrar_cliente_publico
 from app.seguridad import limitar, requiere_rol
 
 from .dtos import CATEGORIAS, ESTADOS_RECLAMO, reclamo_response
-from .repositorios import por_cliente, por_sede
-from .servicios import escribir_asesor, escribir_cliente, gestionar, marcar_leidos, radicar
+from .servicios import (
+    escribir_asesor,
+    escribir_cliente,
+    gestionar,
+    marcar_leidos,
+    obtener_reclamo,
+    radicar,
+    reclamos_de_cliente,
+    reclamos_de_sede,
+)
 
 reclamos_bp = Blueprint("reclamos", __name__)
 
@@ -54,8 +61,8 @@ def mis_reclamos():
         celular = celular_del_token(datos)
     except ValueError as error:
         return {"error": str(error)}, 400
-    cliente = buscar_por_celular(celular)
-    reclamos = por_cliente(cliente.id) if cliente else []
+    cliente = cliente_por_celular(celular)
+    reclamos = reclamos_de_cliente(cliente.id) if cliente else []
     respuesta = {"reclamos": [reclamo_response(r, publica=True) for r in reclamos]}
     if datos.get("marcar_leidos", True):
         marcar_leidos(reclamos, "cliente")
@@ -71,7 +78,7 @@ def escribir_publico():
         celular = celular_del_token(datos)
     except ValueError as error:
         return {"error": str(error)}, 400
-    cliente = buscar_por_celular(celular)
+    cliente = cliente_por_celular(celular)
     if not cliente:
         return {"error": "No encontramos reclamos para tu celular."}, 404
     reclamo = escribir_cliente(cliente, datos.get("radicado"), datos.get("texto"))
@@ -89,7 +96,7 @@ def bandeja():
     estado = request.args.get("estado") or None
     if estado and estado not in ESTADOS_RECLAMO:
         return {"error": "Estado no válido."}, 400
-    reclamos = por_sede(punto_id, estado)
+    reclamos = reclamos_de_sede(punto_id, estado)
     filas = [reclamo_response(r) for r in reclamos]
     return {
         "reclamos": filas,
@@ -111,9 +118,7 @@ def escribir_personal(reclamo_id):
 @reclamos_bp.put("/<int:reclamo_id>/leido")
 @requiere_rol("AGENTE")
 def marcar_leido(reclamo_id):
-    from .repositorios import obtener
-
-    reclamo = obtener(reclamo_id)
+    reclamo = obtener_reclamo(reclamo_id)
     if not reclamo or reclamo.punto_id != current_user.punto_asignado_id:
         return {"error": "El reclamo no existe en tu sede."}, 404
     marcar_leidos([reclamo], "asesor")

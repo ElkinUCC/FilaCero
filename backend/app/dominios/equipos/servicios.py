@@ -17,7 +17,7 @@ from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 
 from .dtos import ESTADOS_EQUIPO
 from .modelos import Equipo
-from .repositorios import existe_codigo, obtener, por_cliente
+from .repositorios import existe_codigo, obtener, por_cliente, por_sede
 
 GARANTIA_DIAS = 365
 ORDEN = ["POR_RECIBIR", "RECIBIDO", "EN_REPARACION", "LISTO", "ENTREGADO"]
@@ -207,3 +207,13 @@ def equipos_del_celular(celular):
 
     cliente = buscar_por_celular(celular)
     return cliente, (por_cliente(cliente.id) if cliente else [])
+
+
+# ----------------------------------------------------------------------
+# Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
+# ----------------------------------------------------------------------
+
+
+def equipos_de_sede(punto_id=None, estado=None, buscar=None):
+    """Tablero del taller: equipos de una sede (o de todas) con filtros opcionales."""
+    return por_sede(punto_id, estado, buscar)

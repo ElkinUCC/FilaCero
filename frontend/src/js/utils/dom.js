@@ -75,6 +75,13 @@ export function pintar(elemento, contenido) {
         } catch {
           /* algunos tipos de input no admiten selección */
         }
+      } else if ("value" in nuevo && nuevo.value) {
+        // type="email" y type="number" no exponen la posición del cursor: el
+        // navegador lo deja al inicio y lo escrito saldría al revés. Reasignar
+        // el valor deja el cursor al final, donde la persona estaba escribiendo.
+        const valor = nuevo.value;
+        nuevo.value = "";
+        nuevo.value = valor;
       }
     }
   }

@@ -20,7 +20,7 @@ from app.seguridad import (
 )
 
 from .modelos import Usuario
-from .repositorios import buscar_por_celular, buscar_por_correo, guardar
+from .repositorios import buscar_por_celular, buscar_por_correo, buscar_por_id, guardar
 
 ROLES_PERSONAL = ("ADMIN", "SUPERVISOR", "AGENTE")
 
@@ -333,3 +333,18 @@ def revocar_todas_las_sesiones(usuario):
         usuario.presencia = "AUSENTE"
         usuario.presencia_desde = datetime.now(UTC).replace(tzinfo=None)
     db.session.commit()
+
+
+# ----------------------------------------------------------------------
+# Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
+# ----------------------------------------------------------------------
+
+
+def obtener_usuario(usuario_id):
+    """Usuario por id dentro de la organización activa (o None)."""
+    return buscar_por_id(usuario_id)
+
+
+def cliente_por_celular(celular):
+    """Cliente público registrado con ese celular (o None)."""
+    return buscar_por_celular(celular)

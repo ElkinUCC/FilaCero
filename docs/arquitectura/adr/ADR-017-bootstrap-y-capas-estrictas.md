@@ -40,7 +40,8 @@ Al revisar el código frente a esos requisitos se encontró:
 - La fuente *Onest* (OFL) se sirve desde `public/vendor/fuentes`; la CSP queda en `'self'` (sin Google Fonts).
 
 **Backend**
-- Ningún controlador importa `db` ni usa `.query`: lo verifica `tests/test_arquitectura_capas.py`.
+- Ningún controlador importa `db`, usa `.query` ni importa un repositorio (siempre pasa por el servicio del
+  dominio): lo verifica `tests/test_arquitectura_capas.py`.
 - Nuevos archivos: `agentes/consultas.py` (consola y vista en vivo), `agentes/admin_servicios.py` (asesores,
   historial, métricas), `usuarios/admin_servicios.py`, `turnos/sala.py`, `organizaciones/{servicios,repositorios,dtos}.py`,
   `auditoria/{repositorios,dtos}.py`; `franjas/disponibilidad.py` queda como controlador delgado.
@@ -49,7 +50,7 @@ Al revisar el código frente a esos requisitos se encontró:
 - (+) Cumple los requisitos técnicos 1 y 2 del enunciado sin alterar el diseño aprobado: la comparación de
   capturas antes/después difiere en menos de 0,1 % de píxeles (solo el reloj en vivo).
 - (+) La demo funciona igual sin internet (Bootstrap y la fuente son locales).
-- (+) R-07 queda **cerrado**; la regla de dependencias es verificable (45 pruebas de arquitectura).
+- (+) R-07 queda **cerrado**; la regla de dependencias es verificable (58 pruebas de arquitectura).
 - (+) Errores de los endpoints refactorizados con el formato uniforme `{"success": false, "error": ...}` y
   código según el tipo de error de dominio (p. ej. 409 si el correo del asesor ya existe).
 - (−) +230 KB de CSS (se descarga una vez y queda en caché; ≈ 0,2 s en una LAN de 10 Mbps).

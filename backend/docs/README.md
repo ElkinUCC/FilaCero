@@ -155,7 +155,7 @@ Desde `backend/`, con el entorno virtual activo:
 python -m pytest tests/ -v
 ```
 
-Última ejecución de esta entrega: **209 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 45 de arquitectura de capas). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+Última ejecución de esta entrega: **222 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 58 de arquitectura de capas). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
 
 ## Simulación de operación
 
@@ -207,6 +207,6 @@ FilaCero se ejecuta **solo en localhost**: MySQL 8, la API (`python run.py`, pue
 
 ## Estado y alcance
 
-El alcance de la entrega es una **demostración en localhost** (un equipo), con migraciones, cabeceras de seguridad y 209 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
+El alcance de la entrega es una **demostración en localhost** (un equipo), con migraciones, cabeceras de seguridad y 222 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
 
 Quedan fuera del alcance (documentados como evolución): publicar el sistema en internet, envío real de SMS, HTTPS y alta disponibilidad.

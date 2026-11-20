@@ -8,13 +8,15 @@ from app.seguridad import enmascarar_celular, limitar, normalizar_celular
 from . import otp
 from .dtos import turno_publico_response, turno_response
 from .prediccion import estimar_espera, tiempo_espera_autorizado
-from .repositorios import normalizar_codigo, obtener_por_celular, obtener_por_codigo
 from .sala import pantalla_de_sala
 from .servicios import (
+    buscar_turno_por_codigo,
     cancelar_turno,
     cancelar_turno_publico,
     crear_turno,
     mis_turnos,
+    normalizar_codigo,
+    turnos_del_celular,
     validar_vinculos_del_flujo,
     vincular_al_turno,
 )
@@ -71,7 +73,7 @@ def _celular_de(datos, campo="codigo_turno"):
     if datos.get("celular"):
         return normalizar_celular(datos.get("celular"))
     codigo = normalizar_codigo(datos.get(campo))
-    turno = obtener_por_codigo(codigo) if codigo else None
+    turno = buscar_turno_por_codigo(codigo) if codigo else None
     if not turno or not turno.usuario or not turno.usuario.celular:
         raise ValueError("No encontramos un turno con ese código. Revisa que esté bien escrito.")
     return turno.usuario.celular
@@ -212,7 +214,7 @@ def _turno_publico(datos):
     if not codigo:
         raise ValueError("Ingresa el código de tu turno.")
     celular = normalizar_celular(datos.get("celular"))
-    turno = obtener_por_codigo(codigo, celular)
+    turno = buscar_turno_por_codigo(codigo, celular)
     if not turno or not turno.usuario or turno.usuario.celular != celular:
         # Mensaje genérico: no revela si el código existe.
         raise LookupError("No encontramos un turno con ese código y celular.")
@@ -264,7 +266,7 @@ def consultar_turnos_por_celular():
             raise ValueError("Verifica tu celular para consultar tus turnos.")
         if verificacion.get("celular") != celular:
             raise ValueError("El celular verificado no coincide con la consulta.")
-        turnos = obtener_por_celular(celular, limite=10)
+        turnos = turnos_del_celular(celular, limite=10)
     except ValueError as error:
         return _error(error)
 

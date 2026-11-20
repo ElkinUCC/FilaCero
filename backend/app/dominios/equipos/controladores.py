@@ -16,8 +16,13 @@ from app.dominios.turnos.otp import celular_del_token
 from app.seguridad import limitar, requiere_rol
 
 from .dtos import ESTADOS_EQUIPO, equipo_publico_response, equipo_response
-from .repositorios import por_sede
-from .servicios import MARCAS, cambiar_estado, equipos_del_celular, registrar_por_asesor
+from .servicios import (
+    MARCAS,
+    cambiar_estado,
+    equipos_de_sede,
+    equipos_del_celular,
+    registrar_por_asesor,
+)
 
 equipos_bp = Blueprint("equipos", __name__)
 
@@ -54,7 +59,7 @@ def listar():
     estado = request.args.get("estado") or None
     if estado and estado not in ESTADOS_EQUIPO:
         return {"error": "Estado no válido."}, 400
-    equipos = por_sede(punto_id, estado, (request.args.get("buscar") or "").strip())
+    equipos = equipos_de_sede(punto_id, estado, (request.args.get("buscar") or "").strip())
     return {"equipos": [equipo_response(e) for e in equipos], "estados": ESTADOS_EQUIPO}, 200
 
 

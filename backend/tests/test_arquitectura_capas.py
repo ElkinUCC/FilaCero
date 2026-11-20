@@ -3,7 +3,8 @@
 Comprueban automáticamente las reglas de dependencia documentadas en
 docs/arquitectura/04-arquitectura-logica.md:
 
-1. Los controladores no acceden a la base de datos (sin ``db``, ``.query`` ni SQL).
+1. Los controladores no acceden a la base de datos (sin ``db``, ``.query`` ni SQL) ni
+   importan repositorios: siempre pasan por el servicio del dominio.
 2. Cada dominio con persistencia tiene sus capas: modelos, repositorios, servicios,
    DTO y controlador.
 3. Los servicios y repositorios no dependen de Flask ni de la capa HTTP.
@@ -52,6 +53,18 @@ def test_controladores_sin_acceso_a_datos(ruta):
     assert "app.db" not in _importaciones(ruta), "El controlador importa la sesión de BD"
     for prohibido in ("db.session", ".query.", ".query(", "select("):
         assert prohibido not in codigo, f"{ruta.name} usa {prohibido!r}: muévelo a un repositorio"
+
+
+@pytest.mark.parametrize("ruta", CONTROLADORES, ids=lambda p: f"{p.parent.name}/{p.name}")
+def test_controladores_no_importan_repositorios(ruta):
+    """Regla 1 de 04-arquitectura-logica: controlador → servicio → repositorio (sin saltar capas)."""
+    arbol = ast.parse(ruta.read_text(encoding="utf-8"))
+    for nodo in ast.walk(arbol):
+        if isinstance(nodo, ast.ImportFrom):
+            modulos = [nodo.module or ""] + [alias.name for alias in nodo.names]
+            assert not any(
+                m.endswith("repositorios") for m in modulos
+            ), f"{ruta.name} importa un repositorio: usa el servicio del dominio"
 
 
 @pytest.mark.parametrize("dominio", DOMINIOS_CON_PERSISTENCIA)

@@ -52,7 +52,7 @@ para recoger y un LG en reparación.
 Verifica:
 
 ```powershell
-python -m pytest tests/ -q          # 164 passed
+python -m pytest tests/ -q          # 222 passed, 1 skipped
 python run.py
 ```
 
@@ -89,7 +89,7 @@ Recarga con **Ctrl+F5**.
 | 11 | Pantalla de sala con nombre completo y módulo | ícono de pantalla en Sedes |
 | 12 | Documento de arquitectura: C4, ADR-002 (SPA sin frameworks), ADR-004 y ADR-010 revisados, ADR-013 a 017, seguridad (11), evolución E-1 a E-1f | `docs/arquitectura/README.md` |
 | 12b | Diagramas UML: casos de uso, clases, entidad-relación, paquetes, componentes, despliegue y secuencias | `docs/diagramas/` |
-| 13 | **Informe del proyecto final** (se abre con doble clic, sin internet) y guion del video | `docs/entrega/Informe_Proyecto_Final_FilaCero.html` · `docs/entrega/GUION-VIDEO.md` |
+| 13 | **Informe del proyecto final** (se abre con doble clic, sin internet) y guion del video | `docs/entrega/Informe_Proyecto_Final_FilaCero.html` · `docs/entrega/Guion_Video_FilaCero.docx` |
 
 La voz funciona en **Chrome o Edge**; sube el volumen antes de empezar.
 

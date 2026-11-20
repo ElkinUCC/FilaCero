@@ -13,7 +13,15 @@ from app.horario import ahora_local, capacidad_sede, ocupacion_sede, zona
 
 from .modelos import Turno
 from .preparacion import estado_inicial
-from .repositorios import ESTADOS_ACTIVOS, guardar, obtener_por_id, obtener_por_usuario
+from .repositorios import (
+    ESTADOS_ACTIVOS,
+    guardar,
+    normalizar_codigo,  # noqa: F401 - se reexporta para los controladores
+    obtener_por_celular,
+    obtener_por_codigo,
+    obtener_por_id,
+    obtener_por_usuario,
+)
 
 MAX_TURNOS_ACTIVOS_POR_CLIENTE = 3
 
@@ -270,3 +278,18 @@ def vincular_al_turno(turno, usuario, punto_id, vinculos):
         reclamo.presencial = True
     db.session.commit()
     return turno
+
+
+# ----------------------------------------------------------------------
+# Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
+# ----------------------------------------------------------------------
+
+
+def buscar_turno_por_codigo(codigo, celular=None):
+    """Turno por código completo o, con el celular del dueño, por el corto."""
+    return obtener_por_codigo(codigo, celular)
+
+
+def turnos_del_celular(celular, limite=10):
+    """Turnos recientes del ciudadano dentro de la organización activa."""
+    return obtener_por_celular(celular, limite=limite)

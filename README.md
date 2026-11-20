@@ -133,7 +133,7 @@ Desde `backend/`, con el entorno virtual activo:
 python -m pytest tests/ -v
 ```
 
-Última ejecución de esta entrega: **209 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 45 pruebas de arquitectura en `tests/test_arquitectura_capas.py`, que verifican que ningún controlador acceda a la base de datos). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+Última ejecución de esta entrega: **222 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 58 pruebas de arquitectura en `tests/test_arquitectura_capas.py`, que verifican que ningún controlador acceda a la base de datos ni importe repositorios). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
 
 ## Simulación de operación
 
@@ -162,10 +162,6 @@ Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en
 - **Motor local** (por defecto): entiende español natural sin tildes ni signos, detecta varias intenciones por pregunta y entidades (sede, trámite, persona), y responde con cifras reales, fichas de indicadores, botones de acción y preguntas de seguimiento.
 - **Modo Claude** (opcional): con `ANTHROPIC_API_KEY` en `backend/.env`, Claude redacta la respuesta a partir de los mismos datos. Se envían solo indicadores y primeros nombres (sin celulares, cédulas ni apellidos). Si el proveedor falla o tarda, responde el motor local.
 - El asistente no tiene acceso directo a la base de datos: reutiliza los servicios del tablero, la vista en vivo y la consola, con el mismo aislamiento multiempresa y permisos.
-
-## Limpiar restos de versiones anteriores
-
-Si copiaste esta versión encima de una anterior, ejecuta `.\limpiar-carpeta.ps1` (muestra lo que sobra) y luego `.\limpiar-carpeta.ps1 -Aplicar` (lo mueve fuera del proyecto). Conserva `.git`, `backend\.env` y `backend\venv`.
 
 ## Ejecución en localhost (resumen)
 
@@ -211,6 +207,6 @@ y agrega `http://<IP-del-portátil>:5173` a `CORS_ALLOWED_ORIGINS`. El frontend 
 
 ## Estado y alcance
 
-El alcance de la entrega es una **demostración en localhost** (un equipo, sin despliegue en internet), con migraciones, cabeceras de seguridad y 209 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
+El alcance de la entrega es una **demostración en localhost** (un equipo, sin despliegue en internet), con migraciones, cabeceras de seguridad y 222 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
 
 Quedan fuera del alcance (documentados como evolución en `docs/arquitectura/10-evolucion.md`): publicar el sistema en internet, envío real de SMS, HTTPS y alta disponibilidad.

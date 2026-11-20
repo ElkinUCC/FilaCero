@@ -53,7 +53,9 @@ flowchart TB
 > **Deuda técnica corregida (R-07, entrega final)**: los endpoints de métricas, historial, asesores, sala,
 > disponibilidad, usuarios y organización ya no consultan la base de datos desde el controlador. Las consultas
 > están en `repositorios.py`, las reglas en `servicios.py` / `admin_servicios.py` / `consultas.py` y las respuestas
-> en `dtos.py`. La regla 1 la verifica `tests/test_arquitectura_capas.py` (ADR-017).
+> en `dtos.py`. Los controladores tampoco importan repositorios: las lecturas simples pasan por funciones del servicio
+> (`buscar_turno_por_codigo`, `equipos_de_sede`, `reclamos_de_sede`, `obtener_asesor`…). La regla 1 la verifica
+> `tests/test_arquitectura_capas.py` (ADR-017).
 
 > **Excepción declarada a la regla 2 (acoplamiento por modelo)**: algunos módulos importan el **modelo** de otro
 > para contar o validar, con importación diferida para no crear ciclos de arranque: `franjas` y `usuarios` leen

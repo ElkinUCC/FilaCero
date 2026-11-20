@@ -2,8 +2,8 @@
 
 Capa de presentación: leen la petición, verifican el rol con ``@requiere_rol``,
 llaman a un servicio y devuelven el DTO en JSON con su código HTTP. No contienen
-consultas ni reglas de negocio (ver ``servicios``, ``admin_servicios``,
-``consultas`` y ``repositorios``).
+consultas ni reglas de negocio y no importan repositorios (ver ``servicios``,
+``admin_servicios`` y ``consultas``).
 """
 
 from flask import Blueprint, jsonify, request
@@ -26,7 +26,6 @@ from .dtos import (
     totales_tramite_response,
     turno_accion_response,
 )
-from .repositorios import obtener_usuario
 from .servicios import (
     cambiar_sede_propia,
     consultar_cola,
@@ -36,6 +35,7 @@ from .servicios import (
     llamar_siguiente,
     llamar_turno,
     marcar_no_asistio,
+    obtener_asesor,
     turno_activo,
 )
 
@@ -69,7 +69,7 @@ def _accion(funcion, *args, mensaje):
 @requiere_rol("AGENTE")
 def panel():
     """Consola del asesor en una sola llamada (ver ``consultas.construir_panel``)."""
-    return jsonify(construir_panel(obtener_usuario(_agente_id()))), 200
+    return jsonify(construir_panel(obtener_asesor(_agente_id()))), 200
 
 
 @agentes_bp.put("/sede")
@@ -92,7 +92,7 @@ def cambiar_mi_sede():
 @requiere_rol("AGENTE")
 def cambiar_presencia_propia():
     """El asesor indica qué está haciendo: disponible, pausa, almuerzo o fuera de turno."""
-    agente = obtener_usuario(_agente_id())
+    agente = obtener_asesor(_agente_id())
     datos = request.get_json(silent=True) or {}
     anterior = agente.presencia or "DISPONIBLE"
     cambiar_presencia(agente, datos.get("presencia"), bool(turno_activo(agente.id)))

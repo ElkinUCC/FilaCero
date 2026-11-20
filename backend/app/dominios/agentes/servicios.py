@@ -10,6 +10,7 @@ from .repositorios import (
     obtener_siguiente_bloqueado,
     obtener_turno_activo,
     obtener_turno_bloqueado,
+    obtener_usuario,
 )
 
 
@@ -208,3 +209,13 @@ def devolver_a_cola(usuario_id, turno_id):
     except Exception:
         db.session.rollback()
         raise
+
+
+# ----------------------------------------------------------------------
+# Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
+# ----------------------------------------------------------------------
+
+
+def obtener_asesor(usuario_id):
+    """Cuenta del asesor autenticado (o None)."""
+    return obtener_usuario(usuario_id)

@@ -61,6 +61,6 @@ Repetir antes de cada entrega: `pip-audit -r requirements.txt`.
 
 ```powershell
 cd backend
-python -m pytest tests/ -q                 # 209 passed, 1 skipped
+python -m pytest tests/ -q                 # 222 passed, 1 skipped
 pip-audit -r requirements.txt              # No known vulnerabilities found
 ```

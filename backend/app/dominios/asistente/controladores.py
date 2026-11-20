@@ -13,7 +13,7 @@ import logging
 
 from flask import Blueprint, current_app, jsonify, request
 
-from app.dominios.usuarios.repositorios import buscar_por_id
+from app.dominios.usuarios.servicios import obtener_usuario
 from app.seguridad import limitar, requiere_rol, usuario_autenticado
 
 from . import llm
@@ -28,7 +28,7 @@ MAX_PREGUNTA = 500
 
 def _contexto(usuario, cuerpo):
     if usuario.rol == "AGENTE":
-        return contexto_asesor(buscar_por_id(usuario.id))
+        return contexto_asesor(obtener_usuario(usuario.id))
     dias = cuerpo.get("dias", 7)
     punto_id = cuerpo.get("punto_id") or None
     try:

@@ -25,7 +25,7 @@ leerse juntos y verificarse contra el código.
 | 10 | [Evolución](10-evolucion.md) | ¿Cómo cambia la arquitectura ante nuevos requisitos? | Escenarios de cambio y artefactos realmente afectados |
 | 11 | [Seguridad](11-seguridad.md) | ¿Qué amenazas se revisaron, qué se corrigió y qué riesgo queda? | STRIDE, auditoría de dependencias, riesgos aceptados |
 | 12 | [Diagramas UML](../diagramas/README.md) | ¿Cómo se ve el sistema en notación UML? | Casos de uso, clases, entidad-relación, paquetes, componentes, despliegue y secuencias |
-| 13 | [Evidencias de la entrega](../entrega/) | ¿Cómo se presenta? | Informe PDF de decisiones arquitectónicas y guion del video |
+| 13 | [Evidencias de la entrega](../entrega/) | ¿Cómo se presenta? | Informe HTML del proyecto (fases 01–05) y guiones de sustentación |
 
 ## Resumen ejecutivo
 
@@ -59,7 +59,7 @@ solo "no hagas fila", sino "llega a tu hora y sal con lo que viniste a buscar".
 
 ## Evidencia verificable
 
-- **209 pruebas automatizadas** en verde (más 1 omitida a propósito) (`python -m pytest tests/ -v`), incluidas las de la entrega final
+- **222 pruebas automatizadas** en verde (más 1 omitida a propósito) (`python -m pytest tests/ -v`), incluidas las de la entrega final
   ([test_entrega_final.py](../../backend/tests/test_entrega_final.py), [test_equipos_reclamos.py](../../backend/tests/test_equipos_reclamos.py) y [test_asistente_ia.py](../../backend/tests/test_asistente_ia.py)).
 - **Prueba de carga y concurrencia** reproducible: `python simulacion.py --carga --url http://127.0.0.1:5000`
   (resultados en [05](05-arquitectura-fisica.md#5-evidencia-de-capacidad-medida)).
