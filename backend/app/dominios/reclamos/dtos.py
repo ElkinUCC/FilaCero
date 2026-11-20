@@ -33,7 +33,10 @@ def mensaje_response(m):
 
 
 def _hilo(reclamo):
-    """Mensajes del chat. Las respuestas dadas antes de existir el chat se muestran como primer mensaje."""
+    """Mensajes del chat.
+
+    Las respuestas dadas antes de existir el chat se muestran como primer mensaje.
+    """
     hilo = [mensaje_response(m) for m in reclamo.mensajes]
     if reclamo.respuesta and not any(m["autor"] == "ASESOR" for m in hilo):
         hilo.insert(
@@ -41,9 +44,9 @@ def _hilo(reclamo):
             {
                 "id": f"r{reclamo.id}",
                 "autor": "ASESOR",
-                "autor_nombre": reclamo.gestionado_por.nombre
-                if reclamo.gestionado_por
-                else "Asesor",
+                "autor_nombre": (
+                    reclamo.gestionado_por.nombre if reclamo.gestionado_por else "Asesor"
+                ),
                 "texto": reclamo.respuesta,
                 "fecha": a_iso_utc(reclamo.fecha_respuesta),
             },

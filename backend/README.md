@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)](https://flask.palletsprojects.com/)
-[![Tests](https://img.shields.io/badge/Tests-164%20passing-brightgreen.svg)](tests)
+[![Tests](https://img.shields.io/badge/Tests-209%20passing-brightgreen.svg)](tests)
 [![Code style](https://img.shields.io/badge/code%20style-black%20%2B%20ruff-000000.svg)](pyproject.toml)
 
 ---
@@ -146,7 +146,7 @@ de forma interactiva y actualiza la cuenta existente.
 | Comando | Qué hace |
 |---|---|
 | `python run.py` | Levanta la API en desarrollo |
-| `python -m pytest tests/ -v` | Ejecuta la suite automatizada (164 aprobadas en la última ejecución) |
+| `python -m pytest tests/ -v` | Ejecuta la suite automatizada (209 aprobadas y 1 omitida en la última ejecución) |
 | `python -m pytest tests/test_contrato_y_errores.py -v` | Pruebas de un solo tema |
 | `ruff check .` · `black .` | Estilo y formato (100 columnas) |
 | `pip-audit -r requirements.txt` | Vulnerabilidades en dependencias |

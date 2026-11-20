@@ -4,7 +4,7 @@ title FilaCero · Diagrama de despliegue UML (solo localhost)
 
 node "«device» Equipo de demostración\nWindows 10/11 · ≥ 4 GB RAM · 2+ núcleos" as EQ {
   node "«execution environment»\nServidor estático\n(python -m http.server / Live Server)" as WS {
-    artifact "index.html\nsrc/css/*.css\nsrc/js/**/*.js" as A1
+    artifact "index.html\nsrc/css/*.css\nsrc/js/**/*.js\npublic/vendor (Bootstrap 5.3, fuente)" as A1
   }
   node "«execution environment»\nPython 3.12 venv" as PY {
     artifact "backend/app + run.py\n(Flask) :5000" as A2

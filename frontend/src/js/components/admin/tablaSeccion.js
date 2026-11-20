@@ -18,13 +18,13 @@ const ANCHOS = [27, 17, 17, 17, 12, 10];
 
 export function tablaSeccion({ columnas, filas, cargando, vacio, etiqueta, alinear = ALINEAR, anchos = ANCHOS }) {
   return html`
-    <div class="tabla-envoltura">
-      <table class="tabla tabla--seccion" aria-label="${etiqueta}">
+    <div class="table-responsive tabla-envoltura">
+      <table class="table table-hover align-middle tabla tabla--seccion" aria-label="${etiqueta}">
         <colgroup>${anchos.map((a) => html`<col style="width: ${a}%" />`)}</colgroup>
         <thead>
           <tr>
             ${columnas.map(
-              (c, i) => html`<th scope="col" class="al-${alinear[i]} ${i === columnas.length - 1 ? "acciones" : ""}">${i === columnas.length - 1 && !c ? html`<span class="sr">Acciones</span>` : c}</th>`,
+              (c, i) => html`<th scope="col" class="al-${alinear[i]} ${i === columnas.length - 1 ? "acciones" : ""}">${i === columnas.length - 1 && !c ? html`<span class="visually-hidden">Acciones</span>` : c}</th>`,
             )}
           </tr>
         </thead>

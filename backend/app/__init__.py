@@ -15,7 +15,7 @@ registra un blueprint por dominio y los manejadores globales de error.
 import logging
 import os
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
@@ -84,28 +84,27 @@ def create_app(test_config=None):
 
     # Modelos: registrar todos antes de usar migraciones.
     from app.dominios.agentes.controladores import admin_agentes_bp, agentes_bp
+    from app.dominios.asistente.controladores import asistente_bp
     from app.dominios.auditoria.modelos import Auditoria  # noqa: F401
     from app.dominios.equipos.controladores import equipos_bp
     from app.dominios.equipos.modelos import Equipo  # noqa: F401
-    from app.dominios.reclamos.controladores import reclamos_bp
-    from app.dominios.reclamos.modelos import Reclamo  # noqa: F401
-    from app.dominios.organizaciones.modelos import Organizacion  # noqa: F401
     from app.dominios.franjas.admin_controladores import admin_franjas_bp
     from app.dominios.franjas.controladores import franjas_bp
     from app.dominios.franjas.disponibilidad import disponibilidad_bp
     from app.dominios.franjas.modelos import Franja  # noqa: F401
+    from app.dominios.organizaciones.controladores import organizaciones_bp
+    from app.dominios.organizaciones.modelos import Organizacion  # noqa: F401
+    from app.dominios.reclamos.controladores import reclamos_bp
+    from app.dominios.reclamos.modelos import Reclamo  # noqa: F401
     from app.dominios.sedes.controladores import puntos_bp
     from app.dominios.sedes.modelos import Punto  # noqa: F401
     from app.dominios.tramites.controladores import tramites_bp
     from app.dominios.tramites.modelos import Tramite  # noqa: F401
     from app.dominios.turnos.controladores import turnos_bp
     from app.dominios.turnos.modelos import Turno  # noqa: F401
-    from app.dominios.turnos.prediccion import prediccion_bp
     from app.dominios.usuarios.admin_controladores import admin_usuarios_bp
     from app.dominios.usuarios.controladores import usuarios_bp
     from app.dominios.usuarios.modelos import Usuario  # noqa: F401
-    from app.dominios.organizaciones.controladores import organizaciones_bp
-    from app.dominios.asistente.controladores import asistente_bp
 
     app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
     app.register_blueprint(puntos_bp, url_prefix="/api/v1/sedes")
@@ -115,7 +114,6 @@ def create_app(test_config=None):
     app.register_blueprint(turnos_bp, url_prefix="/api/v1/turnos")
     app.register_blueprint(agentes_bp, url_prefix="/api/v1/agente")
     app.register_blueprint(admin_agentes_bp, url_prefix="/api/v1/admin/agentes")
-    app.register_blueprint(prediccion_bp, url_prefix="/api/v1/turnos")
     app.register_blueprint(disponibilidad_bp, url_prefix="/api/v1/franjas")
     app.register_blueprint(admin_usuarios_bp, url_prefix="/api/v1/admin/usuarios")
     app.register_blueprint(organizaciones_bp, url_prefix="/api/v1/organizacion")

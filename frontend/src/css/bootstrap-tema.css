@@ -1,0 +1,177 @@
+/* =========================================
+   FILACERO · TEMA DE BOOTSTRAP 5.3
+   -----------------------------------------
+   Bootstrap (public/vendor/bootstrap, sin CDN) es la base visual de la SPA:
+   Reboot, sistema de grillas, utilidades, botones, tablas, alertas, avisos
+   (toasts), spinners y estados de validación. Este archivo es el PUENTE entre
+   Bootstrap y el sistema de diseño de FilaCero: no reescribe componentes,
+   asigna los tokens de FilaCero (index.css) a las variables CSS de Bootstrap.
+
+   Se carga justo después de bootstrap.min.css y antes de las hojas propias.
+   Solo se usa el CSS de Bootstrap: el comportamiento (modales, menús, avisos)
+   lo maneja el JavaScript de la SPA, para que una sola capa controle el DOM
+   (ADR-017).
+   ========================================= */
+
+/* ---------- 1. Variables globales ---------- */
+:root,
+[data-bs-theme="light"] {
+  --bs-font-sans-serif: "Onest", "Segoe UI", system-ui, sans-serif;
+  --bs-body-font-family: var(--bs-font-sans-serif);
+  --bs-body-font-size: 15px;
+  --bs-body-line-height: 1.45;
+  --bs-body-color: #0f2a2e;
+  --bs-body-color-rgb: 15, 42, 46;
+  --bs-body-bg: #e6efec;
+  --bs-body-bg-rgb: 230, 239, 236;
+  --bs-heading-color: #0f2a2e;
+  --bs-emphasis-color: #0f2a2e;
+  --bs-secondary-color: #51676b;
+  --bs-tertiary-bg: #dbe7e3;
+
+  --bs-primary: #135e63;
+  --bs-primary-rgb: 19, 94, 99;
+  --bs-secondary: #3d5559;
+  --bs-secondary-rgb: 61, 85, 89;
+  --bs-success: #1a6b43;
+  --bs-success-rgb: 26, 107, 67;
+  --bs-danger: #b4232c;
+  --bs-danger-rgb: 180, 35, 44;
+  --bs-warning: #f0b429;
+  --bs-warning-rgb: 240, 180, 41;
+  --bs-info: #2458a6;
+  --bs-info-rgb: 36, 88, 166;
+
+  --bs-danger-text-emphasis: #b4232c;
+  --bs-danger-bg-subtle: #f8e3e3;
+  --bs-danger-border-subtle: #f1c6c8;
+  --bs-success-text-emphasis: #1a6b43;
+  --bs-success-bg-subtle: #dcefe3;
+
+  --bs-link-color: #135e63;
+  --bs-link-color-rgb: 19, 94, 99;
+  --bs-link-hover-color: #0d4a4f;
+  --bs-link-hover-color-rgb: 13, 74, 79;
+  --bs-code-color: inherit;
+
+  --bs-border-color: #cfdcd8;
+  --bs-border-radius: 10px;
+  --bs-border-radius-sm: 6px;
+  --bs-border-radius-lg: 16px;
+  --bs-focus-ring-color: rgb(19 94 99 / 25%);
+  --bs-form-invalid-color: #b4232c;
+  --bs-form-invalid-border-color: #b4232c;
+}
+
+/* ---------- 2. Reboot ajustado al diseño de FilaCero ----------
+   Reboot normaliza el navegador; aquí se conservan las proporciones
+   tipográficas con las que se diseñaron las pantallas. */
+h1, h2, h3, h4, h5, h6 { margin-bottom: 0; font-weight: 700; line-height: 1.15; }
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h3 { font-size: 1.17em; }
+h4 { font-size: 1em; }
+small { font-size: smaller; }
+ol, ul { margin-top: 1em; margin-bottom: 1em; padding-left: 40px; }
+dl { margin-top: 1em; margin-bottom: 1em; }
+dd { margin-left: 40px; margin-bottom: 0; }
+dt { font-weight: inherit; }
+img, svg { vertical-align: baseline; }
+th { text-align: center; }
+summary { display: list-item; }
+
+/* ---------- 3. Botones: .btn de Bootstrap con las variantes de FilaCero ----------
+   Cada variante fija las variables --bs-btn-*; así los estados que resuelve
+   Bootstrap (hover, foco, activo y deshabilitado) usan los colores propios. */
+.btn {
+  --bs-btn-font-family: inherit;
+  --bs-btn-font-size: 1em;
+  --bs-btn-font-weight: 600;
+  --bs-btn-line-height: 1.45;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-disabled-opacity: 0.5;
+  --bs-btn-focus-shadow-rgb: 19, 94, 99;
+}
+.btn:focus-visible { outline: 2px solid var(--petroleo); outline-offset: 2px; box-shadow: none; }
+
+.btn--primario {
+  --bs-btn-color: #fff;            --bs-btn-bg: var(--petroleo);
+  --bs-btn-hover-color: #fff;      --bs-btn-hover-bg: var(--petroleo-2);
+  --bs-btn-active-color: #fff;     --bs-btn-active-bg: var(--petroleo-2);
+  --bs-btn-disabled-color: #fff;   --bs-btn-disabled-bg: var(--petroleo);
+}
+.btn--suave {
+  --bs-btn-color: var(--tinta);          --bs-btn-bg: var(--menta-2);
+  --bs-btn-hover-color: var(--tinta);    --bs-btn-hover-bg: var(--petroleo-claro);
+  --bs-btn-active-color: var(--tinta);   --bs-btn-active-bg: var(--petroleo-claro);
+  --bs-btn-disabled-color: var(--tinta); --bs-btn-disabled-bg: var(--menta-2);
+}
+.btn--borde {
+  --bs-btn-color: var(--tinta);             --bs-btn-bg: transparent;           --bs-btn-border-color: var(--linea);
+  --bs-btn-hover-color: var(--petroleo);    --bs-btn-hover-bg: transparent;     --bs-btn-hover-border-color: var(--petroleo);
+  --bs-btn-active-color: var(--petroleo);   --bs-btn-active-bg: transparent;    --bs-btn-active-border-color: var(--petroleo);
+  --bs-btn-disabled-color: var(--tinta);    --bs-btn-disabled-bg: transparent;  --bs-btn-disabled-border-color: var(--linea);
+}
+.btn--borde-claro {
+  --bs-btn-color: #e3eeec;           --bs-btn-bg: transparent;          --bs-btn-border-color: #3d6064;
+  --bs-btn-hover-color: #e3eeec;     --bs-btn-hover-bg: transparent;    --bs-btn-hover-border-color: #8fb3b0;
+  --bs-btn-active-color: #e3eeec;    --bs-btn-active-bg: transparent;   --bs-btn-active-border-color: #8fb3b0;
+  --bs-btn-disabled-color: #e3eeec;  --bs-btn-disabled-bg: transparent; --bs-btn-disabled-border-color: #3d6064;
+}
+.btn--peligro {
+  --bs-btn-color: #fff;           --bs-btn-bg: var(--rojo);
+  --bs-btn-hover-color: #fff;     --bs-btn-hover-bg: #921b23;
+  --bs-btn-active-color: #fff;    --bs-btn-active-bg: #921b23;
+  --bs-btn-disabled-color: #fff;  --bs-btn-disabled-bg: var(--rojo);
+}
+.btn--exito {
+  --bs-btn-color: #fff;           --bs-btn-bg: var(--verde);
+  --bs-btn-hover-color: #fff;     --bs-btn-hover-bg: #14583a;
+  --bs-btn-active-color: #fff;    --bs-btn-active-bg: #14583a;
+  --bs-btn-disabled-color: #fff;  --bs-btn-disabled-bg: var(--verde);
+}
+.btn--fantasma,
+.btn--fantasma-oscuro {
+  --bs-btn-color: var(--tinta-2);           --bs-btn-bg: transparent;
+  --bs-btn-hover-color: var(--petroleo);    --bs-btn-hover-bg: transparent;
+  --bs-btn-active-color: var(--petroleo);   --bs-btn-active-bg: transparent;
+  --bs-btn-disabled-color: var(--tinta-2);  --bs-btn-disabled-bg: transparent;
+}
+.btn--fantasma-oscuro { --bs-btn-hover-color: var(--rojo); --bs-btn-active-color: var(--rojo); }
+/* Variante del asistente de despacho (fondo oscuro): primario en ámbar. */
+.asistente .btn--primario {
+  --bs-btn-color: var(--tinta);           --bs-btn-bg: var(--ambar);
+  --bs-btn-hover-color: var(--tinta);     --bs-btn-hover-bg: #ffc94d;
+  --bs-btn-active-color: var(--tinta);    --bs-btn-active-bg: #ffc94d;
+  --bs-btn-disabled-color: var(--tinta);  --bs-btn-disabled-bg: var(--ambar);
+}
+
+/* ---------- 4. Tablas: .table de Bootstrap con la línea gráfica del panel ---------- */
+.table.tabla {
+  --bs-table-bg: transparent;
+  --bs-table-color: inherit;
+  --bs-table-border-color: #e3ebe8;
+  --bs-table-hover-bg: #f4f8f6;
+  --bs-table-hover-color: inherit;
+  margin-bottom: 0;
+}
+
+/* ---------- 5. Avisos: .toast de Bootstrap (la SPA agrega .show al crearlos) ---------- */
+.toasts .toast { width: auto; border: 0; }
+
+/* ---------- 6. Alertas de error de formularios: .alert.alert-danger ---------- */
+.alert.rv__error { --bs-alert-margin-bottom: 0; --bs-alert-border-color: transparent; margin-bottom: 0; border: 0; }
+
+/* ---------- 7. Validación de campos: .is-invalid / .invalid-feedback ----------
+   Los campos de FilaCero envuelven el input con su icono (.campo); el estado
+   inválido de Bootstrap se refleja en el contenedor completo. */
+.campo.is-invalid { border-color: var(--rojo); }
+.campo.is-invalid:focus-within { border-color: var(--rojo); box-shadow: 0 0 0 3px rgb(180 35 44 / 14%); }
+.campo + .invalid-feedback,
+.campo ~ .invalid-feedback { font-size: 12.5px; }
+
+/* ---------- 8. Spinners de carga dentro de botones ---------- */
+.btn .spinner-border-sm { --bs-spinner-width: 0.95em; --bs-spinner-height: 0.95em; --bs-spinner-border-width: 0.16em; }

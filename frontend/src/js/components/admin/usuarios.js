@@ -14,6 +14,7 @@ import { icono } from "../ui/icon.js";
 import { abrirDetalle, abrirModal, confirmar, datosDetalle, mensajeError } from "../ui/modal.js";
 import { avisar } from "../ui/toast.js";
 import { botonFila, enlaceDetalle, estadoInsignia, tablaSeccion } from "./tablaSeccion.js";
+import { cargando } from "../ui/cargando.js";
 
 const ROLES = {
   ADMIN: { nombre: "Administrador", tono: "admin", permisos: ["Todo el panel", "Crear y editar sedes, trámites y usuarios", "Ver la actividad del sistema"] },
@@ -62,7 +63,7 @@ function abrirFormularioUsuario(inicial, sedes, yo, alGuardado) {
 
   const cuerpo = () => html`
     <form id="form-usuario" class="formulario">
-      <div class="formulario__fila">
+      <div class="row row-cols-1 row-cols-sm-2 g-3">
         <label><span class="etiqueta">Nombre completo</span><span class="campo">${icono("usuario", 17)}<input id="us-nombre" data-f="nombre" value="${form.nombre}" maxlength="100" /></span></label>
         <label><span class="etiqueta">Correo de acceso</span><span class="campo"><input id="us-correo" data-f="correo" type="email" value="${form.correo}" maxlength="120" placeholder="nombre@filacero.co" /></span></label>
       </div>
@@ -93,7 +94,7 @@ function abrirFormularioUsuario(inicial, sedes, yo, alGuardado) {
     </form>`;
   const pie = () => html`
     <button type="button" class="btn btn--suave" data-cerrar>Cancelar</button>
-    <button type="submit" form="form-usuario" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? "Guardando…" : editando ? "Guardar cambios" : "Crear usuario"}</button>`;
+    <button type="submit" form="form-usuario" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? cargando("Guardando…") : editando ? "Guardar cambios" : "Crear usuario"}</button>`;
 
   const v = abrirModal({
     titulo: editando ? "Editar usuario" : "Nuevo usuario",
@@ -188,6 +189,7 @@ export function montarUsuarios(contenedor, { titulo }) {
         etiqueta: titulo,
         columnas: ["Usuario", "Rol", "Sede", "Último acceso", "Estado", ""],
         alinear: ["left", "center", "left", "center", "center", "right"],
+        anchos: [25, 14, 16, 15, 15, 15],
         filas,
         cargando: !datos,
         vacio: "Ningún usuario con ese filtro.",

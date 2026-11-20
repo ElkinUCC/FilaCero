@@ -597,7 +597,7 @@
 .wz__chip:hover { transform: translateY(-1px); }
 .wz__chip.activo { border-color: #000; background: #000; color: #fff; }
 .campo--ok { border-color: var(--verde) !important; }
-.campo--error { border-color: var(--rojo) !important; }
+
 .wz__garantia { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; font-size: 14px; animation: wz-aparece .25s both; }
 .wz__garantia--ok { background: var(--verde-claro); color: var(--verde); }
 .wz__garantia--no { background: var(--rojo-claro); color: var(--rojo); }

@@ -413,14 +413,26 @@ def test_minichat_cliente_asistente_y_asesor(client, taller):
     token = _verificar(client)
     radicado = client.post(
         "/api/v1/reclamos/publico",
-        json={"celular": CELULAR, "token_verificacion": token, "nombre": "Juliana Restrepo",
-              "categoria": "CONSULTA", "descripcion": "Mi televisor no enciende, ¿cuánto vale revisarlo?",
-              "punto_id": taller["sede"].id, "presencial": False},
+        json={
+            "celular": CELULAR,
+            "token_verificacion": token,
+            "nombre": "Juliana Restrepo",
+            "categoria": "CONSULTA",
+            "descripcion": "Mi televisor no enciende, ¿cuánto vale revisarlo?",
+            "punto_id": taller["sede"].id,
+            "presencial": False,
+        },
     ).get_json()["reclamo"]["radicado"]
     tok = _verificar(client)
-    r = client.post("/api/v1/reclamos/publico/mensajes",
-                    json={"celular": CELULAR, "token_verificacion": tok, "radicado": radicado,
-                          "texto": "¿Cuánto vale y a qué hora abren?"})
+    r = client.post(
+        "/api/v1/reclamos/publico/mensajes",
+        json={
+            "celular": CELULAR,
+            "token_verificacion": tok,
+            "radicado": radicado,
+            "texto": "¿Cuánto vale y a qué hora abren?",
+        },
+    )
     assert r.status_code == 201, r.get_json()
     mensajes = r.get_json()["reclamo"]["mensajes"]
     assert [m["autor"] for m in mensajes] == ["CLIENTE", "ASISTENTE"]
@@ -429,16 +441,26 @@ def test_minichat_cliente_asistente_y_asesor(client, taller):
     bandeja = client.get("/api/v1/reclamos/", headers=taller["asesor_auth"]).get_json()
     assert bandeja["mensajes_sin_leer"] == 1
     rid = bandeja["reclamos"][0]["id"]
-    ok = client.post(f"/api/v1/reclamos/{rid}/mensajes", headers=taller["asesor_auth"],
-                     json={"texto": "La revisión vale $50.000; tráelo cuando quieras."})
+    ok = client.post(
+        f"/api/v1/reclamos/{rid}/mensajes",
+        headers=taller["asesor_auth"],
+        json={"texto": "La revisión vale $50.000; tráelo cuando quieras."},
+    )
     assert ok.status_code == 201
-    assert client.get("/api/v1/reclamos/", headers=taller["asesor_auth"]).get_json()["mensajes_sin_leer"] == 0
+    assert (
+        client.get("/api/v1/reclamos/", headers=taller["asesor_auth"]).get_json()[
+            "mensajes_sin_leer"
+        ]
+        == 0
+    )
 
-    mios = client.post("/api/v1/reclamos/publico/mios",
-                       json={"celular": CELULAR, "token_verificacion": tok}).get_json()["reclamos"][0]
+    mios = client.post(
+        "/api/v1/reclamos/publico/mios", json={"celular": CELULAR, "token_verificacion": tok}
+    ).get_json()["reclamos"][0]
     assert mios["sin_leer"] == 2 and mios["mensajes"][-1]["autor"] == "ASESOR"
-    otra = client.post("/api/v1/reclamos/publico/mios",
-                       json={"celular": CELULAR, "token_verificacion": tok}).get_json()["reclamos"][0]
+    otra = client.post(
+        "/api/v1/reclamos/publico/mios", json={"celular": CELULAR, "token_verificacion": tok}
+    ).get_json()["reclamos"][0]
     assert otra["sin_leer"] == 0
 
 
@@ -446,19 +468,30 @@ def test_consulta_solo_con_codigo(client, taller):
     token = _verificar(client)
     codigo = _reservar(client, taller, "RECLAMO", token).get_json()["turno"]["codigo"]
     corto = f"TU-{codigo[-6:]}"
-    r = client.post("/api/v1/turnos/publico/solicitar-codigo",
-                    json={"codigo_turno": corto, "proposito": "consulta"})
+    r = client.post(
+        "/api/v1/turnos/publico/solicitar-codigo",
+        json={"codigo_turno": corto, "proposito": "consulta"},
+    )
     assert r.status_code == 200, r.get_json()
     assert r.get_json()["celular_enmascarado"].endswith(CELULAR[-3:])
-    v = client.post("/api/v1/turnos/publico/verificar-codigo",
-                    json={"codigo_turno": corto, "proposito": "consulta",
-                          "codigo": r.get_json()["codigo_prueba"]})
+    v = client.post(
+        "/api/v1/turnos/publico/verificar-codigo",
+        json={
+            "codigo_turno": corto,
+            "proposito": "consulta",
+            "codigo": r.get_json()["codigo_prueba"],
+        },
+    )
     assert v.status_code == 200, v.get_json()
-    c = client.post("/api/v1/turnos/publico/consultar",
-                    json={"codigo": corto, "token_verificacion": v.get_json()["token_verificacion"]})
+    c = client.post(
+        "/api/v1/turnos/publico/consultar",
+        json={"codigo": corto, "token_verificacion": v.get_json()["token_verificacion"]},
+    )
     assert c.status_code == 200, c.get_json()
-    malo = client.post("/api/v1/turnos/publico/solicitar-codigo",
-                       json={"codigo_turno": "TU-ZZZZZZ", "proposito": "consulta"})
+    malo = client.post(
+        "/api/v1/turnos/publico/solicitar-codigo",
+        json={"codigo_turno": "TU-ZZZZZZ", "proposito": "consulta"},
+    )
     assert malo.status_code == 400
 
 

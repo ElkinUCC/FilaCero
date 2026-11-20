@@ -4,6 +4,7 @@ La organización activa se resuelve desde un JWT firmado o desde el encabezado
 X-Organization-Slug en rutas públicas. Nunca se confía en un organization_id
 suministrado en el cuerpo de una petición.
 """
+
 from contextlib import contextmanager
 
 from flask import g, has_app_context, has_request_context
@@ -105,9 +106,7 @@ def instalar_aislamiento_multiempresa():
         # validarse aquí explícitamente, incluso si el objeto quedó cargado
         # antes de cambiar el contexto de organización en una tarea interna.
         organizacion_borrado = (
-            int(organizacion_id)
-            if organizacion_id is not None
-            else organizacion_actual_id()
+            int(organizacion_id) if organizacion_id is not None else organizacion_actual_id()
         )
         for objeto in sesion.deleted:
             if isinstance(objeto, TenantScoped):
@@ -158,7 +157,10 @@ def resolver_organizacion_peticion(app):
             if usuario is None:
                 abort(401, description="La sesión no pertenece a una organización activa.")
             try:
-                token_org_id = int(claims["org_id"]) if claims.get("org_id") is not None else int(usuario.organizacion_id)
+                org_firmada = claims.get("org_id")
+                token_org_id = int(
+                    org_firmada if org_firmada is not None else usuario.organizacion_id
+                )
             except (TypeError, ValueError):
                 abort(401, description="La sesión no tiene una organización válida.")
 
@@ -191,9 +193,7 @@ def resolver_organizacion_peticion(app):
             if slug_solicitado and slug_solicitado != organizacion.slug:
                 abort(403, description="La sesión no tiene acceso a esa organización.")
         else:
-            slug = slug_solicitado or app.config.get(
-                "DEFAULT_ORGANIZATION_SLUG", "filacero-demo"
-            )
+            slug = slug_solicitado or app.config.get("DEFAULT_ORGANIZATION_SLUG", "filacero-demo")
             organizacion = Organizacion.query.filter_by(slug=slug).first()
             # Compatibilidad para instalaciones antiguas recién migradas en
             # pruebas/desarrollo. Con MySQL la crea la migración Alembic.

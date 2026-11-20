@@ -16,6 +16,7 @@ import {
 import { anunciar } from "../../utils/voz.js";
 import { icono } from "../ui/icon.js";
 import { mensajeError } from "../ui/modal.js";
+import { cargando } from "../ui/cargando.js";
 
 /** Lo que ve el ciudadano sobre la preparación previa (solo entregas y garantías). */
 const TEXTO_PREPARACION = {
@@ -248,7 +249,7 @@ export function montarConsultar(contenedor, { inicial, onResultado }) {
                 ? html`<label class="campo">${icono("ficha", 17)}<input id="ct-codigo" value="${s.codigo}" placeholder="Código del turno (TU-…)" aria-label="Código del turno" /></label>`
                 : html`<label class="campo">${icono("celular", 17)}<input id="ct-celular" type="tel" inputmode="numeric" value="${s.celular}" placeholder="Celular de la reserva" aria-label="Celular de la reserva" /></label>`}
               <button class="btn btn--primario" ${s.cargando || s.consultaEnviada ? "disabled" : ""}>
-                ${s.cargando ? "Procesando…" : s.tokenConsulta ? "Consultar" : "Enviar código"}
+                ${s.cargando ? cargando("Procesando…") : s.tokenConsulta ? "Consultar" : "Enviar código"}
               </button>
             </form>`}`;
   }

@@ -11,6 +11,7 @@ import { icono } from "../ui/icon.js";
 import { abrirDetalle, abrirModal, confirmar, datosDetalle, mensajeError } from "../ui/modal.js";
 import { avisar } from "../ui/toast.js";
 import { botonFila, enlaceDetalle, estadoInsignia, tablaSeccion } from "./tablaSeccion.js";
+import { cargando } from "../ui/cargando.js";
 
 const CONFIG = {
   sedes: {
@@ -78,7 +79,7 @@ function abrirFormulario(tipo, inicial, alGuardado) {
     </form>`;
   const pie = () => html`
     <button type="button" class="btn btn--suave" data-cerrar>Cancelar</button>
-    <button type="submit" form="form-catalogo" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? "Guardando…" : editando ? "Guardar cambios" : `Crear ${c.singular}`}</button>`;
+    <button type="submit" form="form-catalogo" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? cargando("Guardando…") : editando ? "Guardar cambios" : `Crear ${c.singular}`}</button>`;
 
   const v = abrirModal({ titulo: editando ? `Editar ${c.singular}` : c.nuevo, descripcion: c.detalle, cuerpo: cuerpo(), pie: pie() });
   const repintar = () => {

@@ -14,7 +14,7 @@ let region = null;
 function regionViva() {
   if (!region) {
     region = document.createElement("div");
-    region.className = "sr";
+    region.className = "visually-hidden";
     region.setAttribute("role", "status");
     region.setAttribute("aria-live", "polite");
     document.body.appendChild(region);

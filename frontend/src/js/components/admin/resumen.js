@@ -176,8 +176,8 @@ export function montarResumen(contenedor, { titulo, soloLectura }) {
     if (!t) cuerpo = html`<div class="esqueleto" style="height: 230px"></div>`;
     else if (s.verTabla) {
       cuerpo = html`
-        <div class="tabla-envoltura tablero__tabla">
-          <table class="tabla">
+        <div class="table-responsive tabla-envoltura tablero__tabla">
+          <table class="table table-hover align-middle tabla">
             <thead><tr><th>Fecha</th><th class="num">Turnos</th><th class="num">Atendidos</th><th class="num">No asistió</th><th class="num">Cancelados</th><th class="num">Anterior</th></tr></thead>
             <tbody>${dias.map((d, i) => html`<tr><td>${fechaCorta(d.fecha)}</td><td class="num">${d.total}</td><td class="num">${d.atendidos}</td><td class="num">${d.no_asistio}</td><td class="num">${d.cancelados}</td><td class="num">${t.por_dia_anterior[i]}</td></tr>`)}</tbody>
           </table>
@@ -222,8 +222,8 @@ export function montarResumen(contenedor, { titulo, soloLectura }) {
         <div><strong>${vivo ? contar("LLAMADO") : "—"}</strong><span>llamando</span></div>
         <div><strong>${vivo ? contar("LIBRE") : "—"}</strong><span>libres para atender</span></div>
       </div>
-      <div class="tabla-envoltura">
-        <table class="tabla tabla--vivo">
+      <div class="table-responsive tabla-envoltura">
+        <table class="table table-hover align-middle tabla tabla--vivo">
           <thead><tr><th scope="col">Sede</th><th scope="col">Franja en curso</th><th scope="col">Próximo turno</th><th scope="col" class="num">Esperan hoy</th><th scope="col" class="num">En riesgo</th><th scope="col">Asesores</th></tr></thead>
           <tbody>
             ${(vivo || []).map((x) => {
@@ -312,8 +312,8 @@ export function montarResumen(contenedor, { titulo, soloLectura }) {
   function sedesHTML(t) {
     return html`
       <header class="panel__cabeza"><h2>Desempeño por sede</h2><span class="panel__nota">Ordenadas por demanda</span></header>
-      <div class="tabla-envoltura">
-        <table class="tabla tabla--ranking">
+      <div class="table-responsive tabla-envoltura">
+        <table class="table table-hover align-middle tabla tabla--ranking">
           <thead><tr><th>Sede</th><th class="num">Turnos</th><th>Asistencia</th><th>En su franja</th><th class="num">Atención</th></tr></thead>
           <tbody>
             ${(t?.por_sede || []).map((x) => html`<tr><th scope="row">${x.nombre}</th><td class="num">${x.total.toLocaleString("es-CO")}</td><td>${mini(x.asistencia_pct)}</td><td>${mini(x.puntualidad_pct)}</td><td class="num">${duracion(x.atencion_promedio_seg)}</td></tr>`)}

@@ -765,9 +765,9 @@ def _nuevo_equipo(cliente, sede, rnd, estado, origen="REPARACION", asesor=None, 
         serial=f"SN{rnd.randint(10**8, 10**9 - 1)}",
         falla=rnd.choice(FALLAS_TV),
         origen=origen,
-        fecha_compra=(date.today() - timedelta(days=rnd.randint(20, 330)))
-        if origen == "GARANTIA"
-        else None,
+        fecha_compra=(
+            (date.today() - timedelta(days=rnd.randint(20, 330))) if origen == "GARANTIA" else None
+        ),
         estado=estado,
         nota=NOTAS_EQUIPO.get(estado),
         registrado_por_id=asesor.id if asesor and estado != "POR_RECIBIR" else None,
@@ -1082,7 +1082,7 @@ def comando_cuentas(args):
                         f"(.co / .com).{FIN}"
                     )
                 print(
-                    f"  {GRIS}Créala: python scripts/crear_cuenta.py {correo} ADMIN \"Tu nombre\"\n"
+                    f'  {GRIS}Créala: python scripts/crear_cuenta.py {correo} ADMIN "Tu nombre"\n'
                     f'  (para asesor: ... {correo} AGENTE "Tu nombre" "Sede Centro"){FIN}'
                 )
                 continue
@@ -1194,9 +1194,7 @@ def comando_cargar(args, solo_borrar=False):
                 desde = (
                     hoy - timedelta(days=args.dias)
                     if args.dias and not args.desde
-                    else date.fromisoformat(args.desde)
-                    if args.desde
-                    else hoy - timedelta(days=6)
+                    else date.fromisoformat(args.desde) if args.desde else hoy - timedelta(days=6)
                 )
                 hasta = date.fromisoformat(args.hasta) if args.hasta else hoy - timedelta(days=1)
             except ValueError:
@@ -1536,9 +1534,11 @@ def _mostrar_tablero_operativo(Turno, agentes, trabajos, ids_turnos, creadas, in
     ids = [a.id for a in agentes]
     estados = ("ESPERANDO", "LLAMADO", "EN_ATENCION", "ATENDIDO", "NO_ASISTIO", "CANCELADO")
     conteos = {
-        estado: Turno.query.filter(Turno.id.in_(ids_turnos), Turno.estado == estado).count()
-        if ids_turnos
-        else 0
+        estado: (
+            Turno.query.filter(Turno.id.in_(ids_turnos), Turno.estado == estado).count()
+            if ids_turnos
+            else 0
+        )
         for estado in estados
     }
     activos = (
@@ -1666,9 +1666,7 @@ def comando_en_vivo(args):
                     if turno:
                         # Igual que en el portal: la entrega lleva su equipo listo,
                         # la garantía su televisor por recibir y el reclamo su radicado.
-                        _simular_vinculos(
-                            turno, servicio, cliente, sede, [], rnd, ahora_local()
-                        )
+                        _simular_vinculos(turno, servicio, cliente, sede, [], rnd, ahora_local())
                         db.session.commit()
                         creadas += 1
                         turnos_simulados.append(turno.id)
@@ -2327,7 +2325,7 @@ def comando_carga(args):
     paso(
         "Nunca se supera el cupo de la franja",
         aceptadas <= cupo,
-        f"{aceptadas} aceptadas, {estados.count(400)} rechazadas por cupo",
+        f"{aceptadas} aceptadas, {estados.count(409) + estados.count(400)} rechazadas por cupo",
     )
     return 0 if aceptadas <= cupo else 1
 

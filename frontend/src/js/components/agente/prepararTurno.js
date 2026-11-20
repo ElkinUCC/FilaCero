@@ -8,6 +8,7 @@ import { html, pintar } from "../../utils/dom.js";
 import { codigoTurno, fechaCorta, PREPARACION, textoPreparacion, valorRespuesta } from "../../utils/formatters.js";
 import { icono } from "../ui/icon.js";
 import { abrirModal, mensajeError } from "../ui/modal.js";
+import { cargando } from "../ui/cargando.js";
 
 const DETALLES = {
   ENTREGA: {
@@ -53,7 +54,7 @@ export function abrirPrepararTurno(turno, alListo) {
 
   const pie = () => html`
     <button type="button" class="btn btn--suave" data-cerrar>Cancelar</button>
-    <button type="submit" form="form-preparar" class="btn btn--primario" ${s.ocupado ? "disabled" : ""}>${s.ocupado ? "Guardando…" : "Guardar preparación"}</button>`;
+    <button type="submit" form="form-preparar" class="btn btn--primario" ${s.ocupado ? "disabled" : ""}>${s.ocupado ? cargando("Guardando…") : "Guardar preparación"}</button>`;
 
   const pedido = turno.equipo
     ? html`

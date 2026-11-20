@@ -9,6 +9,7 @@ from .servicios import (
     emitir_token,
     iniciar_sesion,
     registrar_usuario,
+    revocar_todas_las_sesiones,
 )
 
 usuarios_bp = Blueprint("usuarios", __name__)
@@ -78,16 +79,9 @@ def cambiar_mi_clave():
 @jwt_required()
 def cerrar_sesion():
     """Revoca TODOS los tokens del usuario (cierra sesión en todos sus equipos)."""
-    from app import db
     from app.dominios.auditoria.servicios import registrar
 
     if current_user:
-        current_user.revocar_sesiones()
-        if current_user.rol == "AGENTE":
-            from datetime import UTC, datetime
-
-            current_user.presencia = "AUSENTE"  # salió: queda "fuera de turno"
-            current_user.presencia_desde = datetime.now(UTC).replace(tzinfo=None)
-        db.session.commit()
+        revocar_todas_las_sesiones(current_user)
         registrar("logout", usuario_id=current_user.id)
     return {"mensaje": "Sesión cerrada."}, 200

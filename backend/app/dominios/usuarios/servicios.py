@@ -324,3 +324,12 @@ def verificar_o_asignar_documento(cliente, valor):
     if not cliente.documento:
         cliente.documento = documento
     return documento
+
+
+def revocar_todas_las_sesiones(usuario):
+    """Cierre de sesión: invalida todos sus tokens; el asesor queda "fuera de turno"."""
+    usuario.revocar_sesiones()
+    if usuario.rol == "AGENTE":
+        usuario.presencia = "AUSENTE"
+        usuario.presencia_desde = datetime.now(UTC).replace(tzinfo=None)
+    db.session.commit()

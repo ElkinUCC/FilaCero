@@ -498,7 +498,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
                 <button class="btn btn--fantasma" data-accion="devolver" data-id="${t.id}" ${ocupado}>${icono("deshacer", 17)} Devolver a la cola</button>`
             : html`<button class="btn btn--exito btn--grande" data-accion="finalizar" ${ocupado}>${icono("finalizado", 18)} Finalizar atención</button>`}
         </div>
-        ${modulo ? html`<span class="sr">Módulo ${modulo}</span>` : ""}
+        ${modulo ? html`<span class="visually-hidden">Módulo ${modulo}</span>` : ""}
       </div>`;
   }
 
@@ -656,7 +656,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
   function atencionHTML() {
     return html`
       <main class="ag__cuerpo" id="contenido" tabindex="-1">
-        <h1 class="sr">Consola de atención${p()?.agente?.sede ? ` · ${p().agente.sede}` : ""}</h1>
+        <h1 class="visually-hidden">Consola de atención${p()?.agente?.sede ? ` · ${p().agente.sede}` : ""}</h1>
         <div class="ag__principal">${asistenteHTML()}${puestoHTML()}${jornadaHTML()}</div>
         ${colaHTML()}
       </main>`;

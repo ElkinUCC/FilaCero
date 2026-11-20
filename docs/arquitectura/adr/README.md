@@ -4,7 +4,7 @@ Formato: **contexto → alternativas → decisión → consecuencias**, con esta
 calidad ([02](../02-atributos-calidad.md)) y riesgos ([09](../09-tradeoffs-riesgos.md)). Un ADR no se borra:
 si la implementación cambia la decisión, se **revisa** y se deja constancia (ver ADR-002, ADR-004 y ADR-008).
 
-Total: **16 ADR**.
+Total: **17 ADR**.
 
 | ADR | Título | Estado | Atributo principal |
 |---|---|---|---|
@@ -24,3 +24,4 @@ Total: **16 ADR**.
 | [014](ADR-014-presencia-del-asesor.md) | Presencia del asesor | Nuevo (iteración 2) | Usabilidad del panel |
 | [015](ADR-015-cedula-y-codigos-visibles.md) | Cédula para entregar equipos y códigos visibles uniformes | Nuevo (iteración 3) | Seguridad, usabilidad |
 | [016](ADR-016-minichat-y-alertas.md) | Minichat con asistente automático y alertas al asesor | Nuevo (iteración 4) | Usabilidad |
+| [017](ADR-017-bootstrap-y-capas-estrictas.md) | Bootstrap 5.3 como base visual de la SPA y capas estrictas en el backend | Nuevo (entrega final) | Mantenibilidad, verificabilidad |

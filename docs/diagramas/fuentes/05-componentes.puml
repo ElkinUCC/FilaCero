@@ -7,20 +7,22 @@ actor Asesor
 actor "Admin /\nSupervisor" as Adm
 actor "TV de sala" as TV
 
-component "SPA FilaCero\n«HTML + CSS + JS módulos ES»" as SPA {
-  portin "~#/" as p1
-  portin "~#/agente" as p2
-  portin "~#/admin/:seccion" as p3
-  portin "~#/sala" as p4
+component "SPA FilaCero\n«HTML + CSS + JS módulos ES · Bootstrap 5.3»" as SPA {
+  () "~#/" as p1
+  () "~#/agente" as p2
+  () "~#/admin/:seccion" as p3
+  () "~#/sala" as p4
   [router + guards] as RG
   [pages + components] as PC
   [api/http.js\n(único fetch)] as HTTP
   [auth/session.service] as SES
   [utils/voz.js\n(Web Speech API)] as VOZ
+  [Bootstrap 5.3 (CSS local)\n+ bootstrap-tema.css] as BS
   RG --> PC
   PC --> HTTP
   PC --> VOZ
   HTTP --> SES
+  PC ..> BS : clases btn, table,\nalert, toast, row, is-invalid
 }
 Ciudadano --> p1
 Asesor --> p2
@@ -28,9 +30,10 @@ Adm --> p3
 TV --> p4
 
 component "API FilaCero\n«Flask 3 · monolito modular»" as API {
-  portin "REST /api/v1" as rest
+  () "REST /api/v1" as rest
   [Blueprints\n(controladores)] as CT
-  [Servicios de dominio] as SV
+  [Servicios de dominio\n(reglas y transacciones)] as SV
+  [DTO\n(contratos JSON)] as DTO
   [Repositorios] as RP
   [Modelos ORM\n+ TenantScoped] as MD
   [Seguridad\nJWT · roles · rate limit] as SG
@@ -40,6 +43,7 @@ component "API FilaCero\n«Flask 3 · monolito modular»" as API {
   rest --> CT
   CT --> SG
   CT --> SV
+  CT --> DTO
   CT --> AU
   SV --> RP
   RP --> MD

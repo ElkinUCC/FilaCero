@@ -180,37 +180,65 @@ def hallazgos(datos):
 
     v = _var(k["total"], a["total"])
     if v is not None and abs(v) >= 5:
-        add("info", f"La demanda {'subió' if v > 0 else 'bajó'} {abs(v)} %",
-            f"{k['total']:,} turnos frente a {a['total']:,} del periodo anterior.".replace(",", "."))
+        add(
+            "info",
+            f"La demanda {'subió' if v > 0 else 'bajó'} {abs(v)} %",
+            f"{k['total']:,} turnos frente a {a['total']:,} del periodo anterior.".replace(
+                ",", "."
+            ),
+        )
     p = k.get("puntualidad_pct")
     if p is not None:
         if p >= 90:
-            add("bien", f"Promesa cumplida: {p} % atendidos en su franja", "Por encima de la meta de 90 %.")
+            add(
+                "bien",
+                f"Promesa cumplida: {p} % atendidos en su franja",
+                "Por encima de la meta de 90 %.",
+            )
         else:
-            add("alerta", f"Puntualidad en {p} %, bajo la meta de 90 %",
-                "Revisa sedes con más turnos en riesgo y la duración de las atenciones.")
+            add(
+                "alerta",
+                f"Puntualidad en {p} %, bajo la meta de 90 %",
+                "Revisa sedes con más turnos en riesgo y la duración de las atenciones.",
+            )
     if datos["por_hora"]:
         pico = max(datos["por_hora"], key=lambda h: h["total"])
-        add("info", f"Hora pico: {pico['hora']:02d}:00 – {pico['hora'] + 1:02d}:00",
-            f"{pico['total']} turnos. Programa más asesores en esa franja y deja las horas bajas para alistar entregas.")
+        add(
+            "info",
+            f"Hora pico: {pico['hora']:02d}:00 – {pico['hora'] + 1:02d}:00",
+            f"{pico['total']} turnos. Programa más asesores en esa franja y deja las horas bajas para alistar entregas.",
+        )
     sedes = [s for s in datos["por_sede"] if s["asistencia_pct"] is not None]
     if len(sedes) > 1:
         peor = min(sedes, key=lambda s: s["asistencia_pct"])
         mejor = max(sedes, key=lambda s: s["asistencia_pct"])
         if mejor["asistencia_pct"] - peor["asistencia_pct"] >= 2:
-            add("atencion", f"{peor['nombre']}: asistencia más baja ({peor['asistencia_pct']} %)",
-                f"{mejor['nombre']} llega a {mejor['asistencia_pct']} %. Considera recordatorios previos a la cita.")
+            add(
+                "atencion",
+                f"{peor['nombre']}: asistencia más baja ({peor['asistencia_pct']} %)",
+                f"{mejor['nombre']} llega a {mejor['asistencia_pct']} %. Considera recordatorios previos a la cita.",
+            )
     c = k.get("cancelacion_pct")
     if c is not None and c >= 10:
-        add("atencion", f"Cancelaciones en {c} %", "Muchos cupos se liberan: revisa franjas con más cancelaciones.")
+        add(
+            "atencion",
+            f"Cancelaciones en {c} %",
+            "Muchos cupos se liberan: revisa franjas con más cancelaciones.",
+        )
     r = datos["reclamos"]
     if r["sin_atender"]:
-        add("alerta", f"{r['sin_atender']} reclamos sin atender",
-            "Asigna un asesor para responderlos: el cliente ve la respuesta al consultar con su celular.")
+        add(
+            "alerta",
+            f"{r['sin_atender']} reclamos sin atender",
+            "Asigna un asesor para responderlos: el cliente ve la respuesta al consultar con su celular.",
+        )
     e = datos["equipos"]
     if e["listos_por_recoger"] >= 20:
-        add("atencion", f"{e['listos_por_recoger']} equipos listos sin recoger",
-            "Invita a los clientes a reservar la entrega para liberar espacio en el taller.")
+        add(
+            "atencion",
+            f"{e['listos_por_recoger']} equipos listos sin recoger",
+            "Invita a los clientes a reservar la entrega para liberar espacio en el taller.",
+        )
     orden = {"alerta": 0, "atencion": 1, "info": 2, "bien": 3}
     return sorted(out, key=lambda h: orden[h["tono"]])[:6]
 

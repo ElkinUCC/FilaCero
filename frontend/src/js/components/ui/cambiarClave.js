@@ -9,6 +9,7 @@ import { getToken, saveSession } from "../../auth/session.service.js";
 import { html, pintar } from "../../utils/dom.js";
 import { icono } from "./icon.js";
 import { abrirModal, mensajeError } from "./modal.js";
+import { cargando } from "./cargando.js";
 
 const REGLAS = [
   { texto: "8 caracteres o más", ok: (c) => c.length >= 8 },
@@ -45,7 +46,7 @@ export function formularioClaveHTML(e, obligatorio) {
       </ul>
       ${mensajeError(e.error)}
       ${obligatorio
-        ? html`<button class="btn btn--primario btn--ancho" ${!esValida(e) || e.guardando ? "disabled" : ""}>${e.guardando ? "Guardando…" : "Guardar y continuar"}</button>`
+        ? html`<button class="btn btn--primario btn--ancho" ${!esValida(e) || e.guardando ? "disabled" : ""}>${e.guardando ? cargando("Guardando…") : "Guardar y continuar"}</button>`
         : ""}
     </form>`;
 }

@@ -1,0 +1,38 @@
+"""Servicio de la pantalla de sala de espera (pública, sin datos personales sensibles).
+
+La TV de cada sede consulta cada 4 s: turnos llamados en los últimos 30 minutos
+(con módulo y asesor) y los próximos en espera. Nunca incluye el celular (ADR-008).
+"""
+
+from datetime import UTC, timedelta
+
+from app.dominios.sedes.repositorios import obtener_activos as sedes_activas
+from app.dominios.sedes.repositorios import obtener_por_id as obtener_sede
+from app.horario import ahora_local, hoy_local, info_horario
+
+from . import repositorios as repo
+from .dtos import turno_llamado_sala_response, turno_siguiente_sala_response
+
+MINUTOS_VISIBLES = 30
+
+
+def pantalla_de_sala(sede_id):
+    sedes = [{"id": p.id, "nombre": p.nombre} for p in sedes_activas()]
+    sede = obtener_sede(sede_id) if sede_id else None
+    if not sede or not sede.activo:
+        return {"sedes": sedes, "sede": None}
+
+    hoy = hoy_local()
+    desde = (ahora_local() - timedelta(minutes=MINUTOS_VISIBLES)).astimezone(UTC)
+    desde = desde.replace(tzinfo=None)
+    return {
+        "sedes": sedes,
+        "sede": {"id": sede.id, "nombre": sede.nombre, "direccion": sede.direccion},
+        "horario": info_horario(),
+        "llamados": [
+            turno_llamado_sala_response(t) for t in repo.llamados_recientes(sede.id, hoy, desde)
+        ],
+        "siguientes": [
+            turno_siguiente_sala_response(t) for t in repo.siguientes_en_espera(sede.id, hoy)
+        ],
+    }

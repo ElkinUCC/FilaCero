@@ -111,7 +111,9 @@ def test_copiloto_del_asesor_propone_llamar(client, operacion):
     d = _preguntar(client, operacion["asesor_auth"], "¿a quién llamo?")
     assert "siguiente" in d["intenciones"]
     # El turno es de mañana: el copiloto lo dice y no ofrece llamarlo hoy.
-    assert "Mariana Zapata Ríos" in d["respuesta"] and "No hay más turnos para hoy" in d["respuesta"]
+    assert (
+        "Mariana Zapata Ríos" in d["respuesta"] and "No hay más turnos para hoy" in d["respuesta"]
+    )
 
     riesgo = _preguntar(client, operacion["asesor_auth"], "hay alguien en riesgo?")
     assert riesgo["intenciones"] == ["riesgo"]

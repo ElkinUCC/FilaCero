@@ -50,9 +50,10 @@ flowchart TB
 5. Los DTO definen el contrato: `turno_response` (personal) y `turno_publico_response` (ciudadano, sin IDs
    internos y con celular enmascarado) son representaciones distintas de la misma entidad.
 
-> **Deuda técnica declarada**: algunos endpoints de métricas e historial del panel (`agentes/controladores.py`)
-> construyen consultas en el controlador. Funcionan y están probados, pero violan la regla 1. Se registran
-> como riesgo R-07 en [09](09-tradeoffs-riesgos.md) con su plan de corrección (mover a `agentes/repositorios.py`).
+> **Deuda técnica corregida (R-07, entrega final)**: los endpoints de métricas, historial, asesores, sala,
+> disponibilidad, usuarios y organización ya no consultan la base de datos desde el controlador. Las consultas
+> están en `repositorios.py`, las reglas en `servicios.py` / `admin_servicios.py` / `consultas.py` y las respuestas
+> en `dtos.py`. La regla 1 la verifica `tests/test_arquitectura_capas.py` (ADR-017).
 
 > **Excepción declarada a la regla 2 (acoplamiento por modelo)**: algunos módulos importan el **modelo** de otro
 > para contar o validar, con importación diferida para no crear ciclos de arranque: `franjas` y `usuarios` leen

@@ -5,6 +5,7 @@ import { saveSession } from "../../auth/session.service.js";
 import { atraparFoco, crearElemento, html, pintar } from "../../utils/dom.js";
 import { icono } from "../ui/icon.js";
 import { mensajeError } from "../ui/modal.js";
+import { cargando } from "../ui/cargando.js";
 
 export function abrirLogin({ onIngresar, alCerrar }) {
   const e = { correo: "", password: "", ver: false, cargando: false, error: "" };
@@ -27,7 +28,7 @@ export function abrirLogin({ onIngresar, alCerrar }) {
       </label>
       ${mensajeError(e.error)}
       <button class="btn btn--primario btn--ancho" ${e.cargando || !e.correo || !e.password ? "disabled" : ""}>
-        ${e.cargando ? "Ingresando…" : "Ingresar"}
+        ${e.cargando ? cargando("Ingresando…") : "Ingresar"}
       </button>
     </form>`;
   const repintar = () => pintar(velo, vista());

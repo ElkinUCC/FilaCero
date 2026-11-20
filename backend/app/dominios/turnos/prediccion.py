@@ -1,32 +1,19 @@
+"""Servicio de predicción del tiempo de espera de un turno.
+
+Regresión lineal ligera sobre las últimas 100 atenciones del mismo trámite y sede;
+con menos de 5 muestras usa la mediana o el tiempo estimado del trámite.
+"""
+
 from datetime import datetime
 
-from flask import Blueprint, jsonify
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from app.errores import NoEncontradoError
 
-from app import db
-from app.dominios.usuarios.modelos import Usuario
-
-from .modelos import Turno
-from .repositorios import posicion_en_cola
-
-prediccion_bp = Blueprint("prediccion", __name__)
+from . import repositorios as repo
 
 
 def _predecir_duracion(turno):
-    """Regresión lineal ligera sobre las últimas 100 atenciones (segundos)."""
-    historial = (
-        db.session.query(Turno.fecha_inicio, Turno.fecha_fin)
-        .filter(
-            Turno.estado == "ATENDIDO",
-            Turno.fecha_inicio.isnot(None),
-            Turno.fecha_fin.isnot(None),
-            Turno.tramite_id == turno.tramite_id,
-            Turno.punto_id == turno.punto_id,
-        )
-        .order_by(Turno.fecha_fin.desc())
-        .limit(100)
-        .all()
-    )
+    """Duración esperada de la atención (segundos), muestras usadas y modelo."""
+    historial = repo.duraciones_recientes(turno.tramite_id, turno.punto_id)
     duraciones = [(fin - inicio).total_seconds() for inicio, fin in historial if fin > inicio]
 
     if len(duraciones) < 5:
@@ -58,17 +45,9 @@ def estimar_espera(turno):
         return {"turnos_antes": 0, "tiempo_estimado_minutos": 0}
 
     duracion, muestras, modelo = _predecir_duracion(turno)
-    antes = posicion_en_cola(turno)
-    agentes = max(
-        1,
-        Usuario.query.filter_by(
-            rol="AGENTE", activo=True, punto_asignado_id=turno.punto_id
-        ).count(),
-    )
-    en_atencion = Turno.query.filter(
-        Turno.punto_id == turno.punto_id,
-        Turno.estado.in_(("LLAMADO", "EN_ATENCION")),
-    ).count()
+    antes = repo.posicion_en_cola(turno)
+    agentes = max(1, repo.contar_asesores_activos(turno.punto_id))
+    en_atencion = repo.contar_en_curso(turno.punto_id)
 
     minutos = round(((antes + en_atencion) * duracion / agentes) / 60)
     return {
@@ -79,17 +58,18 @@ def estimar_espera(turno):
     }
 
 
-@prediccion_bp.get("/<int:turno_id>/tiempo-espera")
-@jwt_required()
-def tiempo_espera(turno_id):
-    turno = db.session.get(Turno, turno_id)
-    if not turno:
-        return jsonify({"error": "Turno no encontrado"}), 404
+def tiempo_espera_autorizado(turno_id, usuario_id):
+    """Estimación para el dueño del turno, un asesor de la misma sede o un administrador.
 
-    # Solo el dueño, un agente de la misma sede o un administrador.
-    usuario = db.session.get(Usuario, int(get_jwt_identity()))
+    Si no tiene permiso responde "no encontrado" (404) para no revelar que el turno existe.
+    """
+    from app.dominios.usuarios.repositorios import buscar_por_id
+
+    turno = repo.obtener_por_id(turno_id)
+    usuario = buscar_por_id(usuario_id)
     permitido = (
-        usuario
+        turno
+        and usuario
         and usuario.activo
         and (
             usuario.id == turno.usuario_id
@@ -98,31 +78,19 @@ def tiempo_espera(turno_id):
         )
     )
     if not permitido:
-        # 404 y no 403: no se revela que el turno existe.
-        return jsonify({"error": "Turno no encontrado"}), 404
+        raise NoEncontradoError("Turno no encontrado")
 
     if turno.estado in ("ATENDIDO", "CANCELADO", "NO_ASISTIO", "EN_ATENCION"):
-        return (
-            jsonify(
-                {
-                    "turno_id": turno.id,
-                    "estado": turno.estado,
-                    "tiempo_estimado_minutos": 0,
-                    "mensaje": "El turno ya no está en espera.",
-                }
-            ),
-            200,
-        )
-
-    return (
-        jsonify(
-            {
-                "turno_id": turno.id,
-                "estado": turno.estado,
-                **estimar_espera(turno),
-                "generado_en": datetime.now().isoformat(timespec="seconds"),
-                "nota": "Estimación orientativa basada en atenciones anteriores.",
-            }
-        ),
-        200,
-    )
+        return {
+            "turno_id": turno.id,
+            "estado": turno.estado,
+            "tiempo_estimado_minutos": 0,
+            "mensaje": "El turno ya no está en espera.",
+        }
+    return {
+        "turno_id": turno.id,
+        "estado": turno.estado,
+        **estimar_espera(turno),
+        "generado_en": datetime.now().isoformat(timespec="seconds"),
+        "nota": "Estimación orientativa basada en atenciones anteriores.",
+    }

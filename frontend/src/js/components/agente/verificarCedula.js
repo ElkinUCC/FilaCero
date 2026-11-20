@@ -10,6 +10,7 @@ import { html, pintar } from "../../utils/dom.js";
 import { soloDigitos } from "../../utils/formatters.js";
 import { icono } from "../ui/icon.js";
 import { abrirModal, mensajeError } from "../ui/modal.js";
+import { cargando } from "../ui/cargando.js";
 
 export function abrirVerificarCedula({ equipo, estado, nombre, alListo }) {
   const entrega = estado === "ENTREGADO";
@@ -20,7 +21,7 @@ export function abrirVerificarCedula({ equipo, estado, nombre, alListo }) {
   const pie = () => html`
     <button type="button" class="btn btn--suave" data-cerrar>Cancelar</button>
     <button type="submit" form="form-cedula" class="btn ${entrega ? "btn--exito" : "btn--primario"}" ${s.ocupado || s.cedula.length < 6 ? "disabled" : ""}>
-      ${icono(entrega ? "check" : "paquete", 16)} ${s.ocupado ? "Verificando…" : entrega ? "Verificar y entregar" : "Verificar y recibir"}
+      ${icono(entrega ? "check" : "paquete", 16)} ${s.ocupado ? cargando("Verificando…") : entrega ? "Verificar y entregar" : "Verificar y recibir"}
     </button>`;
   const cuerpo = () => html`
     <form id="form-cedula" class="formulario cedula">
@@ -33,7 +34,7 @@ export function abrirVerificarCedula({ equipo, estado, nombre, alListo }) {
       </p>
       <label>
         <span class="etiqueta">Cédula del titular</span>
-        <span class="campo campo--grande ${s.error ? "campo--error" : ""}">
+        <span class="campo campo--grande ${s.error ? "is-invalid" : ""}">
           ${icono("ficha", 18)}
           <input id="cedula-numero" inputmode="numeric" autocomplete="off" value="${s.cedula}" placeholder="Ej. 1037654321" aria-label="Número de cédula" />
         </span>

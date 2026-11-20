@@ -1,7 +1,7 @@
 # Guía para aplicar la entrega final de FilaCero
 
-Esta carpeta es la **versión completa de la entrega final**: backend, frontend (HTML + CSS + JavaScript puro, sin
-frameworks), documentación de arquitectura, diagramas UML y evidencias. No incluye secretos (`.env`), entorno
+Esta carpeta es la **versión completa de la entrega final**: backend, frontend (HTML + CSS + JavaScript puro con
+Bootstrap 5.3, sin frameworks de interfaz), documentación de arquitectura, diagramas UML y evidencias. No incluye secretos (`.env`), entorno
 virtual (`venv`) ni cachés: esos se crean en cada equipo.
 
 ## 1. Instalar o actualizar la carpeta (Windows PowerShell)
@@ -34,7 +34,7 @@ cd backend
 flask --app run db upgrade
 ```
 
-Deben aparecer hasta cuatro líneas `Running upgrade ...` (`a7c9e1b3d5f7`, `b8d0f2a4c6e9`, `c1e3a5b7d9f0` y `d2f4b6c8e0a1`). Son migraciones
+Si tu base ya estaba al día no aparece ninguna línea nueva (las migraciones no cambiaron en esta entrega; solo se corrigió la bajada de dos de ellas). En una base anterior pueden aparecer hasta cuatro líneas `Running upgrade ...` (`a7c9e1b3d5f7`, `b8d0f2a4c6e9`, `c1e3a5b7d9f0` y `d2f4b6c8e0a1`). Son migraciones
 **aditivas**: no borran datos. **Sin este paso la API falla.** Si ves `Unknown column`, repite este paso.
 
 Para la demostración recarga los datos simulados (equipos, reclamos, módulos y estados de los asesores).
@@ -87,10 +87,9 @@ Recarga con **Ctrl+F5**.
 | 10 | Panel → **Resumen**: tablero ejecutivo (indicador principal, variación contra el periodo anterior, tendencia, demanda por hora; pasa el puntero por las gráficas; cambia Hoy/7/30/90 días y sede; CSV). El supervisor ve lo mismo con la etiqueta "Solo lectura" | `#/admin` |
 | 10b | Panel (`laura.gomez@filacero.co` / `Admin12345`): Asesores con su **estado actual** (Atendiendo, En almuerzo, En pausa, Fuera de turno); Sedes alineada; Trámites con **Tipo de atención**; detalle al hacer clic; eliminar asesor | `#/admin/...` |
 | 11 | Pantalla de sala con nombre completo y módulo | ícono de pantalla en Sedes |
-| 12 | Documento de arquitectura: C4, ADR-002 (SPA sin frameworks), ADR-004 y ADR-010 revisados, ADR-013 a 016, seguridad (11), evolución E-1 a E-1d | `docs/arquitectura/README.md` |
+| 12 | Documento de arquitectura: C4, ADR-002 (SPA sin frameworks), ADR-004 y ADR-010 revisados, ADR-013 a 017, seguridad (11), evolución E-1 a E-1f | `docs/arquitectura/README.md` |
 | 12b | Diagramas UML: casos de uso, clases, entidad-relación, paquetes, componentes, despliegue y secuencias | `docs/diagramas/` |
-| 12c | Informe PDF de decisiones arquitectónicas y guion del video | `docs/entrega/` |
-| 13 | **Manual metodológico** del proyecto (se abre con doble clic, sin internet) | `docs/MANUAL_FilaCero.html` |
+| 13 | **Informe del proyecto final** (se abre con doble clic, sin internet) y guion del video | `docs/entrega/Informe_Proyecto_Final_FilaCero.html` · `docs/entrega/GUION-VIDEO.md` |
 
 La voz funciona en **Chrome o Edge**; sube el volumen antes de empezar.
 

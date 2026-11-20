@@ -1,30 +1,20 @@
 # Roadmap de FilaCero
 
-## Sprints completados
+## Completado
 
-| Sprint | Objetivo | Resultado |
+| Bloque | Objetivo | Referencia |
 |---|---|---|
-| 01 | Base técnica: factory, configuración, migraciones | ✅ |
-| 02 | Usuarios y seguridad (JWT, hash, roles) | ✅ |
-| 03 | Modelo de negocio: sedes, trámites, franjas, turnos | ✅ |
-| 04 | Administración de catálogo | ✅ |
-| 05 | Portal del ciudadano: reserva sin cuenta con OTP | ✅ |
-| 06 | Asesores y ciclo de atención | ✅ |
-| 07 | Supervisión: métricas, historial, panel en vivo | ✅ |
-| 08 | Documentación y colección Postman | ✅ |
-| 09 | Regla de puntualidad: cupo por sede y despacho EDF | ✅ |
-| 10 | Usuarios y permisos, bloqueo, revocación, bitácora | ✅ |
-| 11 | Accesibilidad WCAG 2.2 AA, pantalla de sala con voz | ✅ |
-| 12 | Arquitectura alineada con la referencia (ADR-0009) | ✅ |
+| Sprints 01–10 | Base, seguridad, modelo de negocio, catálogo, reserva con OTP, consola, supervisión, documentación, integración SPA y calidad | `docs/sprints/` |
+| Iteraciones E-1 a E-1c e iteración 4 | Preparación previa, voz, equipos, garantía, reclamos, cédula, tablero ejecutivo, minichat | `docs/arquitectura/10-evolucion.md` |
+| E-1d · E-1e | SPA sin frameworks; ejecución solo en localhost | ADR-002, ADR-012 |
+| E-1f (entrega final) | Bootstrap 5.3 local, capas estrictas verificadas por pruebas, migraciones reversibles en MySQL | ADR-017 |
 
-## Próximos pasos (después de la sustentación)
+## Después de la sustentación (fuera del alcance)
 
-| Prioridad | Tarea | Motivo | Referencia |
-|---|---|---|---|
-| Alta | Conectar un proveedor real de SMS con reintentos y tiempo límite | Hoy el OTP funciona en modo de prueba | `docs/arquitectura/09-evolucion.md` §9.2 |
-| Fuera de alcance | Publicar en internet con HTTPS | Usar la gente real | Evolución analizada en `docs/arquitectura/10-evolucion.md` |
-| Alta | Respaldo diario de MySQL y prueba de restauración | Riesgo R7 | `05-computacional-y-despliegue.md` |
-| Media | Repetir la prueba de carga con MySQL en el servidor | Riesgo R6 | `simulacion.py --carga` |
-| Media | Mover OTP y límite por IP a Redis | Poder tener varias instancias | ADR-0004, riesgo R3 |
-| Baja | Avisos por WhatsApp o SMS cuando falten 10 minutos | Menos ausencias | — |
-| Baja | Versión `/api/v2` con sobre `{"data": ...}` si se abre a terceros | Contrato estándar | ADR-0009 |
+| Prioridad | Tarea | Referencia |
+|---|---|---|
+| Alta | Proveedor real de SMS con reintentos | Incertidumbre I-02 |
+| Alta | Respaldo diario de MySQL y prueba de restauración | Riesgo R-03 |
+| Media | Límite de peticiones en un almacén compartido para varios procesos | Riesgo R-09 |
+| Media | JWT en cookie HttpOnly + CSRF si se publicara | `docs/arquitectura/11-seguridad.md` |
+| Baja | Avisar por SMS cuando el pedido esté listo | Escenario E-3 |

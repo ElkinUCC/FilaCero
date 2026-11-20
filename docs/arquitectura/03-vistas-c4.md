@@ -72,7 +72,7 @@ C4Container
 
 | Contenedor | Tecnología | Responsabilidad | Se comunica con |
 |---|---|---|---|
-| **SPA FilaCero** | HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`), **sin frameworks ni librerías**, sin compilación | Presentación, navegación por rutas `#/` (`hashchange`), guardas de rol, voz (Web Speech API), escape de HTML contra XSS | API FilaCero (REST JSON) |
+| **SPA FilaCero** | HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`) con **Bootstrap 5.3** (CSS local), **sin frameworks de interfaz**, sin compilación | Presentación, navegación por rutas `#/` (`hashchange`), guardas de rol, voz (Web Speech API), escape de HTML contra XSS | API FilaCero (REST JSON) |
 | **API FilaCero** | Flask 3, SQLAlchemy 2, Flask-JWT-Extended, Marshmallow, Alembic | Toda regla de negocio y de seguridad; nunca confía en la SPA | Base de datos FilaCero, Proveedor SMS |
 | **Base de datos FilaCero** | MySQL 8 / InnoDB, `utf8mb4` | Persistencia transaccional; bloqueos de fila para cupos | — |
 

@@ -37,12 +37,12 @@ aceptado** con su mitigación y su camino de evolución.
 | Celular y serial enmascarados en las vistas públicas | DTO públicos |
 | Bitácora de acciones sensibles (entregas, bajas, cambios de rol) | módulo `auditoria` |
 
-## 3. Auditoría de dependencias (7 de noviembre de 2026)
+## 3. Auditoría de dependencias (7 de noviembre de 2026, repetida el 19 de noviembre de 2026)
 
 | Herramienta | Alcance | Resultado |
 |---|---|---|
 | `pip-audit -r requirements.txt` | 16 paquetes de ejecución con versión fija | **0 vulnerabilidades conocidas** |
-| Frontend | HTML + CSS + JavaScript puro, **sin dependencias de terceros** | No hay paquetes que auditar (superficie de cadena de suministro = 0) |
+| Frontend | HTML + CSS + JavaScript propio; única dependencia: CSS de Bootstrap 5.3.9 (copia local, sin JavaScript de terceros) | Versión fijada sin vulnerabilidades conocidas; se sirve desde el mismo origen (CSP `'self'`) |
 
 Repetir antes de cada entrega: `pip-audit -r requirements.txt`.
 
@@ -61,6 +61,6 @@ Repetir antes de cada entrega: `pip-audit -r requirements.txt`.
 
 ```powershell
 cd backend
-python -m pytest tests/ -q                 # 164 passed
+python -m pytest tests/ -q                 # 209 passed, 1 skipped
 pip-audit -r requirements.txt              # No known vulnerabilities found
 ```

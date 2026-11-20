@@ -13,8 +13,7 @@ import logging
 
 from flask import Blueprint, current_app, jsonify, request
 
-from app import db
-from app.dominios.usuarios.modelos import Usuario
+from app.dominios.usuarios.repositorios import buscar_por_id
 from app.seguridad import limitar, requiere_rol, usuario_autenticado
 
 from . import llm
@@ -29,7 +28,7 @@ MAX_PREGUNTA = 500
 
 def _contexto(usuario, cuerpo):
     if usuario.rol == "AGENTE":
-        return contexto_asesor(db.session.get(Usuario, usuario.id))
+        return contexto_asesor(buscar_por_id(usuario.id))
     dias = cuerpo.get("dias", 7)
     punto_id = cuerpo.get("punto_id") or None
     try:
@@ -47,13 +46,16 @@ def _contexto(usuario, cuerpo):
 def sugerencias():
     usuario = usuario_autenticado()
     rol = "asesor" if usuario.rol == "AGENTE" else "gerencial"
-    return jsonify(
-        {
-            "sugerencias": SUGERENCIAS_INICIALES[rol],
-            "modo": "ia" if llm.disponible() else "local",
-            "nombre": "FilaCero IA",
-        }
-    ), 200
+    return (
+        jsonify(
+            {
+                "sugerencias": SUGERENCIAS_INICIALES[rol],
+                "modo": "ia" if llm.disponible() else "local",
+                "nombre": "FilaCero IA",
+            }
+        ),
+        200,
+    )
 
 
 @asistente_bp.post("/preguntar")

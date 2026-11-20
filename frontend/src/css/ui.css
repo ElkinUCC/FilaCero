@@ -254,7 +254,7 @@
 .campo input:focus-visible, .campo textarea:focus-visible, .dd__buscar input:focus-visible { outline: none; }
 
 /* ---------- Modal ---------- */
-.modal {
+.ventana {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 32px);
@@ -380,15 +380,7 @@
    ACCESIBILIDAD
    ========================================= */
 
-/* Texto solo para lectores de pantalla */
-.sr {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
+/* Texto solo para lectores de pantalla: clase .visually-hidden de Bootstrap. */
 
 /* Enlace "Saltar al contenido": visible solo al navegar con teclado */
 .saltar {
@@ -577,8 +569,7 @@
 .tabla--seccion th, .tabla--seccion td { vertical-align: middle; }
 .tabla--seccion th { white-space: nowrap; }
 /* Campos dentro de filas de formulario: nunca se salen del modal. */
-.formulario__fila > * { min-width: 0; }
-.formulario__fila .campo input { min-width: 0; width: 100%; }
+.formulario .row .campo input { min-width: 0; width: 100%; }
 
 /* ---------- Minichat (cliente ↔ asesor ↔ asistente) ---------- */
 .chat { display: flex; flex-direction: column; gap: 8px; }

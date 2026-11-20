@@ -21,5 +21,5 @@ Un proceso Flask con **módulos de dominio** (`usuarios`, `sedes`, `tramites`, `
 - (+) La reserva es una transacción ACID local: base de ADR-004.
 - (+) La entrega final agregó preparación, módulo y bajas tocando solo los módulos afectados (ver [10](../10-evolucion.md)).
 - (−) Todo escala junto; el techo medido es ≈ 120 req/s por proceso (suficiente con 20× de margen).
-- (−) Las reglas de capas no las impone el lenguaje: se detectó deuda en métricas (R-07).
+- (−) Las reglas de capas no las impone el lenguaje: se detectó deuda en métricas (R-07), corregida en la entrega final y vigilada por `tests/test_arquitectura_capas.py` (ADR-017).
 - Si un módulo necesitara escalar aparte (p. ej. la sala con miles de TV), es el primer candidato a extraerse (E-2).

@@ -1,10 +1,11 @@
 """Pruebas de aislamiento multiempresa del núcleo inicial."""
 
+from flask_jwt_extended import create_access_token
+
 from app.dominios.organizaciones.modelos import Organizacion
 from app.dominios.sedes.modelos import Punto
 from app.dominios.usuarios.modelos import Usuario
 from app.seguridad import encriptar_password
-from flask_jwt_extended import create_access_token
 
 
 def _crear_organizacion(db, **kwargs):
@@ -115,6 +116,7 @@ def test_configuracion_operativa_es_por_organizacion(client, admin_auth):
 
 def test_codigo_otp_no_se_comparte_entre_organizaciones(app):
     import pytest
+
     from app.dominios.turnos import otp
 
     otp.reiniciar()

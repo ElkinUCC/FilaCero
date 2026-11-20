@@ -149,7 +149,6 @@
 .marca-ok { display: inline-flex; align-items: center; gap: 4px; color: var(--verde); font-weight: 600; }
 .mono { font-variant-numeric: tabular-nums; font-weight: 650; letter-spacing: 0.3px; }
 .bloque { display: block; color: var(--tinta-3); font-size: 12.5px; }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 /* Barras horizontales */
 .barras { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -336,10 +335,9 @@
 .rol-op:hover:not(:disabled) { border-color: #9fb8b3; }
 .rol-op.activo { border-color: var(--petroleo); background: #eef6f4; box-shadow: 0 0 0 3px rgb(19 94 99 / 12%); }
 .rol-op:disabled { opacity: 0.4; }
-.formulario__fila { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 @media (max-width: 640px) {
-  .roles, .formulario__fila, .ficha-asesor dl { grid-template-columns: 1fr; }
+  .roles, .ficha-asesor dl { grid-template-columns: 1fr; }
 }
 
 

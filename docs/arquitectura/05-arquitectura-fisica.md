@@ -37,7 +37,7 @@ Capacidad máxima de negocio: 4 sedes × 2 asesores × 3 cupos × 48 franjas = *
 |---|---|---|---|---|
 | **CPU** | 1 núcleo efectivo (Python con GIL); escala con más procesos, no con más hilos | < 0,5 núcleo a la carga estimada | Despreciable (estático) | Medido: con 2 vCPU la API satura en ~120 req/s, 20× la carga estimada |
 | **RAM** | ≈ 190 MB (medido, proceso en reposo con datos demo) | ≈ 130 MB (MariaDB, medido) · 512 MB recomendados para MySQL 8 | ≈ 20 MB (servidor estático de Python, medido). No hay Node.js en el nodo | Total recomendado del nodo: **4 GB** (hay holgura para navegador y SO) |
-| **Almacenamiento** | Código < 5 MB | ≈ 0,44 KB por turno con índices (1 435 turnos = 0,63 MB medidos) ⇒ a capacidad máxima ≈ 0,5 MB/día ≈ **185 MB/año**; franjas ≈ 0,19 KB c/u | Frontend sin compilar: 53 módulos ES + 10 hojas CSS ≈ 504 KB | Un disco SSD de cualquier tamaño sobra; el riesgo no es espacio sino **respaldo** (R-03) |
+| **Almacenamiento** | Código < 5 MB | ≈ 0,44 KB por turno con índices (1 435 turnos = 0,63 MB medidos) ⇒ a capacidad máxima ≈ 0,5 MB/día ≈ **185 MB/año**; franjas ≈ 0,19 KB c/u | Frontend sin compilar: 54 módulos ES + 12 hojas CSS ≈ 504 KB | Un disco SSD de cualquier tamaño sobra; el riesgo no es espacio sino **respaldo** (R-03) |
 | **E/S** | Baja; sin archivos | Escrituras pequeñas por turno; lecturas dominadas por la consola (consulta de cola) | — | Índices en `turnos.franja_id`, `turnos.usuario_id`, `turnos.agente_id`, `usuarios.celular` |
 | **Red** | Panel del asesor ≈ 46 KB cada 5 s ⇒ 8 asesores ≈ 74 KB/s (0,6 Mbps); sala ≈ 1,3 KB cada 4 s | Local (loopback) | Carga inicial ≈ 504 KB por loopback o LAN (≈ 0,4 s en una LAN de 10 Mbps); luego el navegador los guarda en caché | Una LAN de 10 Mbps soporta la operación de una sede con holgura |
 
@@ -73,6 +73,19 @@ tabla si los números cambian: el método importa más que el número.
 | ″ | 40 | Pantalla de sala | 212 | 331 | 582 | 0 | |
 | waitress 8 hilos | **100** | Horario | 617 | 760 | 1 083 | 0 | 128 req/s |
 | ″ | 100 | Pantalla de sala | 716 | 1 134 | 1 224 | 0 | |
+
+**Repetición en la entrega final (19 de noviembre de 2026)** — 2 vCPU, 7,8 GB RAM, MariaDB 10.11, `python run.py`,
+datos de `simulacion.py --cargar --si` (1 530 turnos), 40 usuarios durante 15 s:
+
+| Operación | peticiones | p50 ms | p95 ms | máx ms | errores |
+|---|---|---|---|---|---|
+| Horario | 520 | 175 | 246 | 452 | 0 |
+| Disponibilidad | 520 | 232 | 323 | 555 | 0 |
+| Pantalla de sala | 520 | 262 | 587 | 690 | 0 |
+| **Rendimiento** | | | | | **104 req/s** |
+
+Concurrencia: 18 reservas simultáneas contra 6 cupos ⇒ **6 aceptadas, 12 rechazadas** (HTTP 409). Verificación
+funcional `simulacion.py --url`: **50/50**.
 
 **Concurrencia de cupos** (misma corrida): 18 reservas simultáneas contra una franja con 6 cupos ⇒
 **6 aceptadas, 12 rechazadas**. Antes de la corrección de ADR-004 la misma prueba sobre MySQL aceptaba **18**

@@ -51,6 +51,7 @@ solo "no hagas fila", sino "llega a tu hora y sal con lo que viniste a buscar".
 | Preparación previa como subestado del turno | Cumplimiento de la promesa, mínima disrupción | [ADR-010](adr/ADR-010-preparacion-previa.md) |
 | Baja lógica de cuentas del personal | Trazabilidad, integridad histórica | [ADR-011](adr/ADR-011-baja-logica-de-cuentas.md) |
 | Ejecución solo en localhost (un nodo, tres procesos; sin contenedores ni nube) | Costo, reproducibilidad de la demostración, simplicidad | [ADR-012](adr/ADR-012-despliegue-en-un-nodo.md) (revisado) |
+| Bootstrap 5.3 (local) como base visual; capas estrictas verificadas por pruebas | Mantenibilidad, verificabilidad | [ADR-017](adr/ADR-017-bootstrap-y-capas-estrictas.md) |
 | Equipos y reclamos como módulos propios; reserva guiada según el tipo de trámite | Cumplimiento de la promesa, modificabilidad | [ADR-013](adr/ADR-013-equipos-y-reclamos.md) |
 | Presencia del asesor (atendiendo, pausa, almuerzo, fuera de turno) | Usabilidad del panel | [ADR-014](adr/ADR-014-presencia-del-asesor.md) |
 | Cédula para entregar equipos; códigos visibles uniformes `TU-` / `EQ-` / `RC-` | Seguridad, usabilidad | [ADR-015](adr/ADR-015-cedula-y-codigos-visibles.md) |
@@ -58,12 +59,12 @@ solo "no hagas fila", sino "llega a tu hora y sal con lo que viniste a buscar".
 
 ## Evidencia verificable
 
-- **164 pruebas automatizadas** en verde (`python -m pytest tests/ -v`), incluidas las de la entrega final
+- **209 pruebas automatizadas** en verde (más 1 omitida a propósito) (`python -m pytest tests/ -v`), incluidas las de la entrega final
   ([test_entrega_final.py](../../backend/tests/test_entrega_final.py), [test_equipos_reclamos.py](../../backend/tests/test_equipos_reclamos.py) y [test_asistente_ia.py](../../backend/tests/test_asistente_ia.py)).
 - **Prueba de carga y concurrencia** reproducible: `python simulacion.py --carga --url http://127.0.0.1:5000`
   (resultados en [05](05-arquitectura-fisica.md#5-evidencia-de-capacidad-medida)).
 - **Verificación funcional de punta a punta** contra el servidor encendido: `python simulacion.py --url http://127.0.0.1:5000`
   (50 comprobaciones de ciudadano, asesor, administrador, permisos y seguridad).
 - Migraciones probadas en subida y bajada (`flask db upgrade` / `flask db downgrade`) sobre motor MySQL/MariaDB.
-- **16 ADR**, 15 migraciones Alembic encadenadas y 8 diagramas UML generados desde el código ([`docs/diagramas/`](../diagramas/README.md)).
-- Frontend sin dependencias de terceros: `frontend/` contiene solo `index.html`, `src/css/`, `src/js/` y `public/` (ver [ADR-002](adr/ADR-002-spa-vanilla-y-api-rest.md) y el escenario E-1d en [10](10-evolucion.md)).
+- **17 ADR**, 15 migraciones Alembic encadenadas y 8 diagramas UML generados desde el código ([`docs/diagramas/`](../diagramas/README.md)).
+- Frontend sin frameworks de interfaz, con Bootstrap 5.3 local como base de estilos: `frontend/` contiene solo `index.html`, `src/css/`, `src/js/` y `public/` (con `vendor/`) (ver [ADR-002](adr/ADR-002-spa-vanilla-y-api-rest.md) y el escenario E-1d en [10](10-evolucion.md)).

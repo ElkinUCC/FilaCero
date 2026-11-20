@@ -1,6 +1,13 @@
 # FilaCero
 
-**Plataforma web de gestión y orquestación de turnos presenciales**, con portal ciudadano, consola de asesores, sala de atención y panel administrativo. Esta entrega integra un frontend SPA en HTML + CSS + JavaScript puro (sin frameworks) con el backend Flask, organizado como monolito modular por capas y dominios, y el núcleo multiempresa validado por la suite automatizada del proyecto.
+**Plataforma web de gestión y orquestación de turnos presenciales**, con portal ciudadano, consola de asesores, sala de atención y panel administrativo. Esta entrega integra un frontend SPA en HTML + CSS + JavaScript puro con Bootstrap 5.3 (sin frameworks de interfaz) con el backend Flask, organizado como monolito modular por capas y dominios, y el núcleo multiempresa validado por la suite automatizada del proyecto.
+
+## Integrantes
+
+- Elkin Amador
+- Andrés Reina
+
+Curso: Arquitectura de Software y Computacional · Proyecto final.
 
 ## Qué incluye
 
@@ -17,7 +24,7 @@
 ## Tecnologías
 
 - Backend: Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow.
-- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, rutas `#/`). Sin frameworks ni librerías, sin Node.js ni compilación.
+- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, rutas `#/`) con **Bootstrap 5.3.9** (CSS en copia local, con un tema que lo conecta al diseño de FilaCero). Sin React, Angular ni Vue; sin Node.js ni compilación.
 - Base de datos: MySQL 8 (SQLite está disponible para pruebas automatizadas).
 - Pruebas: pytest.
 
@@ -37,14 +44,14 @@ FilaCero/
 │   └── run.py
 ├── frontend/               # SPA sin frameworks (HTML + CSS + JS)
 │   ├── index.html          # contenedor único #app
+│   ├── public/vendor/      # Bootstrap 5.3.9 (CSS) y fuente Onest, locales: funciona sin internet
 │   ├── src/css/
 │   ├── src/js/             # main · router · pages · components · api · auth · utils
 │   └── public/
 └── docs/
     ├── arquitectura/       # documento de arquitectura (01–11) y ADR
     ├── diagramas/          # UML: casos de uso, clases, ER, paquetes, componentes, despliegue, secuencias
-    ├── entrega/            # informe de decisiones arquitectónicas (PDF) y guion del video
-    └── MANUAL_FilaCero.html
+    └── entrega/            # Informe_Proyecto_Final_FilaCero.html (informe del proyecto, fases 01–05)
 ```
 
 ## Requisitos
@@ -126,7 +133,7 @@ Desde `backend/`, con el entorno virtual activo:
 python -m pytest tests/ -v
 ```
 
-Última ejecución de esta entrega: **164 passed** (incluye 11 pruebas del asistente IA en `tests/test_asistente_ia.py`). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+Última ejecución de esta entrega: **209 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 45 pruebas de arquitectura en `tests/test_arquitectura_capas.py`, que verifican que ningún controlador acceda a la base de datos). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
 
 ## Simulación de operación
 
@@ -156,6 +163,10 @@ Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en
 - **Modo Claude** (opcional): con `ANTHROPIC_API_KEY` en `backend/.env`, Claude redacta la respuesta a partir de los mismos datos. Se envían solo indicadores y primeros nombres (sin celulares, cédulas ni apellidos). Si el proveedor falla o tarda, responde el motor local.
 - El asistente no tiene acceso directo a la base de datos: reutiliza los servicios del tablero, la vista en vivo y la consola, con el mismo aislamiento multiempresa y permisos.
 
+## Limpiar restos de versiones anteriores
+
+Si copiaste esta versión encima de una anterior, ejecuta `.\limpiar-carpeta.ps1` (muestra lo que sobra) y luego `.\limpiar-carpeta.ps1 -Aplicar` (lo mueve fuera del proyecto). Conserva `.git`, `backend\.env` y `backend\venv`.
+
 ## Ejecución en localhost (resumen)
 
 FilaCero se ejecuta **solo en localhost**, en un equipo con tres procesos:
@@ -175,12 +186,11 @@ y agrega `http://<IP-del-portátil>:5173` a `CORS_ALLOWED_ORIGINS`. El frontend 
 | Qué | Dónde |
 |---|---|
 | Documento de arquitectura (problema, atributos, C4, lógica, computacional, despliegue, análisis, trade-offs, riesgos, evolución, seguridad) | [`docs/arquitectura/README.md`](docs/arquitectura/README.md) |
-| 16 decisiones de arquitectura (ADR) | [`docs/arquitectura/adr/`](docs/arquitectura/adr/README.md) |
+| 17 decisiones de arquitectura (ADR) | [`docs/arquitectura/adr/`](docs/arquitectura/adr/README.md) |
 | Diagramas UML (casos de uso, clases, entidad-relación, paquetes, componentes, despliegue y secuencias) | [`docs/diagramas/`](docs/diagramas/README.md) |
-| Informe de decisiones arquitectónicas (PDF) y guion del video | [`docs/entrega/`](docs/entrega/) |
+| **Informe del proyecto (entregable HTML, se abre con doble clic, sin internet)** | [`docs/entrega/Informe_Proyecto_Final_FilaCero.html`](docs/entrega/Informe_Proyecto_Final_FilaCero.html) |
 | Arquitectura del frontend SPA sin frameworks | [`frontend/docs/ARQUITECTURA-SPA-VANILLA.md`](frontend/docs/ARQUITECTURA-SPA-VANILLA.md) |
 | Contrato backend ↔ frontend y colección Postman | [`frontend/docs/CONTRATO-BACKEND-FRONTEND.md`](frontend/docs/CONTRATO-BACKEND-FRONTEND.md), [`backend/docs/postman/`](backend/docs/postman/README.md) |
-| Manual metodológico (se abre con doble clic, sin internet) | [`docs/MANUAL_FilaCero.html`](docs/MANUAL_FilaCero.html) |
 
 ## Roles principales
 
@@ -201,6 +211,6 @@ y agrega `http://<IP-del-portátil>:5173` a `CORS_ALLOWED_ORIGINS`. El frontend 
 
 ## Estado y alcance
 
-El alcance de la entrega es una **demostración en localhost** (un equipo, sin despliegue en internet), con migraciones, cabeceras de seguridad y 164 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
+El alcance de la entrega es una **demostración en localhost** (un equipo, sin despliegue en internet), con migraciones, cabeceras de seguridad y 209 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
 
 Quedan fuera del alcance (documentados como evolución en `docs/arquitectura/10-evolucion.md`): publicar el sistema en internet, envío real de SMS, HTTPS y alta disponibilidad.

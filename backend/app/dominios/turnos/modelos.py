@@ -61,4 +61,5 @@ class Turno(TenantScoped, db.Model):
     def codigo_corto(self):
         """Código visible, con el mismo formato que equipos (EQ-) y reclamos (RC-)."""
         return f"TU-{self.codigo[-6:]}" if self.codigo else None
+
     reclamo = db.relationship("Reclamo")

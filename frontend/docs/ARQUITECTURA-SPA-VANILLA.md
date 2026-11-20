@@ -113,3 +113,11 @@ optimistas) y `detener()`. El encabezado muestra "En vivo · hh:mm:ss" o "Sin co
 - "Saltar al contenido", ventanas con foco atrapado y Escape, pestañas con flechas (patrón ARIA).
 - Regiones `aria-live` para avisos (`utils/voz.js` → `anunciar()`), llamado por voz con la Web Speech API.
 - Desplegables nativos `<select>` (accesibles por teclado y lectores de pantalla sin código extra).
+
+## Bootstrap 5.3 (entrega final, ADR-017)
+
+La SPA usa **Bootstrap 5.3.9** como base de estilos, sin su JavaScript. Se carga primero
+`public/vendor/bootstrap/bootstrap.min.css`, luego `src/css/bootstrap-tema.css` (tokens de FilaCero → variables
+`--bs-*`) y después las hojas propias. Componentes usados: `.btn`, `.table`, `.alert`, `.toast`, `.spinner-border`,
+grilla (`.row`, `.row-cols-*`, `.g-*`), validación (`.is-invalid`, `.invalid-feedback`) y `.visually-hidden`.
+La clase propia `.modal` se renombró a `.ventana` para no chocar con la de Bootstrap.

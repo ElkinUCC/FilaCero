@@ -18,6 +18,7 @@ import {
 } from "../../utils/formatters.js";
 import { icono } from "../ui/icon.js";
 import { mensajeError } from "../ui/modal.js";
+import { cargando } from "../ui/cargando.js";
 
 const DIAS_VISIBLES = 7;
 const GARANTIA_DIAS = 365;
@@ -101,6 +102,10 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
   const indice = () => Math.max(0, pasos().indexOf(s.paso));
   const celularValido = () => /^3\d{9}$/.test(s.celular);
   const nombreValido = () => s.nombre.trim().split(/\s+/).join(" ").length >= 3;
+  // Validación en el cliente con los estados de Bootstrap (.is-invalid / .invalid-feedback).
+  // El servidor vuelve a validar todo: esto solo orienta a la persona mientras escribe.
+  const celularInvalido = () => s.celular.length === 10 && !celularValido();
+  const nombreInvalido = () => s.nombre.trim().length > 0 && !nombreValido();
   const garantiaVence = () =>
     s.garantia.fecha_compra
       ? new Date(new Date(`${s.garantia.fecha_compra}T12:00:00`).getTime() + GARANTIA_DIAS * 86400000).toISOString().slice(0, 10)
@@ -299,15 +304,19 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
       ${!s.token
         ? html`
             <div class="wz__celular">
-              <label class="campo campo--grande">
+              <label class="campo campo--grande ${celularInvalido() ? "is-invalid" : ""}">
                 ${icono("celular", 18)}
                 <input id="rv-celular" type="tel" inputmode="numeric" autocomplete="tel-national" value="${s.celular}"
-                  placeholder="300 123 4567" aria-label="Número de celular" />
+                  placeholder="300 123 4567" aria-label="Número de celular" aria-describedby="rv-celular-ayuda"
+                  aria-invalid="${celularInvalido() ? "true" : "false"}" />
               </label>
               <button type="button" class="btn btn--primario" data-accion="enviar-codigo" ${!celularValido() || s.ocupado ? "disabled" : ""}>
                 ${s.codigoEnviado ? "Reenviar" : "Enviar código"}
               </button>
             </div>
+            ${celularInvalido()
+              ? html`<div class="invalid-feedback d-block" id="rv-celular-ayuda">El celular debe tener 10 dígitos y empezar por 3 (ej. 300 123 4567).</div>`
+              : html`<span class="visually-hidden" id="rv-celular-ayuda">Celular colombiano de 10 dígitos.</span>`}
             ${s.codigoEnviado
               ? html`
                   <div class="wz__codigo">
@@ -315,7 +324,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
                       maxlength="6" placeholder="······" aria-label="Código de verificación" ${s.ocupado ? "disabled" : ""} />
                     <p class="rv__nota">
                       ${s.ocupado
-                        ? "Verificando…"
+                        ? cargando("Verificando…")
                         : s.codigoPrueba
                           ? html`Modo prueba: tu código es <button type="button" class="enlace" data-accion="usar-codigo">${s.codigoPrueba}</button>`
                           : `Te enviamos un SMS al ${s.celular}.`}
@@ -324,10 +333,12 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
               : ""}`
         : html`
             <div class="wz__verificado">${icono("check", 16)} ${s.celular} verificado</div>
-            <label class="campo campo--grande">
+            <label class="campo campo--grande ${nombreInvalido() ? "is-invalid" : ""}">
               ${icono("usuario", 18)}
-              <input id="rv-nombre" value="${s.nombre}" placeholder="Nombre completo" autocomplete="name" maxlength="100" aria-label="Nombre completo" />
+              <input id="rv-nombre" value="${s.nombre}" placeholder="Nombre completo" autocomplete="name" maxlength="100" aria-label="Nombre completo"
+                aria-invalid="${nombreInvalido() ? "true" : "false"}" />
             </label>
+            ${nombreInvalido() ? html`<div class="invalid-feedback d-block">Escribe tu nombre completo (mínimo 3 letras).</div>` : ""}
             ${s.equipos.length > 0 && flujo() === "GENERAL"
               ? html`<p class="wz__pista">${icono("tv", 16)} Tienes ${s.equipos.length} equipo(s) registrado(s) con nosotros. Puedes ver su estado en “Consultar mi turno”.</p>`
               : ""}`}
@@ -390,10 +401,12 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
       <div class="rv__fila rv__fila--2">
         <label>
           <span class="etiqueta">Fecha de compra</span>
-          <span class="campo ${g.fecha_compra ? (vigente ? "campo--ok" : "campo--error") : ""}">
+          <span class="campo ${g.fecha_compra ? (vigente ? "campo--ok" : "is-invalid") : ""}">
             ${icono("calendario", 17)}
-            <input id="rv-g-fecha" data-garantia="fecha_compra" type="date" value="${g.fecha_compra}" max="${hoyISO()}" aria-label="Fecha de compra" />
+            <input id="rv-g-fecha" data-garantia="fecha_compra" type="date" value="${g.fecha_compra}" max="${hoyISO()}" aria-label="Fecha de compra"
+              aria-invalid="${g.fecha_compra && !vigente ? "true" : "false"}" />
           </span>
+          ${g.fecha_compra && !vigente ? html`<span class="invalid-feedback d-block">La compra supera 1 año: no aplica garantía.</span>` : ""}
         </label>
         <label>
           <span class="etiqueta">Modelo o tamaño (opcional)</span>
@@ -436,7 +449,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     const botonDerecho = s.reclamoCreado?.presencial
       ? html`<button type="button" class="btn btn--primario" data-accion="siguiente">Elegir horario</button>`
       : html`<button type="button" class="btn btn--primario" data-accion="radicar" ${!reclamoListo() || s.ocupado ? "disabled" : ""}>
-          ${s.ocupado ? "Enviando…" : r.presencial ? "Radicar y elegir horario" : "Radicar reclamo"}
+          ${s.ocupado ? cargando("Enviando…") : r.presencial ? "Radicar y elegir horario" : "Radicar reclamo"}
         </button>`;
     return html`
       <h2 class="wz__titulo">Cuéntanos qué pasó</h2>
@@ -557,7 +570,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
       ${f === "RECLAMO" && s.reclamoCreado
         ? html`<p class="rv__prep" role="note">${icono("mensaje", 17)}<span><strong>Tu reclamo ${s.reclamoCreado.radicado} ya está radicado.</strong> El asesor lo tendrá a la mano cuando llegues.</span></p>`
         : ""}
-      ${pie(html`<button type="button" class="btn btn--primario btn--grande" data-accion="confirmar" ${s.ocupado ? "disabled" : ""}>${s.ocupado ? "Reservando…" : "Confirmar turno"}</button>`)}`;
+      ${pie(html`<button type="button" class="btn btn--primario btn--grande" data-accion="confirmar" ${s.ocupado ? "disabled" : ""}>${s.ocupado ? cargando("Reservando…") : "Confirmar turno"}</button>`)}`;
   }
 
   const VISTAS = {

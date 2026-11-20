@@ -1,40 +1,14 @@
+"""Servicios de auditoría: registrar acciones sensibles y consultar la bitácora."""
+
 import logging
 
 from flask import has_request_context, request
 
-from app import db
-from app.horario import a_iso_utc
-
+from . import repositorios
+from .dtos import ACCIONES, evento_response  # noqa: F401  (contrato público del módulo)
 from .modelos import Auditoria
 
 log = logging.getLogger("filacero.auditoria")
-
-ACCIONES = {
-    "login": "Inicio de sesión",
-    "login_fallido": "Intento de ingreso fallido",
-    "login_bloqueado": "Ingreso con cuenta bloqueada",
-    "logout": "Cerró sesión",
-    "clave_cambiada": "Cambió su contraseña",
-    "clave_restablecida": "Contraseña restablecida",
-    "usuario_creado": "Usuario creado",
-    "usuario_editado": "Usuario editado",
-    "rol_cambiado": "Cambio de rol",
-    "usuario_desactivado": "Acceso desactivado",
-    "usuario_activado": "Acceso activado",
-    "sede_creada": "Sede creada",
-    "sede_editada": "Sede editada",
-    "sede_eliminada": "Sede eliminada",
-    "tramite_creado": "Trámite creado",
-    "tramite_editado": "Trámite editado",
-    "tramite_eliminado": "Trámite eliminado",
-    "sede_cambiada": "Asesor cambió de sede",
-    "usuario_eliminado": "Cuenta eliminada",
-    "turno_preparado": "Preparación de turno",
-    "equipo_registrado": "Equipo registrado",
-    "equipo_actualizado": "Estado de equipo",
-    "reclamo_gestionado": "Reclamo gestionado",
-    "presencia_cambiada": "Estado del asesor",
-}
 
 
 def _actor_actual():
@@ -56,21 +30,35 @@ def registrar(accion, detalle=None, usuario_id=None):
             usuario_id=usuario_id if usuario_id is not None else _actor_actual(),
             ip=(request.remote_addr if has_request_context() else None),
         )
-        db.session.add(evento)
-        db.session.commit()
+        repositorios.agregar(evento)
     except Exception:  # pragma: no cover
-        db.session.rollback()
+        repositorios.deshacer()
         log.exception("No se pudo registrar la auditoría %s", accion)
 
 
-def evento_response(evento):
+def consultar_bitacora(args):
+    """Página de la bitácora con filtros validados (acción y usuario)."""
+    from app.errores import DatosInvalidosError
+
+    try:
+        pagina = max(1, int(args.get("pagina", 1)))
+        por_pagina = min(100, max(1, int(args.get("por_pagina", 25))))
+    except ValueError:
+        raise DatosInvalidosError("Paginación inválida.") from None
+    accion = args.get("accion") or None
+    if accion and accion not in ACCIONES:
+        raise DatosInvalidosError("Acción no válida.")
+    usuario_id = None
+    if args.get("usuario_id"):
+        try:
+            usuario_id = int(args["usuario_id"])
+        except ValueError:
+            raise DatosInvalidosError("usuario_id inválido.") from None
+    total, eventos = repositorios.paginar(pagina, por_pagina, accion, usuario_id)
     return {
-        "id": evento.id,
-        "fecha": a_iso_utc(evento.fecha),
-        "accion": evento.accion,
-        "accion_texto": ACCIONES.get(evento.accion, evento.accion),
-        "detalle": evento.detalle,
-        "usuario": evento.usuario.nombre if evento.usuario else None,
-        "usuario_correo": evento.usuario.correo if evento.usuario else None,
-        "ip": evento.ip,
+        "pagina": pagina,
+        "total": total,
+        "total_paginas": (total + por_pagina - 1) // por_pagina,
+        "acciones": ACCIONES,
+        "eventos": [evento_response(e) for e in eventos],
     }

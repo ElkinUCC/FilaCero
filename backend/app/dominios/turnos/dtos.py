@@ -80,3 +80,48 @@ def turno_publico_response(turno):
         "equipo": _equipo(turno, publica=True),
         "reclamo": _reclamo(turno, publica=True),
     }
+
+
+# ---------------------------------------------------------------------
+# Pantalla de sala (pública): nunca incluye el celular
+# ---------------------------------------------------------------------
+
+
+def _nombre_corto(nombre):
+    partes = (nombre or "").split()
+    if not partes:
+        return ""
+    return partes[0] + (f" {partes[1][0]}." if len(partes) > 1 else "")
+
+
+def nombre_para_sala(nombre):
+    """Nombre que se muestra y se anuncia en la sala de espera.
+
+    Por defecto, completo (la persona se reconoce sin ambigüedad cuando hay
+    nombres repetidos). Con SALA_NOMBRE_COMPLETO=false se abrevia (ADR-008).
+    """
+    from flask import current_app
+
+    if current_app.config.get("SALA_NOMBRE_COMPLETO", True):
+        return " ".join((nombre or "").split())
+    return _nombre_corto(nombre)
+
+
+def turno_llamado_sala_response(turno):
+    return {
+        "id": turno.id,
+        "codigo": turno.codigo_corto,
+        "nombre": nombre_para_sala(turno.usuario.nombre if turno.usuario else ""),
+        "asesor": " ".join((turno.agente.nombre if turno.agente else "").split()),
+        "modulo": turno.agente.modulo if turno.agente else None,
+        "estado": turno.estado,
+        "llamado": a_iso_utc(turno.fecha_llamado),
+    }
+
+
+def turno_siguiente_sala_response(turno):
+    return {
+        "codigo": turno.codigo_corto,
+        "nombre": nombre_para_sala(turno.usuario.nombre if turno.usuario else ""),
+        "hora": f"{turno.franja.hora_inicio:%H:%M}",
+    }

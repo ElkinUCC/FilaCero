@@ -17,7 +17,7 @@
 ## Tecnologías
 
 - Backend: Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow.
-- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, SPA con rutas `#/`). **Sin ningún framework ni librería de JavaScript; sin Node.js ni compilación.**
+- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, SPA con rutas `#/`) con **Bootstrap 5.3** (CSS local). **Sin frameworks de interfaz; sin Node.js ni compilación.**
 - Base de datos: MySQL 8 (SQLite está disponible para pruebas automatizadas).
 - Pruebas: pytest.
 
@@ -145,7 +145,7 @@ ORGANIZATION_SLUG: "filacero-demo",        // organización de las reservas púb
 
 - Diagramas UML (PNG, SVG y fuente PlantUML): [`docs/diagramas/`](../../docs/diagramas/README.md)
 - Documento de arquitectura y ADR: [`docs/arquitectura/`](../../docs/arquitectura/README.md)
-- Guion del video y lista de entrega: [`docs/entrega/`](../../docs/entrega/GUION-VIDEO.md)
+- Informe del proyecto y guion del video: [`docs/entrega/`](../../docs/entrega/)
 
 ## Ejecutar las pruebas
 
@@ -155,7 +155,7 @@ Desde `backend/`, con el entorno virtual activo:
 python -m pytest tests/ -v
 ```
 
-Última ejecución de esta entrega: **164 passed** (incluye 11 pruebas del asistente IA en `tests/test_asistente_ia.py`). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+Última ejecución de esta entrega: **209 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 45 de arquitectura de capas). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
 
 ## Simulación de operación
 
@@ -207,6 +207,6 @@ FilaCero se ejecuta **solo en localhost**: MySQL 8, la API (`python run.py`, pue
 
 ## Estado y alcance
 
-El alcance de la entrega es una **demostración en localhost** (un equipo), con migraciones, cabeceras de seguridad y 164 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
+El alcance de la entrega es una **demostración en localhost** (un equipo), con migraciones, cabeceras de seguridad y 209 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
 
 Quedan fuera del alcance (documentados como evolución): publicar el sistema en internet, envío real de SMS, HTTPS y alta disponibilidad.

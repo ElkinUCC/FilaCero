@@ -87,7 +87,9 @@ def redactar(pregunta, historial, datos, borrador, rol):
     try:
         with urllib.request.urlopen(peticion, timeout=cfg.get("IA_TIMEOUT_SEG", 12)) as r:
             respuesta = json.load(r)
-        texto = "".join(b.get("text", "") for b in respuesta.get("content", []) if b.get("type") == "text")
+        texto = "".join(
+            b.get("text", "") for b in respuesta.get("content", []) if b.get("type") == "text"
+        )
         return texto.strip() or None
     except (urllib.error.URLError, TimeoutError, ValueError, KeyError) as error:
         log.warning("Asistente IA: el proveedor no respondió (%s). Se usa el motor local.", error)

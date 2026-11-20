@@ -48,8 +48,10 @@ def _config_operativa(clave, defecto=None):
 
 def zona():
     organizacion = _organizacion_actual()
-    nombre_zona = organizacion.zona_horaria if organizacion else current_app.config.get(
-        "ZONA_HORARIA", "America/Bogota"
+    nombre_zona = (
+        organizacion.zona_horaria
+        if organizacion
+        else current_app.config.get("ZONA_HORARIA", "America/Bogota")
     )
     return ZoneInfo(nombre_zona)
 

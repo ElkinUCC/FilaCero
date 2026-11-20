@@ -47,7 +47,7 @@ Aburrá, 8 asesores, atención todos los días en franjas de 30 minutos.
 |---|---|---|
 | Académica | Monolito modular por capas, profesional, demostrable en **localhost** | Un proceso backend, módulos de dominio con capas internas; sin microservicios (ADR-001, ADR-012) |
 | Tecnológica | Python/Flask, MySQL 8; frontend **sin frameworks** (HTML + CSS + JavaScript puro), exigencia del curso | SQLAlchemy + Alembic en el backend; SPA vanilla con módulos ES, sin compilación (ADR-002) |
-| Operativa | Equipo de 1 desarrollador, sin presupuesto de nube | Costo de infraestructura ≈ 0; despliegue en un nodo (ADR-012) |
+| Operativa | Equipo de 2 integrantes (Elkin Amador y Andrés Reina), sin presupuesto de nube | Costo de infraestructura ≈ 0; despliegue en un nodo (ADR-012) |
 | De negocio | Atención máxima de 10 min ⇒ 3 cupos por asesor y franja | Regla de capacidad centralizada en `app/horario.py` |
 | Legal | Ley 1581 de 2012 (protección de datos personales, Colombia) | Mínimos datos del ciudadano (nombre + celular), celular enmascarado en vistas públicas, nunca en la sala (ADR-008) |
 | Temporal | Entrega final en la semana 16 | Cambios pequeños, reversibles y probados; sin reescrituras |

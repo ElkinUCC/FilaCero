@@ -4,88 +4,33 @@ Roles:
   ADMIN       acceso total.
   SUPERVISOR  solo lectura del panel (resumen, historial, sedes, asesores).
   AGENTE      consola de atención en su sede.
+
+Controlador HTTP: valida el rol, delega en ``admin_servicios`` y registra la
+auditoría cuando la operación terminó bien.
 """
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import current_user
 
-from app import db
-from app.dominios.auditoria.modelos import Auditoria
-from app.dominios.auditoria.servicios import ACCIONES, evento_response, registrar
-from app.dominios.sedes.modelos import Punto
-from app.seguridad import encriptar_password, requiere_rol, validar_password_segura
+from app.dominios.auditoria.servicios import consultar_bitacora, registrar
+from app.seguridad import requiere_rol
 
+from . import admin_servicios
+from .admin_servicios import ROLES
 from .dtos import usuario_response
-from .modelos import Usuario
-from .repositorios import buscar_por_correo
-from .servicios import dar_de_baja, generar_clave_temporal, liberar_modulo_si_choca
+from .servicios import dar_de_baja
 
 admin_usuarios_bp = Blueprint("admin_usuarios", __name__)
 
-ROLES = {"ADMIN": "Administrador", "SUPERVISOR": "Supervisor", "AGENTE": "Asesor"}
 
-
-def _personal(usuario_id):
-    """Cuenta del personal vigente (las eliminadas no se pueden editar)."""
-    return Usuario.query.filter(
-        Usuario.id == usuario_id,
-        Usuario.rol.in_(tuple(ROLES)),
-        Usuario.eliminado_en.is_(None),
-    ).first()
-
-
-def _admins_activos(excluir_id=None):
-    consulta = Usuario.query.filter_by(rol="ADMIN", activo=True)
-    if excluir_id:
-        consulta = consulta.filter(Usuario.id != excluir_id)
-    return consulta.count()
-
-
-def _nombre(valor):
-    nombre = " ".join(str(valor or "").split())
-    if not 3 <= len(nombre) <= 100:
-        raise ValueError("El nombre debe tener entre 3 y 100 caracteres.")
-    return nombre
-
-
-def _correo(valor, excluir_id=None):
-    correo = str(valor or "").strip().lower()
-    if "@" not in correo or "." not in correo.split("@")[-1] or len(correo) > 120:
-        raise ValueError("Ingresa un correo válido.")
-    if correo.endswith("@publico.filacero.local"):
-        raise ValueError("Ese dominio está reservado.")
-    existente = buscar_por_correo(correo)
-    if existente and existente.id != excluir_id:
-        raise ValueError("Ya existe una cuenta con ese correo.")
-    return correo
-
-
-def _rol(valor):
-    if valor not in ROLES:
-        raise ValueError("Rol no válido.")
-    return valor
-
-
-def _sede(valor):
-    if valor in (None, ""):
-        return None
-    try:
-        punto = db.session.get(Punto, int(valor))
-    except (TypeError, ValueError):
-        raise ValueError("Sede no válida.") from None
-    if not punto or not punto.activo:
-        raise ValueError("La sede no existe o está inactiva.")
-    return punto.id
+def _error(error):
+    return jsonify({"success": False, "error": str(error)}), getattr(error, "codigo_http", 400)
 
 
 @admin_usuarios_bp.get("/")
 @requiere_rol("ADMIN")
 def listar():
-    usuarios = (
-        Usuario.query.filter(Usuario.rol.in_(tuple(ROLES)), Usuario.eliminado_en.is_(None))
-        .order_by(Usuario.rol.asc(), Usuario.nombre.asc())
-        .all()
-    )
+    usuarios = admin_servicios.listar_personal()
     return (
         jsonify(
             {
@@ -101,102 +46,29 @@ def listar():
 @admin_usuarios_bp.post("/")
 @requiere_rol("ADMIN")
 def crear():
-    datos = request.get_json(silent=True) or {}
     try:
-        rol = _rol(datos.get("rol"))
-        usuario = Usuario(
-            nombre=_nombre(datos.get("nombre")),
-            correo=_correo(datos.get("correo")),
-            rol=rol,
-            activo=True,
-            punto_asignado_id=_sede(datos.get("punto_id")) if rol == "AGENTE" else None,
+        usuario, clave_temporal = admin_servicios.crear_personal(
+            request.get_json(silent=True) or {}
         )
-        clave = datos.get("password") or None
-        temporal = clave is None
-        if temporal:
-            clave = generar_clave_temporal()
-        validar_password_segura(clave)
-        usuario.password_hash = encriptar_password(clave)
-        usuario.debe_cambiar_clave = temporal
-        db.session.add(usuario)
-        db.session.commit()
     except ValueError as error:
-        db.session.rollback()
-        return jsonify({"error": str(error)}), 400
+        return _error(error)
 
     registrar("usuario_creado", f"{usuario.correo} como {ROLES[usuario.rol]}")
     respuesta = {"mensaje": "Usuario creado.", "usuario": usuario_response(usuario)}
-    if temporal:
-        respuesta["clave_temporal"] = clave  # se muestra UNA sola vez
+    if clave_temporal:
+        respuesta["clave_temporal"] = clave_temporal  # se muestra UNA sola vez
     return jsonify(respuesta), 201
 
 
 @admin_usuarios_bp.put("/<int:usuario_id>")
 @requiere_rol("ADMIN")
 def editar(usuario_id):
-    usuario = _personal(usuario_id)
-    if not usuario:
-        return jsonify({"error": "Usuario no encontrado."}), 404
-
-    datos = request.get_json(silent=True) or {}
-    es_yo = usuario.id == current_user.id
-    if usuario.protegida and (
-        ("activo" in datos and not datos["activo"])
-        or ("rol" in datos and datos["rol"] != usuario.rol)
-        or ("correo" in datos and str(datos["correo"]).strip().lower() != usuario.correo)
-    ):
-        return (
-            jsonify(
-                {"error": "Cuenta protegida: no se puede desactivar ni cambiar su rol o correo."}
-            ),
-            409,
-        )
-    cambios = []
-    eventos = []  # se registran solo si todo el cambio se guarda
     try:
-        if "nombre" in datos:
-            usuario.nombre = _nombre(datos["nombre"])
-        if "correo" in datos:
-            nuevo = _correo(datos["correo"], excluir_id=usuario.id)
-            if nuevo != usuario.correo:
-                cambios.append(f"correo {usuario.correo} → {nuevo}")
-                usuario.correo = nuevo
-        if "rol" in datos and datos["rol"] != usuario.rol:
-            nuevo_rol = _rol(datos["rol"])
-            if es_yo:
-                raise ValueError("No puedes cambiar tu propio rol.")
-            if usuario.rol == "ADMIN" and _admins_activos(excluir_id=usuario.id) == 0:
-                raise ValueError("Debe quedar al menos un administrador activo.")
-            eventos.append(
-                ("rol_cambiado", f"{usuario.correo}: {ROLES[usuario.rol]} → {ROLES[nuevo_rol]}")
-            )
-            usuario.rol = nuevo_rol
-            usuario.revocar_sesiones()
-            if nuevo_rol != "AGENTE":
-                usuario.punto_asignado_id = None
-        if "punto_id" in datos and usuario.rol == "AGENTE":
-            usuario.punto_asignado_id = _sede(datos["punto_id"])
-            liberar_modulo_si_choca(usuario)
-        if "activo" in datos and bool(datos["activo"]) != usuario.activo:
-            activo = bool(datos["activo"])
-            if es_yo and not activo:
-                raise ValueError("No puedes desactivar tu propia cuenta.")
-            if (
-                not activo
-                and usuario.rol == "ADMIN"
-                and _admins_activos(excluir_id=usuario.id) == 0
-            ):
-                raise ValueError("Debe quedar al menos un administrador activo.")
-            usuario.activo = activo
-            if not activo:
-                usuario.revocar_sesiones()
-            eventos.append(
-                ("usuario_activado" if activo else "usuario_desactivado", usuario.correo)
-            )
-        db.session.commit()
+        usuario, cambios, eventos = admin_servicios.editar_personal(
+            usuario_id, request.get_json(silent=True) or {}, current_user.id
+        )
     except ValueError as error:
-        db.session.rollback()
-        return jsonify({"error": str(error)}), 400
+        return _error(error)
 
     for accion, detalle in eventos:
         registrar(accion, detalle)
@@ -218,19 +90,10 @@ def eliminar(usuario_id):
 @admin_usuarios_bp.post("/<int:usuario_id>/restablecer-clave")
 @requiere_rol("ADMIN")
 def restablecer_clave(usuario_id):
-    usuario = _personal(usuario_id)
-    if not usuario:
-        return jsonify({"error": "Usuario no encontrado."}), 404
-    if usuario.id == current_user.id:
-        return jsonify({"error": "Para tu propia cuenta usa “Cambiar mi contraseña”."}), 400
-
-    clave = generar_clave_temporal()
-    usuario.password_hash = encriptar_password(clave)
-    usuario.debe_cambiar_clave = True
-    usuario.intentos_fallidos = 0
-    usuario.bloqueado_hasta = None  # restablecer también desbloquea
-    usuario.revocar_sesiones()
-    db.session.commit()
+    try:
+        usuario, clave = admin_servicios.restablecer_clave(usuario_id, current_user.id)
+    except ValueError as error:
+        return _error(error)
     registrar("clave_restablecida", usuario.correo)
     return (
         jsonify(
@@ -248,39 +111,6 @@ def restablecer_clave(usuario_id):
 @requiere_rol("ADMIN")
 def auditoria():
     try:
-        pagina = max(1, int(request.args.get("pagina", 1)))
-        por_pagina = min(100, max(1, int(request.args.get("por_pagina", 25))))
-    except ValueError:
-        return jsonify({"error": "Paginación inválida."}), 400
-
-    consulta = Auditoria.query
-    accion = request.args.get("accion")
-    if accion:
-        if accion not in ACCIONES:
-            return jsonify({"error": "Acción no válida."}), 400
-        consulta = consulta.filter(Auditoria.accion == accion)
-    if request.args.get("usuario_id"):
-        try:
-            consulta = consulta.filter(Auditoria.usuario_id == int(request.args["usuario_id"]))
-        except ValueError:
-            return jsonify({"error": "usuario_id inválido."}), 400
-
-    total = consulta.count()
-    eventos = (
-        consulta.order_by(Auditoria.fecha.desc(), Auditoria.id.desc())
-        .offset((pagina - 1) * por_pagina)
-        .limit(por_pagina)
-        .all()
-    )
-    return (
-        jsonify(
-            {
-                "pagina": pagina,
-                "total": total,
-                "total_paginas": (total + por_pagina - 1) // por_pagina,
-                "acciones": ACCIONES,
-                "eventos": [evento_response(e) for e in eventos],
-            }
-        ),
-        200,
-    )
+        return jsonify(consultar_bitacora(request.args)), 200
+    except ValueError as error:
+        return _error(error)

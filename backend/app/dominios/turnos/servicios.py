@@ -8,6 +8,7 @@ from app.dominios.franjas.repositorios import obtener_para_reserva
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
 from app.dominios.usuarios.modelos import Usuario
+from app.errores import ConflictoError
 from app.horario import ahora_local, capacidad_sede, ocupacion_sede, zona
 
 from .modelos import Turno
@@ -146,12 +147,12 @@ def _crear_turno(
             Turno.franja_id == franja.id, Turno.estado != "CANCELADO"
         ).count()
         if reservados >= franja.capacidad:
-            raise ValueError("La franja ya no tiene cupos disponibles.")
+            raise ConflictoError("La franja ya no tiene cupos disponibles.")
 
         # Regla de puntualidad: la sede no recibe más personas por franja de
         # las que sus asesores alcanzan a atender (3 por asesor cada 30 min).
         if ocupacion_sede(punto_id, franja.fecha, franja.hora_inicio) >= capacidad_sede(punto_id):
-            raise ValueError("La franja ya no tiene cupos disponibles.")
+            raise ConflictoError("La franja ya no tiene cupos disponibles.")
 
         duplicado = Turno.query.filter(
             Turno.usuario_id == usuario_id,
@@ -159,7 +160,7 @@ def _crear_turno(
             Turno.estado != "CANCELADO",
         ).first()
         if duplicado:
-            raise ValueError("Ya tienes una reserva activa en esta franja.")
+            raise ConflictoError("Ya tienes una reserva activa en esta franja.")
 
         activos = Turno.query.filter(
             Turno.usuario_id == usuario_id, Turno.estado.in_(ESTADOS_ACTIVOS)
@@ -219,3 +220,53 @@ def cancelar_turno_publico(turno):
     except Exception:
         db.session.rollback()
         raise
+
+
+# ---------------------------------------------------------------------
+# Vínculos según el tipo de trámite (entrega, garantía, reclamo)
+# ---------------------------------------------------------------------
+
+
+def validar_vinculos_del_flujo(tramite_id, usuario, datos):
+    """Valida, ANTES de reservar, lo que exige el tipo de trámite.
+
+    ENTREGA:  un equipo del ciudadano que esté listo.
+    GARANTIA: marca, fecha de compra (máximo 1 año) y falla del televisor.
+    RECLAMO:  opcionalmente, el reclamo ya radicado que seguirá en persona.
+    """
+    from app.dominios.equipos.servicios import datos_garantia, equipo_para_entrega
+    from app.dominios.reclamos.repositorios import obtener as obtener_reclamo
+
+    tramite = db.session.get(Tramite, tramite_id)
+    flujo = getattr(tramite, "tipo_flujo", None) or "GENERAL"
+    if flujo == "ENTREGA":
+        return {"equipo": equipo_para_entrega(datos.get("equipo_id"), usuario)}
+    if flujo == "GARANTIA":
+        return {"garantia": datos_garantia(datos.get("garantia"))}
+    if flujo == "RECLAMO" and datos.get("reclamo_id"):
+        reclamo = obtener_reclamo(int(datos["reclamo_id"]))
+        if not reclamo or reclamo.cliente_id != usuario.id:
+            raise ValueError("El reclamo no corresponde a tu celular.")
+        return {"reclamo": reclamo}
+    return {}
+
+
+def vincular_al_turno(turno, usuario, punto_id, vinculos):
+    """Asocia al turno ya creado el equipo o el reclamo correspondiente."""
+    from app.dominios.equipos.servicios import registrar as registrar_equipo
+
+    if not vinculos:
+        return turno
+    if "garantia" in vinculos:
+        equipo = registrar_equipo(
+            usuario, punto_id, vinculos["garantia"], None, "GARANTIA", "POR_RECIBIR"
+        )
+        turno.equipo_id = equipo.id
+    if "equipo" in vinculos:
+        turno.equipo_id = vinculos["equipo"].id
+    if "reclamo" in vinculos:
+        reclamo = vinculos["reclamo"]
+        turno.reclamo_id = reclamo.id
+        reclamo.presencial = True
+    db.session.commit()
+    return turno

@@ -2,11 +2,9 @@ from datetime import time, timedelta
 
 from flask_jwt_extended import create_access_token
 
-from app import db
 from app.dominios.franjas.modelos import Franja
 from app.dominios.sedes.modelos import Punto
 from app.dominios.turnos.modelos import Turno
-from app.dominios.usuarios.modelos import Usuario
 from app.horario import hoy_local
 
 CELULAR = "3001234567"

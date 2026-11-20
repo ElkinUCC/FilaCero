@@ -12,10 +12,6 @@
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 img, svg { max-width: 100%; }
 .tabla-envoltura { position: relative; max-width: 100%; -webkit-overflow-scrolling: touch; }
-.sr {
-  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
-  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
-}
 /* Botones y campos con área táctil suficiente en pantallas táctiles. */
 @media (pointer: coarse) {
   .btn, .icono-btn, .segmentos button { min-height: 40px; }
@@ -278,7 +274,7 @@ img, svg { max-width: 100%; }
    MODALES Y PANEL DE DETALLE: siempre dentro de la pantalla
    ===================================================================== */
 @media (max-width: 620px) {
-  .modal, .panel-detalle, .detalle { max-width: 100vw; }
+  .ventana, .panel-detalle, .detalle { max-width: 100vw; }
 }
 
 /* Tablero del taller (Equipos): en celular las columnas se deslizan de a una */

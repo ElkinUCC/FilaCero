@@ -45,7 +45,9 @@ def pedir_clave():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Crear o actualizar una cuenta de personal FilaCero")
+    parser = argparse.ArgumentParser(
+        description="Crear o actualizar una cuenta de personal FilaCero"
+    )
     parser.add_argument("correo")
     parser.add_argument("rol", choices=ROLES)
     parser.add_argument("nombre")
@@ -97,7 +99,10 @@ def main():
             db.session.commit()
             registrar("usuario_creado" if nuevo else "usuario_editado", f"{correo} (script)")
 
-            print(f"\nListo: {nombre} <{correo}> · {rol} · {organizacion.nombre}" + (f" · {sede.nombre}" if sede else ""))
+            print(
+                f"\nListo: {nombre} <{correo}> · {rol} · {organizacion.nombre}"
+                + (f" · {sede.nombre}" if sede else "")
+            )
             if correo not in app.config.get("CUENTAS_PROTEGIDAS", []):
                 print("Recuerda agregarla a CUENTAS_PROTEGIDAS en tu .env para protegerla.")
 

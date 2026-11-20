@@ -1,5 +1,3 @@
-from datetime import UTC
-
 from flask import Blueprint, current_app, g, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -9,9 +7,17 @@ from app.seguridad import enmascarar_celular, limitar, normalizar_celular
 
 from . import otp
 from .dtos import turno_publico_response, turno_response
-from .prediccion import estimar_espera
+from .prediccion import estimar_espera, tiempo_espera_autorizado
 from .repositorios import normalizar_codigo, obtener_por_celular, obtener_por_codigo
-from .servicios import cancelar_turno, cancelar_turno_publico, crear_turno, mis_turnos
+from .sala import pantalla_de_sala
+from .servicios import (
+    cancelar_turno,
+    cancelar_turno_publico,
+    crear_turno,
+    mis_turnos,
+    validar_vinculos_del_flujo,
+    vincular_al_turno,
+)
 
 turnos_bp = Blueprint("turnos", __name__)
 
@@ -34,6 +40,11 @@ def _token_verificacion(celular, proposito="reserva", codigo_turno=None):
             "org_id": getattr(g, "organizacion_id", 1),
         }
     )
+
+
+def _error(error):
+    """Error uniforme; el código HTTP sale del tipo de error de dominio (400 por defecto)."""
+    return {"success": False, "error": str(error)}, getattr(error, "codigo_http", 400)
 
 
 def _entero(datos, campo):
@@ -73,7 +84,7 @@ def solicitar_codigo_celular():
     try:
         celular = _celular_de(datos)
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
 
     try:
         codigo = otp.generar_codigo(celular, getattr(g, "organizacion_id", 1))
@@ -117,7 +128,7 @@ def verificar_codigo_celular():
             raise ValueError("El código del turno no es válido.")
         otp.verificar_codigo(celular, codigo, getattr(g, "organizacion_id", 1))
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
 
     token = _token_verificacion(
         celular,
@@ -174,7 +185,7 @@ def solicitar_turno_publico():
         franja_id = _entero(datos, "franja_id")
 
         usuario = registrar_cliente_publico(datos.get("nombre"), celular)
-        vinculos = _vinculos_del_flujo(tramite_id, usuario, datos)
+        vinculos = validar_vinculos_del_flujo(tramite_id, usuario, datos)
         turno = crear_turno(
             usuario.id,
             tramite_id,
@@ -183,9 +194,9 @@ def solicitar_turno_publico():
             datos.get("detalle_necesidad"),
             datos.get("respuestas_solicitud"),
         )
-        _vincular(turno, usuario, punto_id, vinculos)
+        vincular_al_turno(turno, usuario, punto_id, vinculos)
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
 
     return {
         "mensaje": "Tu turno fue reservado correctamente.",
@@ -193,53 +204,6 @@ def solicitar_turno_publico():
         "espera": estimar_espera(turno),
         "token_consulta": _token_verificacion(celular, "consulta", turno.codigo),
     }, 201
-
-
-def _vinculos_del_flujo(tramite_id, usuario, datos):
-    """Valida, ANTES de reservar, lo que exige el tipo de trámite.
-
-    ENTREGA:  un equipo del ciudadano que esté listo.
-    GARANTIA: marca, fecha de compra (máximo 1 año) y falla del televisor.
-    RECLAMO:  opcionalmente, el reclamo ya radicado que seguirá en persona.
-    """
-    from app import db
-    from app.dominios.equipos.servicios import datos_garantia, equipo_para_entrega
-    from app.dominios.reclamos.repositorios import obtener as obtener_reclamo
-    from app.dominios.tramites.modelos import Tramite
-
-    tramite = db.session.get(Tramite, tramite_id)
-    flujo = getattr(tramite, "tipo_flujo", None) or "GENERAL"
-    if flujo == "ENTREGA":
-        return {"equipo": equipo_para_entrega(datos.get("equipo_id"), usuario)}
-    if flujo == "GARANTIA":
-        return {"garantia": datos_garantia(datos.get("garantia"))}
-    if flujo == "RECLAMO" and datos.get("reclamo_id"):
-        reclamo = obtener_reclamo(int(datos["reclamo_id"]))
-        if not reclamo or reclamo.cliente_id != usuario.id:
-            raise ValueError("El reclamo no corresponde a tu celular.")
-        return {"reclamo": reclamo}
-    return {}
-
-
-def _vincular(turno, usuario, punto_id, vinculos):
-    """Asocia al turno ya creado el equipo o el reclamo correspondiente."""
-    from app import db
-    from app.dominios.equipos.servicios import registrar as registrar_equipo
-
-    if not vinculos:
-        return
-    if "garantia" in vinculos:
-        equipo = registrar_equipo(
-            usuario, punto_id, vinculos["garantia"], None, "GARANTIA", "POR_RECIBIR"
-        )
-        turno.equipo_id = equipo.id
-    if "equipo" in vinculos:
-        turno.equipo_id = vinculos["equipo"].id
-    if "reclamo" in vinculos:
-        reclamo = vinculos["reclamo"]
-        turno.reclamo_id = reclamo.id
-        reclamo.presencial = True
-    db.session.commit()
 
 
 def _turno_publico(datos):
@@ -268,10 +232,10 @@ def consultar_turno_publico():
             raise ValueError("El celular verificado no coincide con el de la consulta.")
         turno = _turno_publico(datos)
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
     except LookupError as error:
         # Mismo 400 que un dato inválido: no revela si el código existe.
-        return {"error": str(error)}, 400
+        return _error(error)
 
     return {"turno": turno_publico_response(turno), "espera": estimar_espera(turno)}, 200
 
@@ -302,7 +266,7 @@ def consultar_turnos_por_celular():
             raise ValueError("El celular verificado no coincide con la consulta.")
         turnos = obtener_por_celular(celular, limite=10)
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
 
     return {
         "turnos": [
@@ -324,10 +288,10 @@ def cancelar_publico():
         turno = _turno_publico(datos)
         turno = cancelar_turno_publico(turno)
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
     except LookupError as error:
         # Mismo 400 que un dato inválido: no revela si el código existe.
-        return {"error": str(error)}, 400
+        return _error(error)
 
     return {"mensaje": "Tu turno fue cancelado.", "turno": turno_publico_response(turno)}, 200
 
@@ -337,92 +301,10 @@ def cancelar_publico():
 # ---------------------------------------------------------------------
 
 
-def _nombre_corto(nombre):
-    partes = (nombre or "").split()
-    if not partes:
-        return ""
-    return partes[0] + (f" {partes[1][0]}." if len(partes) > 1 else "")
-
-
-def _nombre_sala(nombre):
-    """Nombre que se muestra y se anuncia en la sala de espera.
-
-    Por defecto, completo (la persona se reconoce sin ambigüedad cuando hay
-    nombres repetidos). Con SALA_NOMBRE_COMPLETO=false se abrevia.
-    """
-    from flask import current_app
-
-    if current_app.config.get("SALA_NOMBRE_COMPLETO", True):
-        return " ".join((nombre or "").split())
-    return _nombre_corto(nombre)
-
-
 @turnos_bp.get("/publico/sala")
 @limitar("LIMITE_PUBLICO_POR_MINUTO")
 def pantalla_sala():
-    from datetime import timedelta
-
-    from app import db
-    from app.dominios.franjas.modelos import Franja
-    from app.dominios.sedes.modelos import Punto
-    from app.dominios.turnos.modelos import Turno
-    from app.horario import ahora_local, hoy_local, info_horario
-
-    sedes = Punto.query.filter_by(activo=True).order_by(Punto.nombre).all()
-    sede_id = request.args.get("sede_id", type=int)
-    sede = db.session.get(Punto, sede_id) if sede_id else None
-    if not sede or not sede.activo:
-        return {"sedes": [{"id": p.id, "nombre": p.nombre} for p in sedes], "sede": None}, 200
-
-    hoy = hoy_local()
-    hace_30 = (ahora_local() - timedelta(minutes=30)).astimezone(UTC).replace(tzinfo=None)
-    llamados = (
-        Turno.query.join(Franja, Turno.franja_id == Franja.id)
-        .filter(
-            Turno.punto_id == sede.id,
-            Franja.fecha == hoy,
-            Turno.estado.in_(("LLAMADO", "EN_ATENCION", "ATENDIDO")),
-            Turno.fecha_llamado.isnot(None),
-            Turno.fecha_llamado >= hace_30,
-        )
-        .order_by(Turno.fecha_llamado.desc())
-        .limit(6)
-        .all()
-    )
-    siguientes = (
-        Turno.query.join(Franja, Turno.franja_id == Franja.id)
-        .filter(Turno.punto_id == sede.id, Franja.fecha == hoy, Turno.estado == "ESPERANDO")
-        .order_by(Franja.hora_inicio.asc(), Turno.hora_solicitud.asc())
-        .limit(6)
-        .all()
-    )
-    from app.horario import a_iso_utc
-
-    return {
-        "sedes": [{"id": p.id, "nombre": p.nombre} for p in sedes],
-        "sede": {"id": sede.id, "nombre": sede.nombre, "direccion": sede.direccion},
-        "horario": info_horario(),
-        "llamados": [
-            {
-                "id": t.id,
-                "codigo": t.codigo_corto,
-                "nombre": _nombre_sala(t.usuario.nombre if t.usuario else ""),
-                "asesor": " ".join((t.agente.nombre if t.agente else "").split()),
-                "modulo": t.agente.modulo if t.agente else None,
-                "estado": t.estado,
-                "llamado": a_iso_utc(t.fecha_llamado),
-            }
-            for t in llamados
-        ],
-        "siguientes": [
-            {
-                "codigo": t.codigo_corto,
-                "nombre": _nombre_sala(t.usuario.nombre if t.usuario else ""),
-                "hora": f"{t.franja.hora_inicio:%H:%M}",
-            }
-            for t in siguientes
-        ],
-    }, 200
+    return pantalla_de_sala(request.args.get("sede_id", type=int)), 200
 
 
 # ---------------------------------------------------------------------
@@ -445,7 +327,7 @@ def solicitar_turno():
         )
         return turno_response(turno), 201
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
 
 
 @turnos_bp.get("/mis-turnos")
@@ -462,4 +344,18 @@ def cancelar_mi_turno(turno_id):
         turno = cancelar_turno(turno_id, int(get_jwt_identity()))
         return {"mensaje": "Turno cancelado.", "turno": turno_response(turno)}, 200
     except ValueError as error:
-        return {"error": str(error)}, 400
+        return _error(error)
+
+
+# ---------------------------------------------------------------------
+# Tiempo de espera estimado (personal o cliente con cuenta)
+# ---------------------------------------------------------------------
+
+
+@turnos_bp.get("/<int:turno_id>/tiempo-espera")
+@jwt_required()
+def tiempo_espera(turno_id):
+    try:
+        return tiempo_espera_autorizado(turno_id, int(get_jwt_identity())), 200
+    except ValueError as error:
+        return _error(error)

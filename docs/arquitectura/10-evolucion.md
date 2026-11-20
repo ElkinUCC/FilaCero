@@ -130,6 +130,25 @@ servidor web, nube) y el modo "producción" de la API no se usaban en la demostr
 | Seguridad del frontend | Sí | La CSP pasa de `nginx.conf` a una etiqueta `<meta>` en `index.html` |
 | Pruebas | Sí | Se retiran 4 pruebas que solo verificaban el modo producción: 164 en verde |
 
+## E-1f · Requisitos del enunciado final: Bootstrap y capas estrictas (ejecutado)
+
+**Estímulo**: el enunciado de la entrega final exige Bootstrap o Tailwind en el frontend y separación por
+controladores, servicios, repositorios, DTO y modelos en el backend.
+
+| Elemento | ¿Afectado? | Cambio proporcional |
+|---|---|---|
+| Estilo, C1, C2 y despliegue | No | Mismos contenedores y nodos |
+| SPA (C3) | Sí | Bootstrap 5.3.9 local + `bootstrap-tema.css`; clases de Bootstrap en botones, tablas, alertas, avisos, spinners, grilla de formularios y validación (`.is-invalid`); `.modal` propio renombrado a `.ventana`; fuente local |
+| API (C3) | Sí (interno) | Consultas fuera de los controladores: `agentes/consultas.py`, `agentes/admin_servicios.py`, `usuarios/admin_servicios.py`, `turnos/sala.py`, `organizaciones/servicios.py`, repositorios y DTO nuevos. Contrato `/api/v1` sin cambios de forma |
+| Persistencia | Sí (corrección) | Las bajadas (`downgrade`) de `7fb57bf505c3` y `c3e5a7b9d1f2` fallaban en MySQL al borrar índices de llaves foráneas (error 1553); ahora se eliminan las tablas directamente. Ciclo completo subida → bajada → subida probado en MariaDB 10.11 |
+| Pruebas | Sí | +45 pruebas de arquitectura (`test_arquitectura_capas.py`): 209 en verde |
+
+**Artefactos actualizados**: ADR-017 (nuevo), ADR-001 y ADR-002 (notas), 03, 04, 07, 09 (R-07 cerrado, T-14), 11,
+diagrama de componentes, README.
+
+**Evidencia**: capturas antes/después con la misma fuente difieren en menos de 0,1 % de píxeles (solo el reloj);
+`python simulacion.py --url …` 50/50 y prueba de concurrencia 6 aceptadas / 12 rechazadas sobre MariaDB.
+
 ## E-2 · Crecimiento a 40 sedes y 200 asesores (analizado)
 
 **Estímulo**: TecniVisión se expande a una red nacional.
@@ -185,8 +204,8 @@ sin tocar reserva, despacho ni sala.
 | Detalle al hacer clic (turno del historial) | ![Detalle turno](img/e1-panel-detalle-turno.png) |
 | Eliminar asesor (baja lógica) | ![Eliminar](img/e1-eliminar-asesor.png) |
 
-> Capturas tomadas con los datos de `python simulacion.py --cargar`. En el equipo de demostración la tipografía
-> *Onest* se descarga de Google Fonts; sin internet el navegador usa una fuente del sistema.
+> Capturas tomadas con los datos de `python simulacion.py --cargar`. Desde la entrega final la tipografía *Onest*
+> se sirve desde `frontend/public/vendor/fuentes`, así que la demo se ve igual sin internet.
 
 ## Evidencia visual de E-1b
 

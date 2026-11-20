@@ -5,6 +5,7 @@ python scripts/crear_organizacion.py --nombre "Cooperativa Norte" \\
   --slug cooperativa-norte --industria cooperativa --pais CO \\
   --zona-horaria America/Bogota --idioma es --moneda COP
 """
+
 import argparse
 import re
 import sys

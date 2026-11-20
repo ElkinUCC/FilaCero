@@ -12,6 +12,7 @@ import { icono } from "../ui/icon.js";
 import { abrirDetalle, abrirModal, confirmar, datosDetalle, mensajeError } from "../ui/modal.js";
 import { avisar } from "../ui/toast.js";
 import { botonFila, enlaceDetalle, estadoInsignia, tablaSeccion } from "./tablaSeccion.js";
+import { cargando } from "../ui/cargando.js";
 
 /** Lo que el asesor está haciendo AHORA (atendiendo, en pausa, almuerzo...). */
 function actividadAgente(agente, sedes) {
@@ -51,7 +52,7 @@ function abrirFormularioAsesor(inicial, sedes, alGuardado) {
         ? ""
         : html`<label><span class="etiqueta">Correo de acceso</span>
             <span class="campo"><input id="as-correo" data-f="correo" type="email" value="${form.correo}" maxlength="120" placeholder="nombre@filacero.co" required /></span></label>`}
-      <div class="formulario__fila">
+      <div class="row row-cols-1 row-cols-sm-2 g-3">
         <label class="dd"><span class="dd__label">Sede</span>
           <span class="campo campo--select">${icono("edificio", 17)}
             <select data-f="punto_id">
@@ -75,7 +76,7 @@ function abrirFormularioAsesor(inicial, sedes, alGuardado) {
     </form>`;
   const pie = () => html`
     <button type="button" class="btn btn--suave" data-cerrar>Cancelar</button>
-    <button type="submit" form="form-asesor" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? "Guardando…" : editando ? "Guardar cambios" : "Crear asesor"}</button>`;
+    <button type="submit" form="form-asesor" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? cargando("Guardando…") : editando ? "Guardar cambios" : "Crear asesor"}</button>`;
 
   const v = abrirModal({
     titulo: editando ? "Editar asesor" : "Nuevo asesor",

@@ -9,6 +9,7 @@ import { html, pintar } from "../../utils/dom.js";
 import { hoyISO, soloDigitos } from "../../utils/formatters.js";
 import { icono } from "../ui/icon.js";
 import { abrirModal, mensajeError } from "../ui/modal.js";
+import { cargando } from "../ui/cargando.js";
 
 const SOLO_NUMEROS = { cliente_celular: 10, cliente_documento: 12 };
 
@@ -29,11 +30,11 @@ export function abrirFormularioEquipo({ inicial = {}, alGuardado }) {
 
   const pie = () => html`
     <button type="button" class="btn btn--suave" data-cerrar>Cancelar</button>
-    <button type="submit" form="form-equipo" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? "Guardando…" : "Registrar equipo"}</button>`;
+    <button type="submit" form="form-equipo" class="btn btn--primario" ${s.guardando ? "disabled" : ""}>${s.guardando ? cargando("Guardando…") : "Registrar equipo"}</button>`;
 
   const cuerpo = () => html`
     <form id="form-equipo" class="formulario">
-      <div class="formulario__fila">
+      <div class="row row-cols-1 row-cols-sm-2 g-3">
         <label><span class="etiqueta">Celular del cliente</span>
           <span class="campo">${icono("celular", 17)}<input id="eq-cliente_celular" data-eq="cliente_celular" inputmode="numeric" value="${form.cliente_celular}" placeholder="3001234567" /></span>
         </label>
@@ -51,14 +52,14 @@ export function abrirFormularioEquipo({ inicial = {}, alGuardado }) {
           ${s.marcas.map((m) => html`<button type="button" class="wz__chip ${form.marca === m ? "activo" : ""}" data-marca="${m}">${m}</button>`)}
         </div>
       </div>
-      <div class="formulario__fila">
+      <div class="row row-cols-1 row-cols-sm-2 g-3">
         <label><span class="etiqueta">Modelo o tamaño</span><span class="campo"><input id="eq-modelo" data-eq="modelo" value="${form.modelo}" maxlength="60" placeholder='55" 4K' /></span></label>
         <label><span class="etiqueta">Serial</span><span class="campo"><input id="eq-serial" data-eq="serial" value="${form.serial}" maxlength="60" placeholder="Opcional" /></span></label>
       </div>
       <label><span class="etiqueta">Falla reportada</span>
         <span class="campo"><textarea id="eq-falla" data-eq="falla" rows="2" maxlength="300" placeholder="Ej. No enciende, el led parpadea">${form.falla}</textarea></span>
       </label>
-      <div class="formulario__fila">
+      <div class="row row-cols-1 row-cols-sm-2 g-3">
         <div>
           <span class="etiqueta">Tipo de ingreso</span>
           <div class="segmentos eq__origen">

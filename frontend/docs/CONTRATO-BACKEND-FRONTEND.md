@@ -13,7 +13,7 @@
 | 401 | Sin sesión, token vencido o revocado | Cierra la sesión y vuelve a `/?ingresar=1` |
 | 403 | Rol insuficiente | Mensaje o página 403, **sin** cerrar sesión |
 | 404 | No existe | Mensaje |
-| 409 | Ya existe o hay conflicto (nombre repetido, sede con turnos) | Mensaje en el modal |
+| 409 | Ya existe o hay conflicto (nombre o correo repetido, sede con turnos, franja sin cupo, reserva duplicada, cédula que no coincide) | Mensaje en el modal o en la alerta del paso |
 | 429 | Demasiados intentos o cuenta bloqueada | Mensaje con la espera |
 
 > Diferencia con la referencia: allí el éxito es `{"data": ...}` y el error `{"error": {"message": ...}}`. FilaCero mantiene los datos en la raíz y `error` como texto para no romper las pruebas existentes (ADR-0009).

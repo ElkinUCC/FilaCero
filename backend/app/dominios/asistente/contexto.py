@@ -40,7 +40,7 @@ def _reservas_manana(punto_id=None):
 
 def contexto_gerencial(dias=7, punto_id=None):
     """Datos para administrador y supervisor."""
-    from app.dominios.agentes.controladores import construir_en_vivo
+    from app.dominios.agentes.consultas import construir_en_vivo
     from app.dominios.agentes.tablero import construir_tablero
 
     tablero = construir_tablero(dias=dias, punto_id=punto_id)
@@ -58,7 +58,7 @@ def contexto_gerencial(dias=7, punto_id=None):
 
 def contexto_asesor(agente):
     """Datos para el asesor: su consola, su cola y su bandeja de reclamos."""
-    from app.dominios.agentes.controladores import construir_panel
+    from app.dominios.agentes.consultas import construir_panel
 
     panel = construir_panel(agente)
     reclamos = Reclamo.query

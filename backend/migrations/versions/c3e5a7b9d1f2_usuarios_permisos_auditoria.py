@@ -35,9 +35,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_auditoria_accion", table_name="auditoria")
-    op.drop_index("ix_auditoria_usuario_id", table_name="auditoria")
-    op.drop_index("ix_auditoria_fecha", table_name="auditoria")
+    # Al eliminar la tabla se eliminan sus índices. En MySQL no se puede borrar
+    # antes el índice que respalda la llave foránea usuario_id (error 1553).
     op.drop_table("auditoria")
     op.drop_column("usuarios", "ultimo_acceso")
     op.drop_column("usuarios", "debe_cambiar_clave")
