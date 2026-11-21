@@ -1,8 +1,4 @@
-"""Servicio de predicción del tiempo de espera de un turno.
-
-Regresión lineal ligera sobre las últimas 100 atenciones del mismo trámite y sede;
-con menos de 5 muestras usa la mediana o el tiempo estimado del trámite.
-"""
+"""Servicio de predicción del tiempo de espera de un turno."""
 
 from datetime import datetime
 
@@ -59,10 +55,7 @@ def estimar_espera(turno):
 
 
 def tiempo_espera_autorizado(turno_id, usuario_id):
-    """Estimación para el dueño del turno, un asesor de la misma sede o un administrador.
-
-    Si no tiene permiso responde "no encontrado" (404) para no revelar que el turno existe.
-    """
+    """Estimación para el dueño del turno, un asesor de la misma sede o un administrador."""
     from app.dominios.usuarios.repositorios import buscar_por_id
 
     turno = repo.obtener_por_id(turno_id)

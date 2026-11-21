@@ -1,7 +1,4 @@
-/**
- * Catálogo: sedes (/api/v1/sedes) y trámites (/api/v1/tramites).
- * Lectura pública; crear, editar y eliminar solo ADMIN.
- */
+/** Catálogo: sedes (/api/v1/sedes) y trámites (/api/v1/tramites). */
 import { http, query } from "./http.js";
 
 export const RECURSOS = {

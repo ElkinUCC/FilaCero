@@ -1,79 +1,67 @@
-# FilaCero · Frontend (HTML + CSS + JavaScript puro)
+# FilaCero · Frontend
 
-SPA sin frameworks de interfaz (no usa React, Angular ni Vue) y con **Bootstrap 5.3.9** como base de estilos; no necesita Node.js, gestores de paquetes ni compilación.
-El navegador carga `index.html`, Bootstrap y la fuente desde `public/vendor/` (copia local: funciona sin internet), los estilos de `src/css/` y los módulos ES de `src/js/`.
+SPA hecha con HTML, CSS y JavaScript puro, con Bootstrap 5.3 para los estilos base. No usa React, Angular ni
+Vue, y tampoco necesita Node.js ni compilación.
 
 ## Cómo ejecutarlo
 
-1. Enciende el backend (`cd backend && python run.py` → `http://127.0.0.1:5000`).
-2. Sirve esta carpeta con un servidor estático (los módulos ES no funcionan con doble clic sobre el archivo):
+Con el backend encendido (`python run.py` en `backend/`):
 
 ```powershell
 cd frontend
 python -m http.server 5173
 ```
 
-Abre `http://localhost:5173`. También sirve la extensión **Live Server** de VS Code (`http://127.0.0.1:5500`).
+Abrir `http://localhost:5173`. Hay que usar un servidor (no doble clic en `index.html`) porque los módulos ES
+del navegador no cargan desde archivos locales. También funciona con Live Server de VS Code, agregando su
+dirección a `CORS_ALLOWED_ORIGINS` en `backend/.env`.
 
-El origen que uses debe estar en `CORS_ALLOWED_ORIGINS` de `backend/.env`.
-La URL de la API (se calcula sola a partir del equipo: `http://<equipo>:5000/api/v1`) y la organización están en `src/js/config.js`.
+La URL de la API y la organización se configuran en `src/js/config.js`.
 
 ## Estructura
 
 ```text
 frontend/
-├── index.html                  # contenedor único #app + hojas de estilo + main.js
-├── public/
-│   ├── favicon.svg
-│   └── vendor/                 # bootstrap/ (5.3.9, MIT) · fuentes/onest (OFL)
+├── index.html              único HTML: contenedor #app, estilos y main.js
+├── public/vendor/          Bootstrap 5.3 y la fuente Onest (copias locales)
 └── src/
-    ├── css/                    # bootstrap-tema (puente con Bootstrap) · fuentes · index (tokens) · ui · cliente · agente · admin · sala · asistente · responsive
+    ├── css/                estilos por pantalla (cliente, agente, admin, sala) y responsive
     └── js/
-        ├── main.js             # render(): URL → ruta → guarda → XPage() + mountXPage()
-        ├── config.js           # API_URL y ORGANIZATION_SLUG
-        ├── router/
-        │   ├── routes.js       # tabla de rutas (public, requiresAuth, roles, :params)
-        │   ├── guards.js       # requireAuth, requireRole, resolveRoute → página/redirect/403/404
-        │   └── navegacion.js   # navigate(), rutaActual() con rutas #/
-        ├── pages/              # PortalPage · SalaPage · AgentePage · AdminPage · CambioClavePage · 403 · 404
-        ├── components/
-        │   ├── cliente/        # reservarTurno (asistente por pasos) · consultarTurno · ficha · login
-        │   ├── agente/         # equipos (taller) · reclamos (minichat) · prepararTurno · verificarCedula …
-        │   ├── admin/          # resumen (tablero) · catalogo · agentes · usuarios · historial · actividad · graficas (SVG)
-        │   ├── ui/             # modal · toast · cargando (spinner) · chat · icon · cambiarClave · asistenteIA
-        │   └── layout/         # marca · encabezado
-        ├── api/                # http.js (único fetch) + auth · publico · agente · catalogo · admin · asistente
-        ├── auth/               # session.service.js (token en localStorage) · permissions.js (roles)
-        └── utils/              # dom.js · formatters.js · polling.js · voz.js · storage.js · errorMessages.js
+        ├── main.js         lee la ruta, aplica la guarda y pinta la página
+        ├── config.js       URL de la API y organización
+        ├── router/         rutas (#/...), guardas de sesión y rol, navegación
+        ├── pages/          Portal, Sala, Agente, Admin, cambio de clave, 403 y 404
+        ├── components/     piezas reutilizables por rol (cliente, agente, admin, ui)
+        ├── api/            http.js (único fetch) y un archivo por grupo de endpoints
+        ├── auth/           sesión (token JWT) y permisos por rol
+        └── utils/          pintar HTML seguro, formatos de fecha, consulta periódica, voz
 ```
 
-Arquitectura detallada y patrones: [`docs/ARQUITECTURA-SPA-VANILLA.md`](docs/ARQUITECTURA-SPA-VANILLA.md).
-Contrato con el backend: [`docs/CONTRATO-BACKEND-FRONTEND.md`](docs/CONTRATO-BACKEND-FRONTEND.md).
+## Cómo funciona
 
-## Cuentas de demostración
+- **Enrutamiento:** las rutas usan el hash de la URL (`#/agente`, `#/admin/sedes`). `main.js` escucha
+  `hashchange`, busca la ruta en `routes.js` y `guards.js` revisa si hay sesión y si el rol puede entrar.
+- **Estado:** cada página guarda su estado en un objeto y vuelve a pintar cuando cambia. La sesión se guarda
+  en `localStorage`.
+- **DOM y eventos:** `utils/dom.js` arma el HTML escapando los datos (evita XSS) y usa delegación de eventos
+  con `data-accion`, así cada contenedor tiene un solo listener.
+- **API:** todo pasa por `api/http.js`, que agrega el token, convierte la respuesta a JSON y traduce los
+  errores a mensajes para la persona.
+- **Validación:** los formularios se validan antes de enviar (celular, nombre, cédula, fechas) con las clases
+  `is-invalid` de Bootstrap. El backend vuelve a validar todo.
+- **Datos en vivo:** la consola del asesor y la sala consultan la API cada pocos segundos (`utils/polling.js`).
 
-Después de `python simulacion.py --cargar --si` en el backend:
+Más detalle en [docs/ARQUITECTURA-SPA-VANILLA.md](docs/ARQUITECTURA-SPA-VANILLA.md) y el contrato con el
+backend en [docs/CONTRATO-BACKEND-FRONTEND.md](docs/CONTRATO-BACKEND-FRONTEND.md).
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Administrador | laura.gomez@filacero.co | Admin12345 |
-| Asesor (Sede Centro) | carlos.mejia@filacero.co | Asesor12345 |
-| Ciudadano | celular 3001112233 | código OTP (en modo prueba se muestra en pantalla) |
+## Cuentas de prueba
 
-## Bootstrap en la SPA
+Después de `python simulacion.py --cargar`:
 
-Bootstrap 5.3.9 se carga desde `public/vendor/bootstrap/bootstrap.min.css` (sin CDN) y `src/css/bootstrap-tema.css`
-le asigna los colores, la tipografía y los radios de FilaCero mediante sus variables `--bs-*`. Solo se usa su CSS:
-el comportamiento (ventanas, avisos, menús) lo maneja el JavaScript de la SPA (ADR-017).
-
-| Bootstrap | Dónde se usa |
+| Rol | Usuario |
 |---|---|
-| Reboot + variables `--bs-*` | Base de toda la interfaz (`bootstrap-tema.css`) |
-| `.btn` | Todos los botones; las variantes `btn--primario`, `btn--suave`, `btn--peligro`… fijan `--bs-btn-*` |
-| `.table .table-hover .align-middle .table-responsive` | Tablas del panel (`admin/tablaSeccion.js`, `admin/resumen.js`) |
-| `.row .row-cols-1 .row-cols-sm-2 .g-3` | Formularios en dos columnas (usuarios, asesores, equipos) |
-| `.is-invalid` + `.invalid-feedback` | Validación en el cliente (celular, nombre, fecha de garantía, cédula) |
-| `.alert .alert-danger` | Mensajes de error de formularios (`ui/modal.js → mensajeError`) |
-| `.toast .show` | Avisos breves (`ui/toast.js`) |
-| `.spinner-border-sm` | Botones en espera (`ui/cargando.js`) |
-| `.visually-hidden` | Textos solo para lectores de pantalla |
+| Administrador | laura.gomez@filacero.co |
+| Asesor (Sede Centro) | carlos.mejia@filacero.co |
+| Ciudadano | cualquier celular; en modo prueba el código OTP aparece en pantalla |
+
+Las contraseñas de prueba están en `backend/simulacion.py` (`SIM_CLAVE_ADMIN` y `SIM_CLAVE_ASESOR`).

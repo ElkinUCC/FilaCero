@@ -1,11 +1,4 @@
-/**
- * Utilidades para pintar HTML de forma segura con JavaScript puro.
- *
- *   html`<p>${texto}</p>`  -> escapa todo lo que se interpola (evita XSS)
- *   crudo(cadena)          -> marca un fragmento como HTML ya seguro (iconos, otros html``)
- *   pintar(el, contenido)  -> reemplaza el contenido conservando el foco del campo activo
- *   delegar(el, evento, acciones) -> un solo listener por contenedor con data-accion
- */
+/** Utilidades para pintar HTML de forma segura con JavaScript puro. */
 
 class Crudo {
   constructor(texto) {
@@ -45,12 +38,7 @@ export function html(partes, ...valores) {
 /** Atributos de clase: clases("btn", activo && "activo") -> "btn activo". */
 export const clases = (...lista) => lista.filter(Boolean).join(" ");
 
-/**
- * Reemplaza el contenido de un elemento. Si el foco estaba en un campo
- * dentro de él (identificado por id o data-campo), lo devuelve al mismo
- * campo y con el cursor en la misma posición: así se puede volver a pintar
- * mientras la persona escribe.
- */
+/** Reemplaza el contenido de un elemento. */
 export function pintar(elemento, contenido) {
   if (!elemento) return;
   const activo = document.activeElement;
@@ -76,9 +64,7 @@ export function pintar(elemento, contenido) {
           /* algunos tipos de input no admiten selección */
         }
       } else if ("value" in nuevo && nuevo.value) {
-        // type="email" y type="number" no exponen la posición del cursor: el
-        // navegador lo deja al inicio y lo escrito saldría al revés. Reasignar
-        // el valor deja el cursor al final, donde la persona estaba escribiendo.
+        // type="email" y type="number" no exponen la posición del cursor
         const valor = nuevo.value;
         nuevo.value = "";
         nuevo.value = valor;
@@ -87,11 +73,7 @@ export function pintar(elemento, contenido) {
   }
 }
 
-/**
- * Igual que pintar(), pero solo toca el DOM si el HTML cambió. Útil en
- * pantallas que se actualizan cada pocos segundos: si los datos no cambiaron,
- * no se interrumpe a la persona (desplegables abiertos, hover, animaciones).
- */
+/** Igual que pintar(), pero solo toca el DOM si el HTML cambió. */
 export function pintarSiCambia(elemento, contenido) {
   if (!elemento) return false;
   const texto = String(contenido);
@@ -101,11 +83,7 @@ export function pintarSiCambia(elemento, contenido) {
   return true;
 }
 
-/**
- * Delegación de eventos: un solo listener por contenedor.
- * Los botones llevan data-accion="nombre" y el mapa ejecuta acciones[nombre](elemento, evento).
- * Devuelve una función para quitar el listener.
- */
+/** Delegación de eventos: un solo listener por contenedor. */
 export function delegar(contenedor, evento, acciones, atributo = "accion") {
   const manejador = (e) => {
     const objetivo = e.target.closest(`[data-${atributo}]`);

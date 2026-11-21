@@ -1,7 +1,4 @@
-/**
- * Actividad (bitácora de auditoría, solo ADMIN): ingresos y cambios sensibles.
- *   montarActividad(contenedor, { titulo })
- */
+/** Actividad (bitácora de auditoría, solo ADMIN) */
 import * as adminApi from "../../api/admin.api.js";
 import { html, pintarSiCambia } from "../../utils/dom.js";
 import { fechaHora } from "../../utils/formatters.js";

@@ -1,6 +1,6 @@
 # ADR-016 · Minichat de reclamos y consultas, con asistente automático y alertas al asesor
 
-- **Estado**: Nuevo (iteración 4) · **Atributos**: usabilidad, cumplimiento de la promesa, modificabilidad
+- **Estado**: Aceptado · **Atributos**: usabilidad, cumplimiento de la promesa, modificabilidad
 
 ## Contexto
 El asesor respondía un reclamo una sola vez (p. ej. "la revisión vale $50.000") y el ciudadano no podía

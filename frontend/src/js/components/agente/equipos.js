@@ -1,10 +1,4 @@
-/**
- * Taller de la sede: los equipos de los clientes avanzan por columnas. Cuando
- * un equipo queda "Listo", el cliente lo ve al consultar con su celular y puede
- * reservar la entrega eligiendo ese equipo.
- *
- *   montarEquipos(contenedor) -> función de limpieza
- */
+/** Taller de la sede: los equipos de los clientes avanzan por columnas. */
 import * as agenteApi from "../../api/agente.api.js";
 import { html, pintar } from "../../utils/dom.js";
 import { ESTADOS_EQUIPO, fechaHora, haceTiempo } from "../../utils/formatters.js";

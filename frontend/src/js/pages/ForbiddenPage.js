@@ -1,7 +1,4 @@
-/**
- * 403: hay sesión pero el rol no alcanza. NO se cierra la sesión
- * (igual que en el proyecto de referencia). embebida: dentro del panel.
- */
+/** 403: hay sesión pero el rol no alcanza. */
 import { homeFor } from "../auth/permissions.js";
 import { marca } from "../components/layout/marca.js";
 import { icono } from "../components/ui/icon.js";

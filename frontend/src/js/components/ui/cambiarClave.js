@@ -1,9 +1,4 @@
-/**
- * Cambio de contraseña del personal.
- *   formularioClaveHTML(estado, obligatorio) -> formulario
- *   enlazarFormularioClave(contenedor, estado, { obligatorio, alListo, repintar })
- *   abrirCambiarMiClave({ alListo })  -> ventana desde el menú del usuario
- */
+/** Cambio de contraseña del personal. */
 import { cambiarClave } from "../../api/auth.api.js";
 import { getToken, saveSession } from "../../auth/session.service.js";
 import { html, pintar } from "../../utils/dom.js";

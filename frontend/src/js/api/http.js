@@ -1,15 +1,4 @@
-/**
- * Cliente HTTP único de FilaCero (fetch nativo del navegador).
- *
- * - Base: CONFIG.API_URL (http://127.0.0.1:5000/api/v1 en localhost).
- * - Agrega "Authorization: Bearer <token>" si hay sesión.
- * - Sin sesión envía "X-Organization-Slug" (organización de las reservas públicas).
- * - 401 con sesión: cierra la sesión en toda la app (evento global).
- * - 403: NO cierra la sesión; la pantalla muestra "sin permiso".
- * - Errores: lanza Error con el mensaje del backend y error.status.
- *
- * Ninguna página usa fetch directamente: todo pasa por aquí (ver *.api.js).
- */
+/** Cliente HTTP único de FilaCero (fetch nativo del navegador). */
 import { CONFIG } from "../config.js";
 import { clearSession, getToken } from "../auth/session.service.js";
 import { formatApiError, MENSAJE_SIN_CONEXION } from "../utils/errorMessages.js";

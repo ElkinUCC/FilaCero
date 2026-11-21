@@ -1,6 +1,6 @@
 # ADR-012 · Ejecución solo en localhost (un nodo)
 
-- **Estado**: **Revisado** (entrega final) · **Atributos**: costo, riesgo de la demostración, simplicidad; sacrifica disponibilidad · **Riesgos**: R-02, R-03
+- **Estado**: Revisado · **Atributos**: costo, riesgo de la demostración, simplicidad; sacrifica disponibilidad · **Riesgos**: R-02, R-03
 
 ## Contexto
 La entrega se presenta en localhost. El curso pide comparar virtualización, contenedores y nube por el problema

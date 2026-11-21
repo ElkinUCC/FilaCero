@@ -1,66 +1,52 @@
 # FilaCero
 
-**Plataforma web de gestión y orquestación de turnos presenciales**, con portal ciudadano, consola de asesores, sala de atención y panel administrativo. Esta entrega integra un frontend SPA en HTML + CSS + JavaScript puro con Bootstrap 5.3 (sin frameworks de interfaz) con el backend Flask, organizado como monolito modular por capas y dominios, y el núcleo multiempresa validado por la suite automatizada del proyecto.
+FilaCero es una aplicación web para gestionar turnos presenciales. El ciudadano reserva su turno desde el
+celular sin crear cuenta, el asesor atiende la cola desde su consola, la sala de espera muestra a quién se
+está llamando y el administrador ve los indicadores de cada sede.
+
+Lo hicimos como proyecto final de **Arquitectura de Software y Computacional**, usando como caso un centro de
+reparación de televisores con varias sedes (TecniVisión).
 
 ## Integrantes
 
 - Elkin Amador
 - Andrés Reina
 
-Curso: Arquitectura de Software y Computacional · Proyecto final.
+## Funcionalidades principales
 
-## Qué incluye
-
-- Portal público para reservar, consultar y cancelar turnos con verificación OTP (diseño pensado primero para celular: la consulta muestra una lista a la vez y el detalle del turno aparece arriba, sin desplazarse).
-- Consola del asesor para llamar, iniciar y finalizar atenciones, con asistente de despacho, jornada del día y cola ordenada por urgencia.
-- **Asistente FilaCero IA**: chat en el panel administrativo (analista de operación) y en la consola del asesor (copiloto). Responde en lenguaje natural con los datos reales, muestra indicadores, propone acciones con un clic (llamar, alistar, abrir sección) y acepta dictado por voz. Funciona sin internet con un motor local y, opcionalmente, redacta con Claude si se configura `ANTHROPIC_API_KEY`.
-- Diseño responsive revisado para celular (360 px en adelante), tableta y computador: tablas que pasan a tarjetas, KPIs sin recortes y menús adaptables.
-- Vista de sala para mostrar turnos llamados.
-- Panel administrativo con resumen operativo, sedes, trámites, asesores, usuarios, historial y actividad.
-- Backend organizado por dominios: organizaciones, usuarios, sedes, trámites, franjas, turnos, agentes y auditoría.
-- Aislamiento multiempresa a nivel de contexto HTTP y consultas/escrituras ORM.
-- Migraciones Alembic y scripts de provisión de organizaciones y cuentas.
+- Reserva, consulta y cancelación de turnos con verificación del celular por código (OTP).
+- Cupos por sede y franja de 30 minutos, sin sobrecupo aunque dos personas reserven al mismo tiempo.
+- Consola del asesor: llamar, iniciar, finalizar o marcar "no asistió", con la cola ordenada por urgencia.
+- Preparación previa de pedidos (entregas y garantías) y llamado por voz.
+- Equipos de clientes, garantías y reclamos con minichat.
+- Pantalla de sala de espera para TV.
+- Panel administrativo: sedes, trámites, asesores, usuarios y permisos, historial, bitácora y tablero de indicadores.
+- Asistente "FilaCero IA" que responde preguntas sobre la operación con los datos reales.
 
 ## Tecnologías
 
-- Backend: Python, Flask, SQLAlchemy, Flask-Migrate, Flask-JWT-Extended, Marshmallow.
-- Frontend: HTML5 + CSS3 + JavaScript puro (módulos ES, `fetch`, rutas `#/`) con **Bootstrap 5.3.9** (CSS en copia local, con un tema que lo conecta al diseño de FilaCero). Sin React, Angular ni Vue; sin Node.js ni compilación.
-- Base de datos: MySQL 8 (SQLite está disponible para pruebas automatizadas).
-- Pruebas: pytest.
+| Parte | Tecnología |
+|---|---|
+| Frontend | HTML5, CSS3, JavaScript puro (módulos ES) y Bootstrap 5.3. SPA propia, sin React, Angular ni Vue |
+| Backend | Python 3.12+, Flask, SQLAlchemy, Flask-Migrate (Alembic), Flask-JWT-Extended y Marshmallow |
+| Base de datos | MySQL 8 (las pruebas automáticas usan SQLite en memoria) |
+| Pruebas | pytest |
 
-## Estructura
+## Estructura del repositorio
 
 ```text
 FilaCero/
-├── backend/                # API Flask: monolito modular por capas y dominios
-│   ├── app/
-│   │   ├── dominios/       # organizaciones, usuarios, sedes, tramites, franjas, turnos,
-│   │   │                   # agentes, equipos, reclamos, auditoria, asistente
-│   │   └── seguridad.py · tenancy.py · errores.py · horario.py · config.py
-│   ├── migrations/
-│   ├── scripts/
-│   ├── tests/
-│   ├── .env.example
-│   └── run.py
-├── frontend/               # SPA sin frameworks (HTML + CSS + JS)
-│   ├── index.html          # contenedor único #app
-│   ├── public/vendor/      # Bootstrap 5.3.9 (CSS) y fuente Onest, locales: funciona sin internet
-│   ├── src/css/
-│   ├── src/js/             # main · router · pages · components · api · auth · utils
-│   └── public/
+├── backend/        API REST en Flask (monolito modular por capas y dominios)
+├── frontend/       SPA en HTML, CSS y JavaScript
 └── docs/
-    ├── arquitectura/       # documento de arquitectura (01–11) y ADR
-    ├── diagramas/          # UML: casos de uso, clases, ER, paquetes, componentes, despliegue, secuencias
-    └── entrega/            # Informe_Proyecto_Final_FilaCero.html (informe del proyecto, fases 01–05)
+    ├── arquitectura/   documento de arquitectura y ADR
+    ├── diagramas/      diagramas UML y C4 (fuentes PlantUML + imágenes)
+    └── entrega/        Informe_Proyecto_Final_FilaCero.html
 ```
 
-## Requisitos
+## Cómo ejecutar el proyecto (Windows)
 
-- Python 3.12 o superior (el proyecto también se ha probado localmente con Python 3.14.3).
-- Un navegador moderno (Chrome o Edge para el llamado por voz). El frontend no necesita Node.js.
-- MySQL 8 para persistencia local. Para pruebas automatizadas se usa SQLite en memoria.
-
-## Instalación en Windows (PowerShell)
+Se necesita Python 3.12 o superior, MySQL 8 y un navegador moderno (Chrome o Edge para el llamado por voz).
 
 ### 1. Backend
 
@@ -68,145 +54,59 @@ FilaCero/
 cd backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 ```
 
-Edita `backend/.env` y configura `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` y `DB_NAME`. Genera secretos nuevos para tu entorno; no reutilices claves de ejemplo ni compartas el `.env`.
+En `backend/.env` se configuran los datos de MySQL (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`).
+Las claves secretas se generan con `python scripts/generate_secret.py`. Después:
 
 ```powershell
-python scripts/generate_secret.py
-flask --app run db upgrade
+python scripts/create_db.py
+flask db upgrade
+python simulacion.py --cargar
 python run.py
 ```
 
-La API queda disponible en `http://127.0.0.1:5000`.
+`simulacion.py --cargar` llena la base con datos de ejemplo (sedes, asesores y turnos de los últimos días);
+antes de borrar los datos anteriores pide escribir `BORRAR` para confirmar.
+La API queda en `http://127.0.0.1:5000`.
 
-> Si ya tienes una base de datos de FilaCero con las migraciones aplicadas, conserva tu `.env` y ejecuta `flask --app run db upgrade` para aplicar únicamente migraciones pendientes. No borres la base de datos.
+### 2. Frontend
 
-### 2. Organización y cuenta administrativa
-
-La migración inicial crea la organización demo `filacero-demo`. Para crear otra organización:
-
-```powershell
-python scripts/crear_organizacion.py --nombre "Mi Empresa" --slug mi-empresa --industria general --pais CO --zona-horaria America/Bogota --idioma es --moneda COP
-```
-
-El comando informa el ID asignado. Usa ese ID para crear el administrador:
-
-```powershell
-python scripts/crear_cuenta.py admin@miempresa.com ADMIN "Administrador" --organizacion-id 2
-```
-
-Cambia `2` por el ID real que devolvió el primer comando. La contraseña se solicita de forma interactiva y no se guarda en texto plano.
-
-Si ya creaste tu organización y cuenta en tu base de datos local, **no repitas estos comandos**.
-
-### 3. Frontend
-
-Abre otra terminal. El frontend es HTML + CSS + JavaScript puro: no se instala nada ni se compila, solo se sirve la carpeta con un servidor estático (los módulos ES no funcionan abriendo el archivo con doble clic):
+En otra terminal:
 
 ```powershell
 cd frontend
 python -m http.server 5173
 ```
 
-La interfaz queda disponible en `http://localhost:5173` (también sirve la extensión **Live Server** de VS Code en `http://127.0.0.1:5500`; agrega ese origen a `CORS_ALLOWED_ORIGINS`).
+La aplicación queda en `http://localhost:5173`. No hay que instalar nada más: Bootstrap y la fuente están
+copiados en `frontend/public/vendor/`, así que funciona sin internet.
 
-La URL de la API y la organización pública se configuran en `frontend/src/js/config.js`:
-
-```js
-export const CONFIG = {
-  API_URL: conProxy ? "/api/v1" : "http://127.0.0.1:5000/api/v1",
-  ORGANIZATION_SLUG: "filacero-demo",
-};
-```
-
-`ORGANIZATION_SLUG` debe coincidir con el slug de la organización que atenderá las solicitudes públicas de ese despliegue. El frontend envía ese encabezado (`X-Organization-Slug`) únicamente cuando no hay una sesión autenticada. En sesiones autenticadas, el backend resuelve la organización desde el `org_id` firmado en el JWT.
-
-## Ejecutar las pruebas
-
-Desde `backend/`, con el entorno virtual activo:
+### 3. Pruebas
 
 ```powershell
-python -m pytest tests/ -v
+cd backend
+python -m pytest
 ```
 
-Última ejecución de esta entrega: **222 passed, 1 skipped** (incluye 11 pruebas del asistente IA y 58 pruebas de arquitectura en `tests/test_arquitectura_capas.py`, que verifican que ningún controlador acceda a la base de datos ni importe repositorios). Vuelve a ejecutar la suite después de instalar dependencias y aplicar cambios locales.
+## Documentación
 
-## Simulación de operación
-
-Desde `backend/`:
-
-```powershell
-python simulacion.py
-```
-
-Consulta las opciones disponibles antes de cargar datos:
-
-```powershell
-python simulacion.py --help
-```
-
-Los comandos de carga/borrado pueden modificar datos de la base. Úsalos solo en una base de pruebas y revisa las opciones de confirmación antes de ejecutarlos.
-
-## Asistente FilaCero IA
-
-| Dónde | Quién | Qué responde |
-|---|---|---|
-| Panel `/admin` (botón «FilaCero IA») | Administrador y supervisor | Resumen del periodo, puntualidad, asistencia, cancelaciones, hora pico, sedes (por nombre), trámites, taller, reclamos, asesores en vivo, proyección de mañana y recomendaciones priorizadas. |
-| Consola `/agente` (botón «Copiloto IA») | Asesor | Quién sigue, qué hacer ahora, quién está en riesgo, qué alistar, cómo va su jornada, cuánto queda de la franja y el detalle de una persona por su nombre. |
-
-- API: `GET /api/v1/asistente/sugerencias` y `POST /api/v1/asistente/preguntar` (requieren sesión; el rol sale del token).
-- **Motor local** (por defecto): entiende español natural sin tildes ni signos, detecta varias intenciones por pregunta y entidades (sede, trámite, persona), y responde con cifras reales, fichas de indicadores, botones de acción y preguntas de seguimiento.
-- **Modo Claude** (opcional): con `ANTHROPIC_API_KEY` en `backend/.env`, Claude redacta la respuesta a partir de los mismos datos. Se envían solo indicadores y primeros nombres (sin celulares, cédulas ni apellidos). Si el proveedor falla o tarda, responde el motor local.
-- El asistente no tiene acceso directo a la base de datos: reutiliza los servicios del tablero, la vista en vivo y la consola, con el mismo aislamiento multiempresa y permisos.
-
-## Ejecución en localhost (resumen)
-
-FilaCero se ejecuta **solo en localhost**, en un equipo con tres procesos:
-
-| # | Proceso | Comando | Dirección |
-|---|---|---|---|
-| 1 | MySQL 8 | servicio de MySQL | `localhost:3307` (o el puerto de tu `.env`) |
-| 2 | API Flask | `cd backend` · `python run.py` | `http://127.0.0.1:5000` |
-| 3 | Frontend | `cd frontend` · `python -m http.server 5173` | `http://localhost:5173` |
-
-Para abrir la pantalla de sala en otro equipo de la misma red (por ejemplo una TV), arranca la API con
-`$env:FLASK_HOST="0.0.0.0"; python run.py`, sirve el frontend con `python -m http.server 5173 --bind 0.0.0.0`
-y agrega `http://<IP-del-portátil>:5173` a `CORS_ALLOWED_ORIGINS`. El frontend detecta solo la dirección de la API.
-
-## Documentación de arquitectura y evidencias
-
-| Qué | Dónde |
+| Documento | Ubicación |
 |---|---|
-| Documento de arquitectura (problema, atributos, C4, lógica, computacional, despliegue, análisis, trade-offs, riesgos, evolución, seguridad) | [`docs/arquitectura/README.md`](docs/arquitectura/README.md) |
-| 17 decisiones de arquitectura (ADR) | [`docs/arquitectura/adr/`](docs/arquitectura/adr/README.md) |
-| Diagramas UML (casos de uso, clases, entidad-relación, paquetes, componentes, despliegue y secuencias) | [`docs/diagramas/`](docs/diagramas/README.md) |
-| **Informe del proyecto (entregable HTML, se abre con doble clic, sin internet)** | [`docs/entrega/Informe_Proyecto_Final_FilaCero.html`](docs/entrega/Informe_Proyecto_Final_FilaCero.html) |
-| Arquitectura del frontend SPA sin frameworks | [`frontend/docs/ARQUITECTURA-SPA-VANILLA.md`](frontend/docs/ARQUITECTURA-SPA-VANILLA.md) |
-| Contrato backend ↔ frontend y colección Postman | [`frontend/docs/CONTRATO-BACKEND-FRONTEND.md`](frontend/docs/CONTRATO-BACKEND-FRONTEND.md), [`backend/docs/postman/`](backend/docs/postman/README.md) |
+| Informe del proyecto (fases 01 a 05) | [docs/entrega/Informe_Proyecto_Final_FilaCero.html](docs/entrega/Informe_Proyecto_Final_FilaCero.html) |
+| Arquitectura (C4, vistas lógica y física, despliegue, seguridad, riesgos) | [docs/arquitectura/](docs/arquitectura/README.md) |
+| Decisiones de arquitectura (ADR) | [docs/arquitectura/adr/](docs/arquitectura/adr/README.md) |
+| Diagramas UML | [docs/diagramas/](docs/diagramas/README.md) |
+| Backend: capas, endpoints y pruebas | [backend/README.md](backend/README.md) |
+| Frontend: estructura de la SPA | [frontend/README.md](frontend/README.md) |
+| Colección de Postman | [backend/docs/postman/](backend/docs/postman/README.md) |
 
-## Roles principales
+## Notas
 
-| Rol | Capacidades |
-|---|---|
-| Ciudadano | Reservar, consultar y cancelar su turno sin crear cuenta. |
-| Agente/asesor | Gestionar la cola y ejecutar el ciclo de atención. |
-| Supervisor | Consultar operación e indicadores según permisos. |
-| Administrador | Gestionar catálogo, personal, permisos e historial de su organización. |
-
-## Seguridad y configuración
-
-- No subir `backend/.env` al repositorio; solo se versiona `backend/.env.example`.
-- `FILACERO_OTP_TEST_MODE=true`: el código OTP se muestra en pantalla y solo para peticiones hechas desde el mismo equipo (127.0.0.1). No se envían SMS reales (fuera del alcance).
-- El depurador de Flask solo se activa si la API escucha en 127.0.0.1.
-- Genera secretos propios con `python scripts/generate_secret.py`; CORS solo admite los orígenes de `CORS_ALLOWED_ORIGINS`.
-- No conectar un agente de IA directamente a la base de datos. Las futuras integraciones deben pasar por servicios y herramientas autorizadas con permisos y auditoría.
-
-## Estado y alcance
-
-El alcance de la entrega es una **demostración en localhost** (un equipo, sin despliegue en internet), con migraciones, cabeceras de seguridad y 222 pruebas automatizadas. Las pruebas corren sobre SQLite; la concurrencia real se verifica contra MySQL con `python simulacion.py --carga`.
-
-Quedan fuera del alcance (documentados como evolución en `docs/arquitectura/10-evolucion.md`): publicar el sistema en internet, envío real de SMS, HTTPS y alta disponibilidad.
+- El proyecto se ejecuta en localhost. No se publicó en internet.
+- No se envían SMS reales: en modo prueba el código OTP aparece en pantalla, y solo para peticiones hechas
+  desde el mismo equipo.
+- El archivo `backend/.env` no se sube al repositorio; solo `backend/.env.example`.
+- Las fechas se guardan en hora de Colombia (America/Bogota).

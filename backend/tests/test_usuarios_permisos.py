@@ -102,8 +102,7 @@ def test_cambio_de_rol_aplica_de_inmediato(app, gente):
         json={"rol": "SUPERVISOR"},
     )
     assert r.status_code == 200 and r.get_json()["usuario"]["punto_asignado_id"] is None
-    # Acceso denegado al instante: 403 por rol o 401 si la revocación de sesión
-    # cae en el mismo segundo en que se emitió el token (ambos bloquean).
+    # Acceso denegado al instante
     assert c.get("/api/v1/agente/panel", headers=token_viejo).status_code in (401, 403)
 
 
@@ -182,7 +181,7 @@ def test_auditoria_registra_ingresos_y_cambios(app, gente):
     assert usuario["ultimo_acceso"]
 
 
-# ---------------------------------------------------------------- endurecimiento
+# endurecimiento
 
 
 def test_bloqueo_tras_5_intentos_y_desbloqueo_al_restablecer(app, gente):

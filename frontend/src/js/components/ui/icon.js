@@ -1,7 +1,4 @@
-/**
- * Iconos SVG en línea (sin dependencias). Trazo de 1.8 px.
- *   icono("check", 16)  -> HTML seguro listo para insertar con html``.
- */
+/** Iconos SVG en línea (sin dependencias). */
 import { crudo } from "../../utils/dom.js";
 
 const TRAZOS = {

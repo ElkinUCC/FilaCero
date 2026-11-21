@@ -1,7 +1,4 @@
-"""Contrato de respuesta y errores de dominio (app/errores.py).
-
-Usa los fixtures compartidos de conftest.py, igual que el proyecto de referencia.
-"""
+"""Contrato de respuesta y errores de dominio (app/errores.py)."""
 
 
 def test_respuestas_exitosas_llevan_success_true(client):

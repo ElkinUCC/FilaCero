@@ -1,6 +1,6 @@
 # ADR-013 · Equipos y reclamos como módulos de dominio propios
 
-- **Estado**: Nuevo (entrega final, iteración 2) · **Atributos**: cumplimiento de la promesa, modificabilidad, privacidad
+- **Estado**: Aceptado · **Atributos**: cumplimiento de la promesa, modificabilidad, privacidad
 
 ## Contexto
 Para que "cuando el ciudadano llegue, todo esté hecho", el sistema necesita saber **qué equipos tiene cada

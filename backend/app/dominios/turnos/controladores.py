@@ -59,17 +59,11 @@ def _entero(datos, campo):
         raise ValueError(f"{campo} no es válido.") from None
 
 
-# ---------------------------------------------------------------------
 # Verificación del celular
-# ---------------------------------------------------------------------
 
 
 def _celular_de(datos, campo="codigo_turno"):
-    """Consulta "por código": si no llega el celular, se usa el del dueño del turno.
-
-    El código de verificación siempre llega al celular registrado, así que
-    conocer el código del turno no basta para ver sus datos.
-    """
+    """Consulta "por código": si no llega el celular, se usa el del dueño del turno."""
     if datos.get("celular"):
         return normalizar_celular(datos.get("celular"))
     codigo = normalizar_codigo(datos.get(campo))
@@ -168,9 +162,7 @@ def _celular_verificado(datos, proposito="reserva", codigo_turno=None):
     return verificacion.get("celular")
 
 
-# ---------------------------------------------------------------------
 # Reserva pública (sin cuenta)
-# ---------------------------------------------------------------------
 
 
 @turnos_bp.post("/publico")
@@ -228,8 +220,7 @@ def consultar_turno_publico():
         datos = request.get_json(silent=True) or {}
         celular = _celular_de(datos, "codigo")
         datos = {**datos, "celular": celular}
-        # Primero se valida la verificación y DESPUÉS se busca el turno: así la
-        # respuesta no sirve para adivinar qué códigos existen.
+        # Primero se valida la verificación y DESPUÉS se busca el turno
         if _celular_verificado(datos, "consulta", _variantes_codigo(datos)) != celular:
             raise ValueError("El celular verificado no coincide con el de la consulta.")
         turno = _turno_publico(datos)
@@ -298,9 +289,7 @@ def cancelar_publico():
     return {"mensaje": "Tu turno fue cancelado.", "turno": turno_publico_response(turno)}, 200
 
 
-# ---------------------------------------------------------------------
 # Pantalla de sala de espera (pública, sin datos personales completos)
-# ---------------------------------------------------------------------
 
 
 @turnos_bp.get("/publico/sala")
@@ -309,9 +298,7 @@ def pantalla_sala():
     return pantalla_de_sala(request.args.get("sede_id", type=int)), 200
 
 
-# ---------------------------------------------------------------------
 # Clientes con cuenta
-# ---------------------------------------------------------------------
 
 
 @turnos_bp.post("/")
@@ -349,9 +336,7 @@ def cancelar_mi_turno(turno_id):
         return _error(error)
 
 
-# ---------------------------------------------------------------------
 # Tiempo de espera estimado (personal o cliente con cuenta)
-# ---------------------------------------------------------------------
 
 
 @turnos_bp.get("/<int:turno_id>/tiempo-espera")

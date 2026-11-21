@@ -1,16 +1,4 @@
-/**
- * Reserva guiada paso a paso. Los pasos cambian según el tipo de atención del
- * trámite (tipo_flujo):
- *
- *   GENERAL   Qué necesitas → Tu celular → Cuándo → Confirmar
- *   ENTREGA   Qué necesitas → Tu celular → Tu equipo (listo) → Cuándo → Confirmar
- *   GARANTIA  Qué necesitas → Tu celular → Tu televisor (compra ≤ 1 año) → Cuándo → Confirmar
- *   RECLAMO   Qué necesitas → Tu celular → Tu reclamo → [en línea: radicado] | [en persona: Cuándo → Confirmar]
- *
- * El celular verificado con código (OTP) es la identidad del ciudadano.
- *
- *   montarReservar(contenedor, { onResumen, onConfirmado }) -> función de limpieza
- */
+/** Reserva guiada paso a paso. */
 import * as publicoApi from "../../api/publico.api.js";
 import { clases, html, pintar } from "../../utils/dom.js";
 import {
@@ -77,7 +65,7 @@ function selector({ etiqueta, icon, campo, valor, opciones, placeholder, deshabi
 }
 
 export function montarReservar(contenedor, { onResumen, onConfirmado }) {
-  // ------------------------------------------------------------ estado
+  // estado
   const s = {
     sedes: [], tramites: [], marcas: [], categorias: {}, cargando: true,
     paso: "tramite", direccion: 1, tramiteId: "", sede: "",
@@ -92,7 +80,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
   let consulta = 0;
   let vivo = true;
 
-  // ------------------------------------------------------------ derivados
+  // derivados
   const tramite = () => s.tramites.find((t) => String(t.id) === String(s.tramiteId));
   const flujo = () => tramite()?.tipo_flujo || "GENERAL";
   const sedeSel = () => s.sedes.find((x) => String(x.id) === String(s.sede));
@@ -103,7 +91,6 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
   const celularValido = () => /^3\d{9}$/.test(s.celular);
   const nombreValido = () => s.nombre.trim().split(/\s+/).join(" ").length >= 3;
   // Validación en el cliente con los estados de Bootstrap (.is-invalid / .invalid-feedback).
-  // El servidor vuelve a validar todo: esto solo orienta a la persona mientras escribe.
   const celularInvalido = () => s.celular.length === 10 && !celularValido();
   const nombreInvalido = () => s.nombre.trim().length > 0 && !nombreValido();
   const garantiaVence = () =>
@@ -128,7 +115,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     });
   }
 
-  // ------------------------------------------------------------ navegación
+  // navegación
   function ir(destino, sentido = 1) {
     s.direccion = sentido;
     s.error = "";
@@ -159,7 +146,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     }
   }
 
-  // ------------------------------------------------------------ acciones
+  // acciones
   async function enviarCodigo() {
     s.ocupado = true;
     s.error = "";
@@ -266,7 +253,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     ir("tramite", -1);
   }
 
-  // ------------------------------------------------------------ vistas por paso
+  // vistas por paso
   const pie = (botonDerecho) => html`
     <div class="wz__pie">
       <button type="button" class="btn btn--suave" data-accion="atras">Atrás</button>
@@ -578,7 +565,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     reclamo: vistaReclamo, horario: vistaHorario, confirmar: vistaConfirmar,
   };
 
-  // ------------------------------------------------------------ pintar
+  // pintar
   let pasoPintado = null;
   function render() {
     if (!vivo) return;
@@ -610,7 +597,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     resumir();
   }
 
-  // ------------------------------------------------------------ eventos
+  // eventos
   const acciones = {
     "elegir-tramite": (b) => {
       const t = s.tramites.find((x) => String(x.id) === b.dataset.id);
@@ -712,7 +699,7 @@ export function montarReservar(contenedor, { onResumen, onConfirmado }) {
     }
   });
 
-  // ------------------------------------------------------------ carga inicial
+  // carga inicial
   render();
   Promise.all([
     publicoApi.listarSedes(),

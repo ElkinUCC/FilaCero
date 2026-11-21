@@ -1,8 +1,4 @@
-/**
- * Pantalla del televisor de la sala de espera (pública). Ruta: #/sala?sede=<id>
- * Muestra el turno llamado, el módulo y los próximos turnos. La voz del
- * llamado la emite la consola del asesor (ADR-009).
- */
+/** Pantalla del televisor de la sala de espera (pública). */
 import { pantallaSala } from "../api/publico.api.js";
 import { marca } from "../components/layout/marca.js";
 import { html, pintar } from "../utils/dom.js";

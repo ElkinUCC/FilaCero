@@ -1,6 +1,4 @@
-/* =========================================
-   FILACERO · PORTAL PÚBLICO (CLIENTE)
-   ========================================= */
+/* FILACERO · PORTAL PÚBLICO (CLIENTE) */
 
 .portal {
   display: grid;
@@ -9,7 +7,7 @@
   background: var(--menta);
 }
 
-/* ---------- Barra superior ---------- */
+/* Barra superior */
 .portal__barra {
   display: flex;
   align-items: center;
@@ -58,7 +56,7 @@
 }
 .portal__personal:hover { border-color: #5e8a8c; background: #17383c; }
 
-/* ---------- Cuerpo ---------- */
+/* Cuerpo */
 .portal__cuerpo {
   display: grid;
   grid-template-columns: minmax(330px, 0.8fr) minmax(0, 1.2fr);
@@ -101,7 +99,7 @@
   background: var(--papel);
 }
 
-/* ---------- Pestañas ---------- */
+/* Pestañas */
 .pestanas {
   display: flex;
   width: 100%;
@@ -134,7 +132,7 @@
   box-shadow: inset 0 3px 0 var(--petroleo);
 }
 
-/* ---------- Formulario de reserva ---------- */
+/* Formulario de reserva */
 .rv { display: flex; flex-direction: column; gap: 18px; }
 .rv__fila { display: grid; gap: 12px; }
 .rv__fila--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -227,7 +225,7 @@
 .rv__estado { color: var(--tinta-3); font-size: 13.5px; }
 .rv__pie .btn { min-width: 180px; }
 
-/* ---------- Ficha de turno ---------- */
+/* Ficha de turno */
 .ficha {
   position: relative;
   width: 100%;
@@ -294,7 +292,7 @@
   to { clip-path: inset(0 0 0 0); transform: none; }
 }
 
-/* ---------- Confirmación ---------- */
+/* Confirmación */
 .listo { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0 4px; text-align: center; }
 .listo__icono {
   display: grid;
@@ -321,7 +319,7 @@
 .listo .ficha { display: none; }
 .listo__acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
 
-/* ---------- Consultar turno ---------- */
+/* Consultar turno */
 .ct { display: flex; flex-direction: column; gap: 16px; }
 .ct__form { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; }
 .ct__form .btn { min-height: 46px; }
@@ -370,7 +368,7 @@
 .ct__acciones > span { margin-right: auto; color: var(--tinta-2); }
 .ct__auto { color: var(--tinta-3) !important; font-size: 13px; }
 
-/* ---------- Login del personal ---------- */
+/* Login del personal */
 .login {
   position: relative;
   display: flex;
@@ -400,7 +398,7 @@
 .login__cerrar:hover { background: var(--menta); }
 .login .btn { margin-top: 6px; min-height: 46px; }
 
-/* ---------- Adaptable ---------- */
+/* Adaptable */
 @media (max-width: 960px) {
   .portal { grid-template-rows: auto auto 1fr; }
   .portal__cuerpo { grid-template-columns: 1fr; }
@@ -427,9 +425,7 @@
   .pestanas button { font-size: 14px; }
 }
 
-/* =========================================
-   FASE 2.3 · PORTAL CIUDADANO REFINADO
-   ========================================= */
+/* PORTAL CIUDADANO */
 .portal { background: #f1f6f4; }
 .portal__barra { height: 66px; padding: 0 clamp(16px, 3vw, 42px); background: linear-gradient(100deg, #102b2f, #123a3e); box-shadow: 0 4px 18px rgb(9 35 38 / 12%); }
 .portal__barra .marca__logo { width: 37px; height: 37px; border-radius: 11px; }
@@ -462,7 +458,7 @@
 
 /* Consulta pública: búsqueda por código o por celular verificado. */
 
-/* Entrega final: estado de la preparación previa que ve el ciudadano */
+/* Estado de la preparación previa que ve el ciudadano */
 .ct__prep { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--radio-m); background: var(--menta); }
 .ct__prep strong { font-size: 14.5px; }
 .ct__prep p { margin-top: 3px; color: var(--tinta-2); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
@@ -474,14 +470,7 @@
 .rv__prep span { color: var(--tinta-2); }
 .rv__prep strong { color: var(--verde); }
 
-/* =========================================================
-   PALETA PRINCIPAL DEL PORTAL (entrega final)
-   Por solicitud del docente, la combinación que antes solo se veía con
-   "Alto contraste" es ahora la apariencia por defecto del ciudadano:
-   paneles negros, bordes definidos y texto más oscuro (la versión
-   anterior se percibía "muy blanca"). Cumple WCAG AA en todos los textos.
-   El modo "Alto contraste" sigue disponible y refuerza aún más los bordes.
-   ========================================================= */
+/* PALETA PRINCIPAL DEL PORTAL */
 .portal {
   --tinta: #000;
   --tinta-2: #111;
@@ -508,13 +497,9 @@
 .portal .punt,
 .portal .chip { border: 1px solid currentColor; }
 
-/* =========================================================
-   ASISTENTE DE RESERVA (entrega final · iteración 2)
-   Un paso a la vez, con transiciones suaves.
-   ========================================================= */
+/* ASISTENTE DE RESERVA: un paso a la vez */
 .wz { display: flex; flex-direction: column; gap: 14px; }
-/* Un <select> con opciones largas (dirección de la sede) no debe ensanchar el
-   asistente: en celulares de 320 px empujaba la página hacia los lados. */
+/* Un <select> con opciones largas (dirección de la sede) no debe ensanchar el asistente */
 .portal__panel, .portal__contenido, .wz, .wz__paso { min-width: 0; }
 .wz .dd, .wz .campo--select { min-width: 0; max-width: 100%; }
 .wz select { width: 100%; min-width: 0; text-overflow: ellipsis; }
@@ -664,7 +649,7 @@
 .ct__respuesta { display: flex; gap: 8px; margin: 0 12px 12px; padding: 10px 12px !important; border-radius: 10px; background: var(--verde-claro); color: var(--verde); font-size: 13.5px; line-height: 1.45; }
 .ct__respuesta span { color: var(--tinta); }
 
-/* ---------- Hora como desplegable (sin cuadrícula) ---------- */
+/* Hora como desplegable (sin cuadrícula) */
 .wz__hora-sel { display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
 .wz__hora-sel .dd__opcion span { font-variant-numeric: tabular-nums; font-weight: 650; }
 .wz__sugerida {
@@ -695,7 +680,7 @@
 .wz__hora-elegida strong { font-variant-numeric: tabular-nums; }
 @keyframes wz-aparece { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* ---------- Celular: lo importante sin desplazarse ---------- */
+/* Celular: lo importante sin desplazarse */
 @media (max-width: 640px) {
   .portal__intro { padding-top: 4px; padding-bottom: 4px; }
   .portal__intro h1 { max-width: none; font-size: 24px; letter-spacing: -.6px; line-height: 1.1; }
@@ -727,10 +712,7 @@
 }
 @media (max-width: 640px) { .rv__dia { flex: 1 1 0; } }
 
-/* =========================================================
-   CONSULTA (v2): sin chat, una lista a la vez y detalle arriba.
-   Pensado primero para celular: nada de bajar para ver el detalle.
-   ========================================================= */
+/* CONSULTA: una lista a la vez y el detalle arriba */
 .ct__modos {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0;
   padding: 4px; border: 2px solid var(--linea); border-radius: 12px; background: var(--menta-2);

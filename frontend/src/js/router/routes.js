@@ -1,17 +1,4 @@
-/**
- * Tabla de rutas del frontend.
- *
- *   public        -> cualquiera puede entrar (ciudadano, TV de sala)
- *   requiresAuth  -> exige sesión del personal
- *   roles         -> además exige uno de estos roles (si no: página 403)
- *
- * Cada página es un módulo con dos funciones (patrón del proyecto de referencia):
- *   XPage(ctx)       -> devuelve el HTML de la página
- *   mountXPage(ctx)  -> enlaza eventos, inicia consultas y devuelve una función de limpieza
- *
- * Una ruta puede tener parámetros: "/admin/:seccion".
- * Las URL usan "#" (#/admin/usuarios) para funcionar en cualquier servidor estático.
- */
+/** Tabla de rutas del frontend. */
 import { ROLES, ROLES_PANEL } from "../auth/permissions.js";
 import { AdminPage, mountAdminPage } from "../pages/AdminPage.js";
 import { AgentePage, mountAgentePage } from "../pages/AgentePage.js";

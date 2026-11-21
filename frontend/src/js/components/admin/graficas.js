@@ -1,15 +1,4 @@
-/**
- * Gráficas del tablero ejecutivo en SVG propio (sin librerías).
- * Reglas: marcas delgadas, una sola escala por gráfica, el color identifica la
- * serie y el texto va siempre en tinta; las gráficas responden al puntero con
- * un tooltip, y todo valor existe también en la tabla de datos.
- *
- *   sparkline(valores)                      -> HTML (sin interacción)
- *   segmentada(partes, descripcion)         -> HTML
- *   montarLineas(contenedor, { series, etiquetas, alto, descripcion })
- *   montarColumnas(contenedor, { datos, alto, descripcion, destacar })
- *     -> se redibujan solas al cambiar el ancho; devuelven una función de limpieza
- */
+/** Gráficas del tablero ejecutivo en SVG propio (sin librerías). */
 import { crudo, esc, html } from "../../utils/dom.js";
 
 export const SERIE = { actual: "#2a78d6", anterior: "#b9b7ae" };

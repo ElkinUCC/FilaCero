@@ -1,11 +1,6 @@
-"""
-Cambia el rol de una cuenta del personal (por defecto a ADMIN).
+"""Cambia el rol de una cuenta del personal (por defecto ADMIN).
 
-    python scripts/promover_admin.py correo@filacero.co
-    python scripts/promover_admin.py correo@filacero.co SUPERVISOR
-
-Útil si se pierde el acceso de administrador. Revoca las sesiones abiertas de
-esa cuenta (debe volver a iniciar sesión) y deja el evento en la bitácora.
+Uso: python scripts/promover_admin.py correo@filacero.co [SUPERVISOR|AGENTE]
 """
 
 import os

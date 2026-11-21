@@ -1,4 +1,4 @@
-/** Cambio obligatorio de la contraseña temporal. Ruta: #/cambiar-clave */
+/** Cambio obligatorio de la contraseña temporal. */
 import { enlazarFormularioClave, estadoClaveInicial, formularioClaveHTML } from "../components/ui/cambiarClave.js";
 import { html, pintar } from "../utils/dom.js";
 

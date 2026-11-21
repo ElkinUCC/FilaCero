@@ -1,8 +1,6 @@
-/* =========================================
-   FILACERO · ASISTENTE IA (panel de conversación)
-   ========================================= */
+/* FILACERO · ASISTENTE IA (panel de conversación) */
 
-/* ---------- Botón flotante ---------- */
+/* Botón flotante */
 .ia-fab {
   position: fixed; z-index: 60; right: 22px; bottom: 22px;
   display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px 0 8px;
@@ -20,7 +18,7 @@
 @keyframes ia-latido { 0%, 100% { box-shadow: 0 0 0 0 rgb(240 180 41 / 45%); } 50% { box-shadow: 0 0 0 8px rgb(240 180 41 / 0%); } }
 .ia-fab--oculto { opacity: 0; pointer-events: none; transform: scale(.9); }
 
-/* ---------- Panel ---------- */
+/* Panel */
 .ia-sombra { position: fixed; z-index: 69; inset: 0; background: rgb(15 42 46 / 18%); animation: ia-aparece .2s ease both; }
 .ia {
   position: fixed; z-index: 70; right: 20px; bottom: 20px;
@@ -50,7 +48,7 @@
 }
 .ia__icono:hover { background: rgb(255 255 255 / 12%); opacity: 1; }
 
-/* ---------- Conversación ---------- */
+/* Conversación */
 .ia__hilo { display: flex; flex: 1; flex-direction: column; gap: 14px; padding: 16px 14px 8px; overflow-y: auto; overscroll-behavior: contain; }
 .ia__bienvenida { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: auto 0; padding: 12px 18px; text-align: center; }
 .ia__bienvenida-icono { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: linear-gradient(140deg, #fff4d6, #ffe39a); color: #8a5a00; box-shadow: 0 8px 20px rgb(240 180 41 / 22%); }
@@ -86,7 +84,7 @@
 .ia__escribiendo i:nth-child(3) { animation-delay: .3s; }
 @keyframes ia-salto { 0%, 60%, 100% { transform: none; opacity: .5; } 30% { transform: translateY(-5px); opacity: 1; } }
 
-/* ---------- Sugerencias y entrada ---------- */
+/* Sugerencias y entrada */
 .ia__sugerencias { display: flex; gap: 6px; padding: 6px 14px 8px; overflow-x: auto; scrollbar-width: none; }
 .ia__sugerencias::-webkit-scrollbar { display: none; }
 .ia__sugerencias button {
@@ -104,7 +102,7 @@
 .ia__enviar:hover:not(:disabled) { background: #0d4a4f; }
 .ia__enviar:disabled { opacity: .4; }
 
-/* ---------- Celular: hoja a pantalla completa ---------- */
+/* Celular: hoja a pantalla completa */
 @media (max-width: 620px) {
   .ia-fab { right: 14px; bottom: 14px; height: 52px; padding: 0 16px 0 7px; font-size: 13.5px; }
   .ia { inset: 0; width: 100%; height: 100%; height: 100dvh; border: 0; border-radius: 0; transform-origin: bottom center; }

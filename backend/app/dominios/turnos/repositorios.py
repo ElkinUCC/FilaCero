@@ -23,8 +23,7 @@ def obtener_por_id(turno_id):
 
 
 def normalizar_codigo(valor):
-    """Acepta el código completo (FC-AAAAMMDD-XXXXXX), el visible (TU-XXXXXX)
-    o solo los 6 caracteres. Devuelve el completo o los 6 caracteres."""
+    """Acepta el código completo , el visible (TU-XXXXXX) o los 6 caracteres."""
     codigo = "".join(str(valor or "").split()).upper()
     if codigo.startswith("TU-"):
         codigo = codigo[3:]
@@ -102,9 +101,7 @@ def confirmar():
     db.session.commit()
 
 
-# ---------------------------------------------------------------------
 # Pantalla de sala
-# ---------------------------------------------------------------------
 
 
 def llamados_recientes(punto_id, fecha, desde_utc, limite=6):
@@ -134,9 +131,7 @@ def siguientes_en_espera(punto_id, fecha, limite=6):
     )
 
 
-# ---------------------------------------------------------------------
 # Predicción del tiempo de espera
-# ---------------------------------------------------------------------
 
 
 def duraciones_recientes(tramite_id, punto_id, limite=100):

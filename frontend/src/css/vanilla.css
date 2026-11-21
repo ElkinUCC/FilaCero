@@ -1,9 +1,6 @@
-/* =========================================
-   FILACERO · AJUSTES DEL FRONTEND VANILLA
-   (desplegables nativos y repintado sin animaciones repetidas)
-   ========================================= */
+/* FILACERO · AJUSTES DEL FRONTEND VANILLA */
 
-/* ---------- Desplegables nativos <select> con el estilo de los campos ---------- */
+/* Desplegables nativos <select> con el estilo de los campos */
 .campo--select { padding-right: 8px; }
 .campo--select select {
   appearance: none;
@@ -41,10 +38,7 @@ label.dd { display: block; }
 .campo--compacto { min-height: 42px; }
 .campo--compacto select { height: 40px; }
 
-/* ---------- Repintado ----------
-   Las páginas se vuelven a pintar cuando llegan datos nuevos (cada pocos
-   segundos). La clase .repintado evita que las animaciones de entrada se
-   repitan en cada actualización; las animaciones de "aviso" se conservan. */
+/* Repintado: las páginas se vuelven a pintar cuando llegan datos nuevos */
 .repintado .wz__paso,
 .repintado .wz__opcion,
 .repintado .wz__equipo,
@@ -82,7 +76,7 @@ label.dd { display: block; }
 /* Mensajes del asistente ya mostrados: no se vuelven a animar */
 .ia__msg--visto { animation: none !important; }
 
-/* ---------- Pequeños ajustes ---------- */
+/* Pequeños ajustes */
 .saltar:focus { z-index: 100; }
 .graf { position: relative; }
 [hidden] { display: none !important; }

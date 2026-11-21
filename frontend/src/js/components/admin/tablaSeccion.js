@@ -1,14 +1,4 @@
-/**
- * Tabla estándar de todas las secciones del panel.
- *
- * Regla de diseño (igual en Sedes, Trámites, Asesores, Usuarios, Historial y
- * Actividad): SEIS columnas con un solo dato por columna:
- *
- *   [Registro (enlace al detalle)] [Dato] [Dato] [Dato] [Estado] [Acciones]
- *
- * El resto de la información vive en el panel de detalle, que se abre al
- * hacer clic en el registro. filas: [{ id, celdas: [6 valores], inactivo }].
- */
+/** Tabla estándar de todas las secciones del panel. */
 import { html } from "../../utils/dom.js";
 import { icono } from "../ui/icon.js";
 

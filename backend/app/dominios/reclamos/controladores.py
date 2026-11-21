@@ -1,12 +1,4 @@
-"""Endpoints de Reclamos (/api/v1/reclamos).
-
-Público (celular verificado por OTP):
-    POST /publico               radicar un reclamo (en línea o para seguir en persona)
-    POST /publico/mios          reclamos del ciudadano con su estado y respuesta
-Personal:
-    GET  /                      bandeja de la sede (asesor) o de todas (panel)
-    PUT  /<id>                  el asesor responde o cambia el estado
-"""
+"""Endpoints de Reclamos (/api/v1/reclamos)."""
 
 from flask import Blueprint, request
 from flask_jwt_extended import current_user

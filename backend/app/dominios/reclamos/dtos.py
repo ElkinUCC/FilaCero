@@ -33,10 +33,7 @@ def mensaje_response(m):
 
 
 def _hilo(reclamo):
-    """Mensajes del chat.
-
-    Las respuestas dadas antes de existir el chat se muestran como primer mensaje.
-    """
+    """Mensajes del chat."""
     hilo = [mensaje_response(m) for m in reclamo.mensajes]
     if reclamo.respuesta and not any(m["autor"] == "ASESOR" for m in hilo):
         hilo.insert(

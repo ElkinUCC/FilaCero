@@ -1,22 +1,4 @@
-"""Preparación previa del turno (capa de servicio del dominio Turnos).
-
-Objetivo de negocio: cuando el ciudadano llega a su franja, lo que pidió ya
-está listo (el televisor reparado, la garantía revisada, la factura generada).
-El asesor de la sede alista el pedido mientras el turno está en espera y el
-ciudadano ve el avance al consultar su turno.
-
-Estados:
-    PENDIENTE       el trámite requiere preparación y nadie la ha tomado.
-    EN_PREPARACION  un asesor la está alistando.
-    LISTO           todo está preparado: el ciudadano solo recoge o firma.
-    NOVEDAD         falta algo (repuesto, documento...): se avisa antes de
-                    que el ciudadano se desplace. Exige una nota.
-
-Reglas:
-    - Solo un asesor activo de la MISMA sede del turno puede prepararlo.
-    - Solo se preparan turnos activos (en espera, llamados o en atención).
-    - La nota es visible para el ciudadano: máximo 500 caracteres.
-"""
+"""Preparación previa del turno (capa de servicio del dominio Turnos)."""
 
 from app import db
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError

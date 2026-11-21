@@ -12,7 +12,7 @@ enlaza con la decisión que lo atiende.
 | 2 | **Seguridad** (autenticación, autorización, privacidad) | Datos personales y acciones administrativas; exigencia legal (Ley 1581) |
 | 3 | **Usabilidad y accesibilidad** | Ciudadanos de toda edad; la sala y la voz son parte del servicio |
 | 4 | **Rendimiento** (latencia percibida) | La consola del asesor y la sala deben sentirse en vivo |
-| 5 | **Mantenibilidad / modificabilidad** | Proyecto académico que evoluciona por retroalimentación (ver [10](10-evolucion.md)) |
+| 5 | **Mantenibilidad / modificabilidad** | Proyecto académico que fue creciendo con cada revisión del docente |
 | 6 | **Disponibilidad** | Importante en operación real; en la demo se acepta un nodo |
 | 7 | **Costo** | Restricción dura: sin presupuesto de infraestructura |
 | 8 | **Escalabilidad** | Hoy 4 sedes; se analiza el crecimiento como escenario de evolución |

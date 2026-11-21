@@ -1,16 +1,4 @@
-/**
- * Ventanas emergentes accesibles (Esc cierra, foco atrapado, fondo bloqueado).
- *
- *   const v = abrirModal({ titulo, descripcion, cuerpo, pie, ancho, alCerrar });
- *   v.caja          -> elemento .ventana (para enlazar eventos)
- *   v.cuerpo / v.pie -> contenedores para volver a pintar
- *   v.cerrar()
- *
- *   confirmar({ titulo, mensaje, textoConfirmar, peligro, alConfirmar })
- *     alConfirmar debe devolver una promesa; si falla, el error se muestra en la ventana.
- *
- *   abrirDetalle({ titulo, subtitulo, insignia, cuerpo, acciones })  -> panel lateral
- */
+/** Ventanas emergentes accesibles (Esc cierra, foco atrapado, fondo bloqueado). */
 import { atraparFoco, crearElemento, html, pintar } from "../../utils/dom.js";
 import { icono } from "./icon.js";
 import { cargando } from "./cargando.js";

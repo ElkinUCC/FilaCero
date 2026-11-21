@@ -1,10 +1,4 @@
-"""
-Configuración de pruebas y fixtures compartidos (como el proyecto de referencia).
-
-Cada prueba recibe una app nueva con SQLite en memoria: no toca la base MySQL
-del desarrollador ni depende del orden de ejecución. Los archivos de prueba
-que definen su propio fixture ``app`` lo sobrescriben localmente.
-"""
+"""Configuración de pruebas y fixtures compartidos."""
 
 import os
 

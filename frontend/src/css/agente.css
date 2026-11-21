@@ -1,10 +1,8 @@
-/* =========================================
-   FILACERO · CONSOLA DEL ASESOR
-   ========================================= */
+/* FILACERO · CONSOLA DEL ASESOR */
 
 .ag { display: flex; flex-direction: column; min-height: 100vh; background: var(--menta); }
 
-/* ---------- Barra ---------- */
+/* Barra */
 .ag__barra {
   position: sticky;
   z-index: 20;
@@ -38,7 +36,7 @@
 
 .ag__aviso { display: flex; align-items: center; gap: 8px; padding: 10px 22px; background: var(--rojo-claro); color: var(--rojo); font-size: 14px; }
 
-/* ---------- Cuerpo ---------- */
+/* Cuerpo */
 .ag__cuerpo {
   display: grid;
   flex: 1;
@@ -51,7 +49,7 @@
 }
 .ag__principal { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-/* ---------- Asistente ---------- */
+/* Asistente */
 .asistente {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -82,7 +80,7 @@
 .asistente--pausa h2 { font-size: 34px; font-variant-numeric: tabular-nums; }
 .asistente--pausa .asistente__tag { color: #cfe5e2; }
 
-/* ---------- Puesto (turno actual) ---------- */
+/* Puesto (turno actual) */
 .puesto {
   display: flex;
   flex-direction: column;
@@ -158,7 +156,7 @@
 .ag__recientes li { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid #e3ebe8; font-size: 14px; }
 .ag__recientes li:first-child { border-top: 0; }
 
-/* ---------- Cola ---------- */
+/* Cola */
 .cola {
   position: sticky;
   top: 82px;
@@ -224,7 +222,7 @@
 .vacio { padding: 24px 8px; color: var(--tinta-3); text-align: center; }
 .mono { font-weight: 650; font-variant-numeric: tabular-nums; }
 
-/* ---------- Adaptable ---------- */
+/* Adaptable */
 @media (max-width: 1050px) {
   .ag__cuerpo { grid-template-columns: 1fr; }
   .cola { position: static; max-height: none; }
@@ -282,9 +280,7 @@
 .ag__sede .dd--barra .dd__panel { min-width: 380px; z-index: 30; color: var(--tinta); }
 .ag__sede small { margin-top: 3px; }
 
-/* =========================================
-   CICLO DE ATENCIÓN: etapas, transiciones y cierre
-   ========================================= */
+/* CICLO DE ATENCIÓN: etapas, transiciones y cierre */
 
 .puesto { transition: border-color 0.35s ease, box-shadow 0.35s ease; }
 .puesto--cierre { border-color: #9fcdb3; box-shadow: inset 4px 0 0 var(--verde); }
@@ -381,9 +377,7 @@
   .sello__circulo, .sello__check { animation: none; stroke-dashoffset: 0; }
 }
 
-/* =========================================
-   FASE 2.3 · CONSOLA DE ATENCIÓN REFINADA
-   ========================================= */
+/* CONSOLA DE ATENCIÓN */
 .ag { background: radial-gradient(ellipse at 50% -15%, rgb(19 94 99 / 8%), transparent 38rem), #f1f6f4; }
 .ag__barra { height: 70px; padding: 0 clamp(16px, 2.6vw, 34px); background: linear-gradient(100deg, #102b2f, #123a3e); box-shadow: 0 5px 20px rgb(9 35 38 / 14%); }
 .ag__barra .marca__logo { width: 37px; height: 37px; border-radius: 11px; }
@@ -415,7 +409,7 @@
   .ag__cuerpo { padding: 14px 12px 24px; }
 }
 
-/* ---------- Entrega final: llamado por voz y preparación previa ---------- */
+/* Llamado por voz y preparación previa */
 .ag__voz {
   display: inline-flex;
   align-items: center;
@@ -502,7 +496,7 @@
 /* Las cifras de "Mi jornada" heredan el tamaño del número (antes se veían diminutas). */
 .ag__dia strong .cifra { color: inherit; font: inherit; letter-spacing: inherit; text-transform: none; }
 
-/* ---------- Entrega final (iteración 2): secciones, presencia, taller y reclamos ---------- */
+/* Secciones, presencia, taller y reclamos */
 .ag__tabs { display: flex; gap: 4px; padding: 10px clamp(14px, 2.4vw, 34px) 0; }
 .ag__tabs button {
   display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 0;
@@ -597,7 +591,7 @@
 .taller__acciones .campo--buscar { width: 300px; }
 @media (max-width: 900px) { .taller__acciones { flex-wrap: wrap; } }
 
-/* ---------- Puesto por nombre (sin números largos) ---------- */
+/* Puesto por nombre (sin números largos) */
 .puesto__avatar {
   display: grid;
   flex: 0 0 auto;
@@ -623,7 +617,7 @@
 .ag__reciente-quien small { color: var(--tinta-3); font-size: 11.5px; }
 @media (max-width: 760px) { .puesto__avatar { width: 48px; height: 48px; font-size: 17px; } }
 
-/* ---------- Verificación de cédula ---------- */
+/* Verificación de cédula */
 .cedula__ayuda {
   display: flex;
   gap: 10px;
@@ -638,7 +632,7 @@
 .cedula__ayuda svg { flex: 0 0 auto; margin-top: 2px; }
 .cedula input { font-size: 20px; font-weight: 700; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; }
 
-/* ---------- Alertas emergentes del asistente ---------- */
+/* Alertas emergentes del asistente */
 .alertas { position: fixed; z-index: 60; top: 86px; right: 18px; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 24px)); pointer-events: none; }
 .alerta { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; padding: 12px 12px 12px 14px; border-left: 4px solid var(--azul); border-radius: 12px; background: #fff; box-shadow: var(--sombra-pop); pointer-events: auto; animation: alerta-entra .3s cubic-bezier(.2,.8,.2,1) both; }
 .alerta strong { display: block; color: var(--tinta); font-size: 14px; line-height: 1.3; }

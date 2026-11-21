@@ -1,7 +1,4 @@
-/**
- * Portal del ciudadano: reservar y consultar turno sin crear cuenta. Ruta: #/
- * #/?ingresar=1 abre directamente el acceso del personal (lo usa la guarda de rutas).
- */
+/** Portal del ciudadano: reservar y consultar turno sin crear cuenta. */
 import { obtenerHorario } from "../api/publico.api.js";
 import { montarConsultar } from "../components/cliente/consultarTurno.js";
 import { fichaHTML } from "../components/cliente/ficha.js";

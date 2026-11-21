@@ -1,6 +1,6 @@
 # ADR-002 · SPA en JavaScript puro (sin frameworks) separada de una API REST versionada
 
-- **Estado**: **Revisado** (entrega final) · reemplaza la versión inicial basada en un framework de componentes · complementado por [ADR-017](ADR-017-bootstrap-y-capas-estrictas.md) (Bootstrap 5.3 como base de estilos)
+- **Estado**: Revisado · reemplaza la versión inicial basada en un framework de componentes · complementado por [ADR-017](ADR-017-bootstrap-y-capas-estrictas.md) (Bootstrap 5.3 como base de estilos)
 - **Atributos**: usabilidad, modificabilidad, seguridad, costo
 
 ## Contexto
@@ -35,7 +35,7 @@ SPA en **HTML5 + CSS3 + JavaScript puro con módulos ES**, sin frameworks de int
 - (+) La sala, la consola y el panel comparten componentes (`admin/tablaSeccion.js`, `ui/modal.js`, `ui/chat.js`) y utilidades (`utils/polling.js`, `utils/voz.js`).
 - (+) La única dependencia de terceros del frontend es el CSS de Bootstrap (copia local fijada en 5.3.9, sin JavaScript de terceros); para ejecutarlo basta servir la carpeta.
 - (+) Se elimina Node.js del nodo de demostración (un proceso menos y ≈ 256 MB de RAM menos).
-- (+) El versionado `/v1` permitió reemplazar todo el cliente sin tocar la API (escenario E-1d en [10](../10-evolucion.md)).
+- (+) El versionado `/v1` permitió reemplazar todo el cliente sin tocar la API.
 - (−) La protección contra XSS no es automática: depende de usar siempre `html``…``` y de no pasar datos del usuario a `crudo()`. Se mitiga con la CSP de `index.html` (`script-src 'self'`).
 - (−) El token sigue en `localStorage` (riesgos R-04 y R-12; ver [07 §3](../07-analisis-atributos.md#3-seguridad) y [11](../11-seguridad.md)).
 - (−) Más código propio de infraestructura de UI (repintado, delegación de eventos, foco).

@@ -1,10 +1,4 @@
-"""Asistente automático del minichat (reglas, sin servicios externos).
-
-Responde al instante las preguntas frecuentes con datos reales del sistema
-(horario, estado del equipo, requisitos de entrega y garantía) y deja claro
-que un asesor humano continúa la conversación. No inventa precios ni
-diagnósticos: eso lo confirma el asesor.
-"""
+"""Asistente automático del minichat (reglas, sin servicios externos)."""
 
 import unicodedata
 

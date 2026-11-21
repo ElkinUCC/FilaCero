@@ -1,8 +1,4 @@
-/**
- * Navegación del SPA con el hash de la URL (#/ruta), sin librerías.
- * Funciona con cualquier servidor estático (Live Server, python -m http.server)
- * porque el navegador nunca pide al servidor la ruta interna.
- */
+/** Navegación del SPA con el hash de la URL (#/ruta), sin librerías. */
 
 /** Ruta interna actual: { path: "/admin/usuarios", query: URLSearchParams }. */
 export function rutaActual() {

@@ -1,9 +1,4 @@
-"""Aislamiento multiempresa a nivel de ORM y contexto HTTP.
-
-La organización activa se resuelve desde un JWT firmado o desde el encabezado
-X-Organization-Slug en rutas públicas. Nunca se confía en un organization_id
-suministrado en el cuerpo de una petición.
-"""
+"""Aislamiento multiempresa a nivel de ORM y contexto HTTP."""
 
 from contextlib import contextmanager
 
@@ -84,10 +79,7 @@ def instalar_aislamiento_multiempresa():
     def _validar_organizacion_en_escrituras(sesion, _contexto, _instancias):
         if not has_app_context():
             return
-        # En peticiones HTTP siempre se exige coincidencia con el tenant
-        # autenticado/resuelto. Fuera de una petición, el código interno (CLI,
-        # migraciones, seeders y tareas administrativas) puede crear registros
-        # para un tenant explícito; si no lo especifica, se asigna el tenant 1.
+        # En peticiones HTTP siempre se exige coincidencia con el tenant autenticado/resuelto.
         organizacion_id = getattr(g, "organizacion_id", None) if has_app_context() else None
         if has_request_context() and not organizacion_id:
             return
@@ -101,10 +93,7 @@ def instalar_aislamiento_multiempresa():
                         "No puedes crear ni modificar información de otra organización."
                     )
 
-        # Los DELETE ejecutados mediante Session.delete() no pasan por
-        # do_orm_execute: SQLAlchemy los emite durante el flush. Por eso deben
-        # validarse aquí explícitamente, incluso si el objeto quedó cargado
-        # antes de cambiar el contexto de organización en una tarea interna.
+        # Los DELETE ejecutados mediante Session.delete() no pasan por do_orm_execute
         organizacion_borrado = (
             int(organizacion_id) if organizacion_id is not None else organizacion_actual_id()
         )
@@ -131,14 +120,10 @@ def resolver_organizacion_peticion(app):
             return None
 
         # CORS preflight: el navegador envía OPTIONS antes de la petición real.
-        # No lleva JWT y no debe resolver tenant ni consultar claims. Flask-CORS
-        # responderá con los encabezados correspondientes; la ruta real seguirá
-        # aplicando toda la autenticación y autorización.
         if request.method == "OPTIONS":
             return None
 
-        # Un token presente siempre se valida; no se permite degradarlo a
-        # petición pública si está vencido, manipulado o revocado.
+        # Un token presente siempre se valida aunque la ruta sea pública
         verify_jwt_in_request(optional=True)
         claims = get_jwt() or {}
         identity = get_jwt_identity()
@@ -150,9 +135,7 @@ def resolver_organizacion_peticion(app):
             except (TypeError, ValueError):
                 abort(401, description="La sesión no tiene una identidad válida.")
 
-            # Compatibilidad segura con JWT heredados que no incluyen org_id:
-            # el tenant se obtiene del usuario en BD, nunca de un dato enviado
-            # por el cliente. Los tokens nuevos sí incluyen org_id firmado.
+            # Compatibilidad segura con JWT heredados que no incluyen org_id
             usuario = db.session.get(Usuario, usuario_id)
             if usuario is None:
                 abort(401, description="La sesión no pertenece a una organización activa.")
@@ -167,11 +150,7 @@ def resolver_organizacion_peticion(app):
             if token_org_id != int(usuario.organizacion_id):
                 abort(401, description="La sesión no pertenece a la organización del usuario.")
             organizacion = db.session.get(Organizacion, token_org_id)
-            # En instalaciones antiguas y en las pruebas automatizadas, la
-            # organización demo (id=1) puede no existir todavía porque usan
-            # create_all() sin ejecutar Alembic. Mantener el mismo bootstrap
-            # que las rutas públicas evita invalidar JWT legítimos de usuarios
-            # heredados cuyo organizacion_id por defecto es 1.
+            # En instalaciones antiguas y en las pruebas automatizadas
             if organizacion is None and token_org_id == 1:
                 organizacion = Organizacion(
                     id=1,
@@ -195,8 +174,7 @@ def resolver_organizacion_peticion(app):
         else:
             slug = slug_solicitado or app.config.get("DEFAULT_ORGANIZATION_SLUG", "filacero-demo")
             organizacion = Organizacion.query.filter_by(slug=slug).first()
-            # Compatibilidad para instalaciones antiguas recién migradas en
-            # pruebas/desarrollo. Con MySQL la crea la migración Alembic.
+            # Compatibilidad para instalaciones antiguas recién migradas en pruebas/desarrollo.
             if organizacion is None and slug == "filacero-demo":
                 organizacion = Organizacion(
                     id=1,

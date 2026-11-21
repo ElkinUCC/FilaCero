@@ -3,7 +3,7 @@ from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 
 from .modelos import Punto
 
-# --- Excepciones de dominio (el app factory las traduce a HTTP) ---
+# Excepciones de dominio (el app factory las traduce a HTTP)
 
 
 class SedeNoEncontradaError(NoEncontradoError):

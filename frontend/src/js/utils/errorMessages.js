@@ -1,9 +1,4 @@
-/**
- * Convierte una respuesta de error de la API en un mensaje legible.
- *
- * Contrato del backend (ver docs/CONTRATO-BACKEND-FRONTEND.md):
- *   { "success": false, "error": "Mensaje para la persona", "detalles": {...} }
- */
+/** Convierte una respuesta de error de la API en un mensaje legible. */
 
 const POR_ESTADO = {
   0: "No hay conexión con el servidor. Revisa que el backend esté encendido.",

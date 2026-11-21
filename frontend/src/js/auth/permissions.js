@@ -1,9 +1,4 @@
-/**
- * Reglas de permisos en la interfaz.
- *
- * Ocultar un botón NO es seguridad: el backend valida el rol en cada petición
- * (requiere_rol en app/seguridad.py). Esto solo evita mostrar opciones inútiles.
- */
+/** Reglas de permisos en la interfaz. */
 
 export const ROLES = {
   ADMIN: "ADMIN",

@@ -1,10 +1,4 @@
-/**
- * Pide la cédula del dueño antes de entregar un equipo (o de recibirlo en sede
- * cuando llega por garantía). El celular identifica; la cédula autoriza.
- * El backend compara con la cédula registrada y responde 409 si no coincide.
- *
- *   estado: "ENTREGADO" | "RECIBIDO"
- */
+/** Pide la cédula del dueño antes de entregar un equipo */
 import * as agenteApi from "../../api/agente.api.js";
 import { html, pintar } from "../../utils/dom.js";
 import { soloDigitos } from "../../utils/formatters.js";

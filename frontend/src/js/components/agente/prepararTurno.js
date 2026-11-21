@@ -1,8 +1,4 @@
-/**
- * Preparación previa del turno: el asesor alista lo que el ciudadano pidió
- * (equipo, garantía…) para que la atención en el módulo sea mínima.
- * El mensaje lo verá el ciudadano al consultar su turno.
- */
+/** Preparación previa del turno */
 import * as agenteApi from "../../api/agente.api.js";
 import { html, pintar } from "../../utils/dom.js";
 import { codigoTurno, fechaCorta, PREPARACION, textoPreparacion, valorRespuesta } from "../../utils/formatters.js";

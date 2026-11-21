@@ -1,10 +1,4 @@
-"""Contexto de datos del asistente IA.
-
-El asistente nunca consulta la base de datos por su cuenta ni ejecuta SQL:
-reutiliza los mismos servicios que alimentan el tablero, la vista "en vivo"
-y la consola del asesor. Así respeta el aislamiento multiempresa, los
-permisos por rol y las reglas de negocio ya probadas.
-"""
+"""Contexto de datos del asistente IA."""
 
 from collections import Counter
 from datetime import timedelta
@@ -76,9 +70,7 @@ def contexto_asesor(agente):
     }
 
 
-# ----------------------------------------------------------------------
 # Versión resumida y sin datos personales para el modelo de lenguaje
-# ----------------------------------------------------------------------
 
 
 def _primer_nombre(nombre):
@@ -86,8 +78,7 @@ def _primer_nombre(nombre):
 
 
 def resumen_para_modelo(ctx):
-    """Reduce el contexto a lo necesario y quita datos personales (celular,
-    cédula, apellidos) antes de enviarlo a un proveedor externo."""
+    """Reduce el contexto a lo necesario y quita datos personales"""
     if ctx["rol"] == "gerencial":
         t = ctx["tablero"]
         return {

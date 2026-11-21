@@ -1,6 +1,6 @@
 # ADR-008 · Nombre completo en la pantalla de sala
 
-- **Estado**: **Revisado en la entrega final** · **Atributos**: usabilidad vs. privacidad · **Riesgos**: R-04
+- **Estado**: Revisado · **Atributos**: usabilidad vs. privacidad · **Riesgos**: R-04
 
 ## Contexto
 La versión anterior mostraba "Nombre I." (nombre e inicial) para minimizar datos personales en un lugar público.

@@ -1,50 +1,12 @@
-"""FilaCero · Simulación de un centro de reparación de televisores.
+"""Simulación de FilaCero: centro de reparación de televisores (TecniVisión).
 
-Un solo archivo para todo lo que necesitas antes de la demo:
-
-  1) CARGAR DATOS DEMO (reemplaza solo los datos operativos del tenant seleccionado)
-       python simulacion.py --cargar
-       python simulacion.py --cargar --si                       # sin preguntar
-       python simulacion.py --cargar --desde 2026-10-25 --hasta 2026-10-30
-       python simulacion.py --cargar --dias 15                  # 15 días, ~1200 turnos
-       python simulacion.py --cargar --dias 15 --turnos 0       # operación completa (pesado)
-
-     Por defecto simula los 6 días anteriores a hoy (si hoy es 31 de octubre:
-     del 25 al 30), más el día de hoy hasta la hora actual y una cola de
-     turnos pendientes para hoy y mañana, así la consola del asesor tiene
-     gente esperando.
-
-     Algunos días un asesor rota a otra sede (queda en la Actividad).
-     Las cuentas de CUENTAS_PROTEGIDAS (.env) se conservan con su contraseña.
-
-  2) SOLO BORRAR todos los registros
-       python simulacion.py --borrar
-
-  3) EN VIVO durante la presentación (reservas llegando solas, Ctrl+C para)
-       python simulacion.py --en-vivo
-       python simulacion.py --en-vivo --cada 10 --por-ciclo 3  # 3 turnos por ciclo
-
-  4) PRUEBA DE CARGA contra el servidor encendido (evidencia de rendimiento)
-       python simulacion.py --carga --url http://127.0.0.1:5000 --usuarios 40 --segundos 20
-     El servidor local debe correr con RATE_LIMIT_ACTIVO=false y
-     FILACERO_OTP_TEST_MODE=true. El modo OTP de prueba solo funciona desde localhost.
-
-  5) VERIFICAR que todo funciona (no toca tu base de datos)
-       python simulacion.py
-       python simulacion.py --url http://127.0.0.1:5000        # contra el servidor
-                                                                # (requiere --cargar antes)
-
-  6) REVISAR LAS CUENTAS PROTEGIDAS (no modifica nada salvo con --desbloquear)
-       python simulacion.py --cuentas                  # existe, rol, activa, bloqueada...
-       python simulacion.py --cuentas --probar-clave   # además prueba la contraseña
-       python simulacion.py --cuentas --desbloquear    # quita el bloqueo por intentos fallidos
-     Para crear una cuenta protegida o cambiarle la contraseña:
-       python scripts/crear_cuenta.py correo@filacero.co ADMIN "Nombre"
-
-El negocio simulado: TecniVisión, 4 sedes, 2 administradores, 1 supervisor y 8 asesores.
-Atención todos los días, 24 horas, en franjas de 30 min, máximo
-10 min por persona (3 cupos por asesor y franja). Los clientes son
-personas ficticias que reservan con su celular, sin registrarse.
+Uso:
+  python simulacion.py --cargar      carga datos demo (6 días anteriores + hoy)
+  python simulacion.py --borrar      borra los datos operativos
+  python simulacion.py --en-vivo     crea reservas solas durante la demo (Ctrl+C para)
+  python simulacion.py --carga       prueba de carga contra el servidor encendido
+  python simulacion.py --cuentas     revisa las cuentas protegidas
+  python simulacion.py               verifica que todo funciona (no toca la BD)
 """
 
 import argparse
@@ -81,9 +43,7 @@ if os.name == "nt":
     except Exception:
         pass
 
-# ======================================================================
 # DATOS DEL NEGOCIO SIMULADO
-# ======================================================================
 
 # En un servidor público cambia estas claves con variables de entorno.
 CLAVE_ADMIN = os.getenv("SIM_CLAVE_ADMIN", "Admin12345")
@@ -132,9 +92,7 @@ SERVICIOS = [
     ),
 ]
 
-# Trámites que se alistan ANTES de que llegue el cliente (preparación previa):
-# el equipo reparado se prueba y empaca y la garantía se revisa con la factura.
-# Lo decide el tipo de atención (ENTREGA o GARANTIA), no el nombre.
+# Trámites que se alistan ANTES de que llegue el cliente (preparación previa)
 SERVICIOS_CON_PREPARACION = {
     "Entrega de equipo reparado",
     "Garantía de televisor",
@@ -327,18 +285,11 @@ DEMANDA_HORA = {
 DEMANDA_DIA = {0: 1.0, 1: 0.9, 2: 0.9, 3: 0.95, 4: 1.0, 5: 0.8, 6: 0.5}
 
 
-# ======================================================================
 # CARGA DE DATOS DEMO EN LA BASE DE DATOS
-# ======================================================================
 
 
 def borrar_todo(db, organizacion_id=None):
-    """Elimina SOLO datos operativos del tenant indicado; nunca organizaciones.
-
-    La versión anterior truncaba todas las tablas, incluida `organizaciones`,
-    y además borraba datos de otros tenants. Esta versión usa DELETE filtrado
-    por organizacion_id y conserva intacto el catálogo multiempresa.
-    """
+    """Elimina SOLO datos operativos del tenant indicado; nunca organizaciones."""
     from flask import g, has_app_context
 
     tenant_id = (
@@ -364,9 +315,7 @@ def _asegurar_organizacion_simulacion(app, db):
     slug = (app.config.get("DEFAULT_ORGANIZATION_SLUG") or "filacero-demo").strip().lower()
     organizacion = Organizacion.query.filter_by(slug=slug).first()
     if organizacion is None:
-        # Recuperación del catálogo tenant tras el truncado accidental de la
-        # versión anterior. No se inventa una organización si hay un slug ya
-        # ocupado ni se modifica ninguna organización existente.
+        # Recuperación del catálogo tenant tras el truncado accidental de la versión anterior.
         organizacion = Organizacion(
             nombre=app.config.get("DEFAULT_ORGANIZATION_NAME", "FilaCero Demo"),
             slug=slug,
@@ -526,8 +475,7 @@ def cargar_semana(
         horas_dia.append(cursor.time())
         cursor = min(cursor + paso, limite_dia)
 
-    # Volumen: los días pasados se escalan para sumar ~turnos_objetivo (más
-    # liviano en MySQL). Hoy y mañana conservan una cola realista para la demo.
+    # Volumen: los días pasados se escalan para sumar ~turnos_objetivo (más liviano en MySQL).
     escala_pasado = 1.0
     if turnos_objetivo:
         por_dia = sum(
@@ -571,8 +519,7 @@ def cargar_semana(
                 franjas = {}
                 horas = horas_dia if dia_habil(fecha) else []
             asesores = [a for a in datos["asesores"] if a.punto_asignado_id == sede.id]
-            # Algunos días un asesor abre tarde su puesto (tráfico, reunión...):
-            # es lo que en la vida real genera los pocos turnos fuera de franja.
+            # Algunos días un asesor abre tarde su puesto (tráfico, reunión...)
             libre = (
                 {
                     a.id: datetime.combine(fecha, horas[0], tzinfo=zona())
@@ -814,8 +761,7 @@ def _simular_vinculos(turno, servicio, cliente, sede, asesores, rnd, ahora):
 
 
 def _simular_equipos_y_reclamos(db, datos, rnd):
-    """Taller en curso: equipos en reparación en cada sede, reclamos en línea
-    y el cliente de la demostración con un televisor listo para recoger."""
+    """Taller en curso"""
     from app.dominios.reclamos.modelos import Reclamo
     from app.dominios.usuarios.modelos import Usuario
 
@@ -925,9 +871,7 @@ def _simular_preparacion(turno, servicio, asesores, rnd, ahora):
 
 
 def _rotar_asesores(db, datos, base, fecha, hoy, rnd):
-    """Rotación realista: algunos días un asesor de una sede con 2 apoya una
-    sede con 1. Hoy y mañana cada uno vuelve a su sede base (la de la tabla
-    de credenciales). El cupo de ambas sedes cambia solo (3 x asesores)."""
+    """Rotación realista: algunos días un asesor de una sede con 2 apoya una sede con 1."""
     for a in datos["asesores"]:
         a.punto_asignado_id = base[a.id]
     cambios = []
@@ -965,8 +909,7 @@ def _parecidas(correo):
 
 
 def _guardar_protegidas(app):
-    """Copia (con su hash) las cuentas de CUENTAS_PROTEGIDAS antes de borrar y
-    avisa de las que no existen: esas NO se pueden conservar."""
+    """Copia (con su hash) las cuentas de CUENTAS_PROTEGIDAS antes de borrar y avisa"""
     from app.dominios.usuarios.modelos import Usuario
 
     correos = _correos_protegidos(app)
@@ -1216,9 +1159,7 @@ def comando_cargar(args, solo_borrar=False):
                 return 1
 
         nombre_organizacion = organizacion.nombre
-        # Si una cuenta protegida no existe pero hay una igual con otro dominio
-        # (.com / .co), lo más probable es un error en el .env: se cancela para
-        # no borrar la cuenta real.
+        # Si una cuenta protegida no existe pero hay una igual con otro dominio (.com / .co)
         from app.dominios.usuarios.modelos import Usuario
 
         en_riesgo = [
@@ -1304,9 +1245,7 @@ def comando_cargar(args, solo_borrar=False):
     return 0
 
 
-# ======================================================================
 # MODO EN VIVO: reservas llegando mientras se presenta
-# ======================================================================
 
 
 def _agentes_demo_automaticos():
@@ -1347,9 +1286,7 @@ def _cerrar_vinculos(db, turno, agente_id):
 
 
 def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
-    """Avanza únicamente reservas creadas por esta ejecución de --en-vivo:
-    alistar (si el trámite lo requiere) → llamar → atender → finalizar, y a
-    veces la persona no llega."""
+    """Avanza únicamente reservas creadas por esta ejecución de --en-vivo"""
     from app.dominios.agentes.servicios import (
         finalizar_atencion,
         iniciar_atencion,
@@ -1455,9 +1392,7 @@ def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
 
 
 def _liberar_asesores_trabados(db, agentes, minutos=10):
-    """Una ejecución anterior detenida a la fuerza pudo dejar asesores demo con un
-    turno "llamado" o "en atención". Si lleva más de 10 min (el máximo por regla),
-    se cierra para que el asesor vuelva a quedar disponible."""
+    """Libera asesores demo que quedaron con un turno "llamado" de una ejecución anterior."""
     from app.dominios.agentes.servicios import finalizar_atencion, marcar_no_asistio
     from app.dominios.turnos.modelos import Turno
 
@@ -1484,8 +1419,7 @@ def _liberar_asesores_trabados(db, agentes, minutos=10):
 
 
 def _cerrar_atenciones_abiertas(db, trabajos):
-    """Al detener --en-vivo no deja asesores "atendiendo" para siempre: termina las
-    atenciones en curso y devuelve a la cola los turnos que solo estaban llamados."""
+    """Al detener --en-vivo no deja asesores "atendiendo" para siempre"""
     from app.dominios.agentes.servicios import devolver_a_cola, finalizar_atencion
     from app.dominios.turnos.modelos import Turno
 
@@ -1569,9 +1503,7 @@ def _mostrar_tablero_operativo(Turno, agentes, trabajos, ids_turnos, creadas, in
 
 
 def comando_en_vivo(args):
-    """Crea reservas de ciudadanos ficticios cada pocos segundos en la BD real,
-    respetando el cupo por sede y, por defecto, simula la atención de esas
-    reservas con los asesores demo. Nunca toma turnos ajenos. Ctrl+C para detener."""
+    """Crea reservas de ciudadanos ficticios cada pocos segundos en la BD real"""
     from app import create_app, db
     from app.dominios.franjas.modelos import Franja
     from app.dominios.sedes.modelos import Punto
@@ -1666,8 +1598,7 @@ def comando_en_vivo(args):
                         if turno:
                             break
                     if turno:
-                        # Igual que en el portal: la entrega lleva su equipo listo,
-                        # la garantía su televisor por recibir y el reclamo su radicado.
+                        # Igual que en el portal
                         _simular_vinculos(turno, servicio, cliente, sede, [], rnd, ahora_local())
                         db.session.commit()
                         creadas += 1
@@ -1754,9 +1685,7 @@ def comando_en_vivo(args):
     return 0
 
 
-# ======================================================================
 # VERIFICACIÓN DE EXTREMO A EXTREMO
-# ======================================================================
 
 resultados = {"ok": 0, "fallo": 0}
 
@@ -1813,9 +1742,7 @@ class ClienteHTTP:
             return 0, {}, {}
 
 
-# ----------------------------------------------------------------------
 # Escenarios
-# ----------------------------------------------------------------------
 
 
 def login(api, correo, password):
@@ -2206,9 +2133,7 @@ def escenario_seguridad(api):
     paso("Cabeceras de seguridad presentes", h.get("X-Frame-Options") == "DENY")
 
 
-# ======================================================================
 # PRUEBA DE CARGA
-# ======================================================================
 
 
 def _percentil(valores, p):
@@ -2279,7 +2204,7 @@ def comando_carga(args):
         )
     print(f"Rendimiento: {total / args.segundos:.1f} peticiones/s")
 
-    # --- Consistencia: reservas simultáneas a UNA franja no superan el cupo
+    # Consistencia: reservas simultáneas a UNA franja no superan el cupo
     titulo("Reservas simultáneas a la misma franja")
     sede, tramite = sedes[0], tramites[0]
     pasado_manana = (date.today() + timedelta(days=2)).isoformat()

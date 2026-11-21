@@ -1,8 +1,4 @@
-/**
- * Registro de un equipo que el cliente deja en la sede (orden de servicio).
- * Se abre desde la sección Equipos o desde el puesto, con los datos del
- * ciudadano que se está atendiendo ya diligenciados.
- */
+/** Registro de un equipo que el cliente deja en la sede (orden de servicio). */
 import * as agenteApi from "../../api/agente.api.js";
 import { catalogoEquipos } from "../../api/publico.api.js";
 import { html, pintar } from "../../utils/dom.js";

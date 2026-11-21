@@ -11,10 +11,7 @@ class Tramite(TenantScoped, db.Model):
     instrucciones_preparacion = db.Column(db.Text)
     campos_solicitud = db.Column(db.JSON, nullable=True, default=list)
     tiempo_estimado = db.Column(db.Integer, nullable=False, default=15)
-    # El trámite se alista antes de que llegue el ciudadano (ej. recoger un
-    # equipo reparado): cada turno nace con estado de preparación PENDIENTE.
-    # Cómo se reserva: GENERAL, ENTREGA (elige su equipo listo), GARANTIA
-    # (registra marca y fecha de compra) o RECLAMO (radica en línea o en persona).
+    # El trámite se alista antes de que llegue el ciudadano (ej. recoger un equipo reparado)
     tipo_flujo = db.Column(
         db.String(20), nullable=False, default="GENERAL", server_default="GENERAL"
     )

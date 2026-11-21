@@ -1,12 +1,4 @@
-"""Endpoints de Equipos (/api/v1/equipos).
-
-Público (con celular verificado por OTP):
-    POST /publico/mios          equipos del ciudadano y su nombre registrado
-Personal:
-    GET  /                      equipos de la sede (asesor) o de todas (panel)
-    POST /                      el asesor registra un equipo recibido
-    PUT  /<id>/estado           el asesor avanza el estado del equipo
-"""
+"""Endpoints de Equipos (/api/v1/equipos)."""
 
 from flask import Blueprint, request
 from flask_jwt_extended import current_user

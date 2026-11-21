@@ -1,10 +1,4 @@
-/**
- * Consulta del ciudadano, por código del turno o por celular (con código OTP).
- *   - Por código: muestra el turno, su espera estimada y permite cancelarlo.
- *   - Por celular: lista turnos, equipos y reclamos asociados a ese número.
- *
- *   montarConsultar(contenedor, { inicial, onResultado }) -> función de limpieza
- */
+/** Consulta del ciudadano, por código del turno o por celular (con código OTP). */
 import {
   cancelarTurno, consultarTurno, consultarTurnosPorCelular, misEquipos, misReclamos, solicitarCodigo, verificarCodigo,
 } from "../../api/publico.api.js";
@@ -229,7 +223,7 @@ export function montarConsultar(contenedor, { inicial, onResultado }) {
     render();
   }
 
-  // ------------------------------------------------------------ vistas
+  // vistas
   function vistaFormulario() {
     if (s.desdeLista && s.resultado?.turno) return "";
     return html`
@@ -442,7 +436,7 @@ export function montarConsultar(contenedor, { inicial, onResultado }) {
     yaPintado = true;
   }
 
-  // ------------------------------------------------------------ eventos
+  // eventos
   const acciones = {
     modo: (b) => {
       s.modo = b.dataset.valor;

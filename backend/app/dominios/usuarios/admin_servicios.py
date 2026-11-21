@@ -1,15 +1,4 @@
-"""Servicios de administración de cuentas del personal (panel → Usuarios y permisos).
-
-Reglas de negocio:
-  - Solo existen los roles ADMIN, SUPERVISOR y AGENTE para el personal.
-  - Las cuentas protegidas no se desactivan ni cambian de rol o correo.
-  - Nadie cambia su propio rol ni desactiva su propia cuenta.
-  - Siempre debe quedar al menos un administrador activo.
-  - Cambiar el rol, desactivar o restablecer la clave revoca las sesiones abiertas.
-
-Los servicios devuelven los eventos de auditoría que el controlador registra
-solo cuando el cambio se guardó.
-"""
+"""Servicios de administración de cuentas del personal (panel → Usuarios y permisos)."""
 
 from app.dominios.sedes.repositorios import obtener_por_id as obtener_sede
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
@@ -71,10 +60,7 @@ def obtener_personal(usuario_id):
 
 
 def crear_personal(datos):
-    """Crea la cuenta. Sin contraseña, genera una temporal que se muestra una sola vez.
-
-    Devuelve (usuario, clave_temporal | None).
-    """
+    """Crea la cuenta."""
     try:
         rol = _rol(datos.get("rol"))
         usuario = Usuario(

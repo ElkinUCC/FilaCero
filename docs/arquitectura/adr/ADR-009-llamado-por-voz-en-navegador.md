@@ -1,6 +1,6 @@
 # ADR-009 · Llamado por voz en el navegador del asesor
 
-- **Estado**: Nuevo (entrega final) · **Atributos**: accesibilidad, costo, disponibilidad · **Riesgos**: R-08
+- **Estado**: Aceptado · **Atributos**: accesibilidad, costo, disponibilidad · **Riesgos**: R-08
 
 ## Contexto
 El docente pidió que, al presionar "Llamar siguiente", se escuche enseguida una voz y que **cada 20 segundos**

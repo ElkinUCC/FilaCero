@@ -29,8 +29,7 @@ class Organizacion(db.Model):
         return self.estado == "activa"
 
 
-# Entorno de pruebas/desarrollo que usa db.create_all(): crea una organización
-# inicial reproducible. Con MySQL la crea la migración Alembic.
+# Entorno de pruebas/desarrollo que usa db.create_all(): crea una organización inicial reproducible.
 from sqlalchemy import event, insert  # noqa: E402  (solo para create_all en pruebas)
 
 

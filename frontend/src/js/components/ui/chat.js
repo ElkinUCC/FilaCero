@@ -1,9 +1,4 @@
-/**
- * Minichat de un reclamo o consulta.
- *   yo: "CLIENTE" o "ASESOR" (sus burbujas van a la derecha).
- *   inicial: primer mensaje (la descripción del reclamo) para dar contexto.
- *   borrador: texto que la persona va escribiendo (lo guarda quien usa el chat).
- */
+/** Minichat de un reclamo o consulta. */
 import { horaDe } from "../../utils/formatters.js";
 import { html } from "../../utils/dom.js";
 import { icono } from "./icon.js";

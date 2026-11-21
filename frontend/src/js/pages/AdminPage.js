@@ -1,7 +1,4 @@
-/**
- * Panel de administración. Rutas: #/admin y #/admin/:seccion (ADMIN y SUPERVISOR).
- * Cada sección tiene su propia URL; el backend vuelve a validar el rol en cada petición.
- */
+/** Panel de administración. */
 import { canEdit, hasRole, ROLES } from "../auth/permissions.js";
 import { montarActividad } from "../components/admin/actividad.js";
 import { montarAgentes } from "../components/admin/agentes.js";
@@ -19,9 +16,7 @@ import { html } from "../utils/dom.js";
 import { ForbiddenPage } from "./ForbiddenPage.js";
 import { NotFoundPage } from "./NotFoundPage.js";
 
-/**
- * Secciones del panel. roles: quién puede verla (por defecto ADMIN y SUPERVISOR).
- */
+/** Secciones del panel. roles: quién puede verla (por defecto ADMIN y SUPERVISOR). */
 const SECCIONES = [
   { id: "resumen", texto: "Resumen", icono: "grafica", montar: montarResumen },
   { id: "sedes", texto: "Sedes", icono: "edificio", montar: (c, o) => montarCatalogo(c, { ...o, tipo: "sedes" }) },

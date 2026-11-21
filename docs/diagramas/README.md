@@ -1,6 +1,6 @@
 # FilaCero · Diagramas UML
 
-Diagramas generados a partir del código real (`backend/app/dominios/*/modelos.py`, controladores e importaciones
+Diagramas hechos a partir del código real (`backend/app/dominios/*/modelos.py`, controladores e importaciones
 entre dominios, y `frontend/src/js/`). Usan los mismos nombres que las vistas C4
 ([`docs/arquitectura/03-vistas-c4.md`](../arquitectura/03-vistas-c4.md)) y el despliegue
 ([`06-despliegue.md`](../arquitectura/06-despliegue.md)).

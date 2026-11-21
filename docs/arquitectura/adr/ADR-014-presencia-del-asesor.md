@@ -1,6 +1,6 @@
 # ADR-014 · Presencia del asesor (lo que está haciendo ahora)
 
-- **Estado**: Nuevo (entrega final, iteración 2) · **Atributos**: usabilidad del panel, trazabilidad
+- **Estado**: Aceptado · **Atributos**: usabilidad del panel, trazabilidad
 
 ## Contexto
 El docente pidió que el **estado** de cada asesor en el panel sea lo que está haciendo en ese momento:

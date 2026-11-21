@@ -1,6 +1,6 @@
 # ADR-011 · Baja lógica de cuentas del personal
 
-- **Estado**: Nuevo (entrega final) · **Atributos**: trazabilidad, integridad, seguridad
+- **Estado**: Aceptado · **Atributos**: trazabilidad, integridad, seguridad
 
 ## Contexto
 El docente señaló que no era posible **eliminar un asesor**. Existía "Retirar" (desactivar, reversible). Un

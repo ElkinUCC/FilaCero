@@ -1,10 +1,4 @@
-"""Controladores HTTP del dominio de atención.
-
-Capa de presentación: leen la petición, verifican el rol con ``@requiere_rol``,
-llaman a un servicio y devuelven el DTO en JSON con su código HTTP. No contienen
-consultas ni reglas de negocio y no importan repositorios (ver ``servicios``,
-``admin_servicios`` y ``consultas``).
-"""
+"""Controladores HTTP del dominio de atención."""
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import current_user, get_jwt_identity
@@ -52,9 +46,7 @@ def _error(error):
     return jsonify({"success": False, "error": str(error)}), getattr(error, "codigo_http", 400)
 
 
-# =====================================================================
-# AGENTE  (/api/v1/agente)
-# =====================================================================
+# AGENTE (/api/v1/agente)
 
 
 def _accion(funcion, *args, mensaje):
@@ -173,11 +165,7 @@ MENSAJES_PREPARACION = {
 @agentes_bp.post("/turnos/<int:turno_id>/preparacion")
 @requiere_rol("AGENTE")
 def preparar(turno_id):
-    """Preparación previa: el asesor alista lo que pidió el ciudadano.
-
-    Cuerpo: {"estado": "EN_PREPARACION" | "LISTO" | "NOVEDAD" | "PENDIENTE",
-             "nota": "texto visible para el ciudadano"}
-    """
+    """Preparación previa: el asesor alista lo que pidió el ciudadano."""
     datos = request.get_json(silent=True) or {}
     turno = registrar_preparacion(_agente_id(), turno_id, datos.get("estado"), datos.get("nota"))
     texto = turno_response(turno)["preparacion"]
@@ -189,9 +177,7 @@ def preparar(turno_id):
     return jsonify(turno_accion_response(turno, mensaje)), 200
 
 
-# =====================================================================
-# ADMIN  (/api/v1/admin/agentes)
-# =====================================================================
+# ADMIN (/api/v1/admin/agentes)
 
 
 @admin_agentes_bp.get("/")

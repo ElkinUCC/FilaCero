@@ -1,12 +1,4 @@
-"""Servicios del dominio Equipos (órdenes de servicio).
-
-Reglas:
-  - Un equipo pertenece a un cliente (identificado por su celular) y a una sede.
-  - Transiciones válidas: POR_RECIBIR -> RECIBIDO -> EN_REPARACION -> LISTO -> ENTREGADO
-    (se permite retroceder un paso para corregir, nunca desde ENTREGADO).
-  - Garantía: televisores con fecha de compra de máximo 1 año.
-  - Para reservar una entrega el equipo debe estar LISTO y ser del celular verificado.
-"""
+"""Servicios del dominio Equipos (órdenes de servicio)."""
 
 import secrets
 from datetime import date, timedelta
@@ -210,9 +202,7 @@ def equipos_del_celular(celular):
     return cliente, (por_cliente(cliente.id) if cliente else [])
 
 
-# ----------------------------------------------------------------------
 # Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
-# ----------------------------------------------------------------------
 
 
 def equipos_de_sede(punto_id=None, estado=None, buscar=None):

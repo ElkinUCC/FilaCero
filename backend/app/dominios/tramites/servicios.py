@@ -5,7 +5,7 @@ from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 
 from .modelos import Tramite
 
-# --- Excepciones de dominio (el app factory las traduce a HTTP) ---
+# Excepciones de dominio (el app factory las traduce a HTTP)
 
 
 class TramiteNoEncontradoError(NoEncontradoError):
@@ -171,8 +171,7 @@ def actualizar_tramite(tramite_id, datos):
         tramite.tiempo_estimado = _tiempo(datos["tiempo_estimado"])
     if "tipo_flujo" in datos:
         tramite.tipo_flujo = _flujo(datos["tipo_flujo"])
-    # La preparación previa depende del tipo de atención (ADR-010 revisado):
-    # solo se alista lo que el cliente viene a recoger o a dejar en garantía.
+    # La preparación previa depende del tipo de atención (ADR-010 revisado)
     tramite.requiere_preparacion = (tramite.tipo_flujo or "GENERAL") in FLUJOS_CON_PREPARACION
     if "activo" in datos:
         tramite.activo = bool(datos["activo"])

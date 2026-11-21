@@ -1,17 +1,4 @@
-"""Asistente inteligente de despacho de FilaCero.
-
-Objetivo de negocio: quien reserva la franja 16:00-16:30 debe empezar a ser
-atendido dentro de esa franja. Para lograrlo el asistente combina:
-
-1. Predicción de duración por trámite (regresión lineal sobre el historial
-   de la sede, con tope en DURACION_MAX_ATENCION_MIN).
-2. Planificación EDF (Earliest Deadline First): se atiende primero el turno
-   cuya franja vence antes; se proyecta la hora de inicio de cada turno
-   repartiendo la cola entre los asesores activos de la sede.
-3. Reglas de recomendación para el asesor: llamar ya, pausa activa,
-   adelantar un turno de la siguiente franja, cerrar la atención o marcar
-   ausente.
-"""
+"""Asistente inteligente de despacho de FilaCero."""
 
 from datetime import datetime, timedelta
 
@@ -36,9 +23,7 @@ from app.tiempo import desde_bd
 ESPERA_LLEGADA_SEG = 3 * 60  # tras llamar, si no llega en 3 min se sugiere "no asistió"
 
 
-# ----------------------------------------------------------------------
 # Utilidades de tiempo
-# ----------------------------------------------------------------------
 
 
 def _local(dt_bd):
@@ -68,9 +53,7 @@ def franja_actual(ahora=None):
     return {"inicio": inicio, "fin": fin}
 
 
-# ----------------------------------------------------------------------
 # 1. Predicción de duración
-# ----------------------------------------------------------------------
 
 
 def duracion_estimada_seg(punto_id, tramite, cache=None):
@@ -96,8 +79,7 @@ def duracion_estimada_seg(punto_id, tramite, cache=None):
     duraciones = [(f - i).total_seconds() for i, f in historial if f and i and f > i]
 
     if len(duraciones) >= 5:
-        # Regresión lineal sobre la secuencia: capta si el equipo va más
-        # rápido o más lento en las últimas atenciones.
+        # Regresión lineal sobre la secuencia
         valores = list(reversed(duraciones))
         n = len(valores)
         x_media = (n - 1) / 2
@@ -121,9 +103,7 @@ def duracion_estimada_seg(punto_id, tramite, cache=None):
     return resultado
 
 
-# ----------------------------------------------------------------------
 # 2. Proyección EDF de la cola
-# ----------------------------------------------------------------------
 
 
 def _disponibilidad_asesores(punto_id, ahora, cache):
@@ -156,8 +136,7 @@ def proyectar_cola(punto_id, ahora=None, cache=None):
         inicio_f, fin_f = _limites_franja(turno)
         duracion, fuente = duracion_estimada_seg(punto_id, turno.tramite, cache)
 
-        # Se asigna al asesor que se libere primero; no antes de su franja
-        # (el ciudadano llega a su hora), salvo que el asesor lo adelante.
+        # Se asigna al asesor que se libere primero, sin adelantar su franja
         indice = min(range(len(libres)), key=lambda i: libres[i])
         inicio = max(libres[indice], inicio_f)
         fin = inicio + timedelta(seconds=duracion)
@@ -190,9 +169,7 @@ def proyectar_cola(punto_id, ahora=None, cache=None):
     return proyeccion
 
 
-# ----------------------------------------------------------------------
 # 3. Recomendación para el asesor
-# ----------------------------------------------------------------------
 
 
 def corto(turno):
@@ -245,7 +222,7 @@ def recomendar(agente, activo, proyeccion, ahora):
     pausa_base = int(current_app.config.get("PAUSA_ACTIVA_SEG", 90))
     en_riesgo = [p for p in proyeccion if p["puntualidad"] in ("atrasado", "en_riesgo")]
 
-    # --- El asesor tiene un turno abierto -------------------------------
+    # El asesor tiene un turno abierto
     if activo and activo.estado == "LLAMADO":
         llamado_en = _local(activo.fecha_llamado)
         if llamado_en and (ahora - llamado_en).total_seconds() > ESPERA_LLEGADA_SEG:
@@ -297,7 +274,7 @@ def recomendar(agente, activo, proyeccion, ahora):
             turno=activo,
         )
 
-    # --- El asesor está libre -------------------------------------------
+    # El asesor está libre
     if not proyeccion:
         return _rec(
             "esperar",
@@ -322,8 +299,7 @@ def recomendar(agente, activo, proyeccion, ahora):
 
     if primero["puntualidad"] == "proxima":
         faltan = int((primero["franja_inicio"] - ahora).total_seconds())
-        # Tiempo libre antes de la siguiente franja: primero se alistan los
-        # pedidos pendientes para que esas personas lleguen y se vayan rápido.
+        # Tiempo libre antes de la siguiente franja
         por_preparar = [
             p["turno"]
             for p in proyeccion
@@ -390,9 +366,7 @@ def recomendar(agente, activo, proyeccion, ahora):
     )
 
 
-# ----------------------------------------------------------------------
 # Resumen de la franja actual y cumplimiento
-# ----------------------------------------------------------------------
 
 
 def estado_franja_actual(punto_id, ahora):

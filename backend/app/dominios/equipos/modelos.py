@@ -8,11 +8,7 @@ def _ahora():
 
 
 class Equipo(TenantScoped, db.Model):
-    """Equipo de un cliente registrado en una sede (orden de servicio).
-
-    Ciclo: POR_RECIBIR (el cliente lo registró para garantía) -> RECIBIDO ->
-    EN_REPARACION -> LISTO (listo para entregar) -> ENTREGADO.
-    """
+    """Equipo de un cliente registrado en una sede (orden de servicio)."""
 
     __tablename__ = "equipos"
 

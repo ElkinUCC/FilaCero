@@ -1,6 +1,4 @@
-/* =========================================
-   FILACERO · ADMINISTRACIÓN
-   ========================================= */
+/* FILACERO · ADMINISTRACIÓN */
 
 .adm {
   display: grid;
@@ -9,7 +7,7 @@
   background: var(--menta);
 }
 
-/* ---------- Barra lateral ---------- */
+/* Barra lateral */
 .adm__lado {
   position: sticky;
   top: 0;
@@ -81,7 +79,7 @@
 .adm__hamburguesa { display: none; }
 .adm__sombra { display: none; }
 
-/* ---------- Contenido ---------- */
+/* Contenido */
 .adm__principal { min-width: 0; padding: 22px clamp(16px, 2.5vw, 32px) 40px; }
 .adm__seccion { display: flex; flex-direction: column; gap: 16px; max-width: 1280px; margin: 0 auto; }
 
@@ -104,7 +102,7 @@
 }
 .segmentos button.activo { background: var(--papel); color: var(--tinta); box-shadow: 0 1px 2px rgb(15 42 46 / 12%); }
 
-/* ---------- KPIs: una franja continua, no tarjetas sueltas ---------- */
+/* KPIs: una franja continua, no tarjetas sueltas */
 .kpis {
   display: grid;
   grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
@@ -129,7 +127,7 @@
 .kpi--destacado .kpi__valor--medio { color: var(--ambar); }
 .kpi--destacado .kpi__valor--bajo { color: #ff9a9a; }
 
-/* ---------- Paneles ---------- */
+/* Paneles */
 .panel {
   min-width: 0;
   padding: 16px 18px;
@@ -193,7 +191,7 @@
 .chip--llamando { background: var(--azul-claro); color: var(--azul); }
 .chips--resumen .chip { background: var(--papel); border: 1px solid var(--linea); }
 
-/* ---------- Tablas ---------- */
+/* Tablas */
 .tabla-envoltura { overflow-x: auto; }
 .tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabla th {
@@ -277,7 +275,7 @@
 .catalogo-vista p { color: var(--tinta-2); font-size: 13px; line-height: 1.5; }
 .catalogo-vista .chip { justify-self: start; }
 
-/* ---------- Adaptable ---------- */
+/* Adaptable */
 @media (max-width: 1150px) {
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .kpi--destacado { grid-column: span 3; }
@@ -307,11 +305,11 @@
   .barra-tabla--filtros .dd, .campo--buscar { width: 100%; }
 }
 
-/* ---------- Navegación agrupada ---------- */
+/* Navegación agrupada */
 .adm__nav-item { display: contents; }
 .adm__nav-grupo { margin: 14px 10px 4px; color: #8fa9a5; font-size: 12px; font-weight: 600; }
 
-/* ---------- Roles ---------- */
+/* Roles */
 .rol { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 650; }
 .rol--admin { background: var(--tinta); color: #fff; }
 .rol--super { background: var(--azul-claro); color: var(--azul); }
@@ -341,7 +339,7 @@
 }
 
 
-/* ---------- Sedes ahora + reservas recientes ---------- */
+/* Sedes ahora + reservas recientes */
 .rejilla-vivo { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
 .tabla--vivo th[scope="row"] { font-weight: 600; text-align: left; white-space: nowrap; }
 .tabla--vivo td, .tabla--vivo th { white-space: nowrap; }
@@ -415,9 +413,7 @@
   vertical-align: middle;
 }
 
-/* =========================================
-   FASE 2.3 · SISTEMA VISUAL ADMINISTRATIVO
-   ========================================= */
+/* SISTEMA VISUAL ADMINISTRATIVO */
 .adm {
   grid-template-columns: 258px minmax(0, 1fr);
   background:
@@ -508,7 +504,7 @@
   .panel { padding: 15px 13px; }
 }
 
-/* ---------- Entrega final: opciones y listas del detalle ---------- */
+/* Opciones y listas del detalle */
 .opcion-preparacion { display: flex !important; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--linea); border-radius: var(--radio-m); cursor: pointer; }
 .opcion-preparacion input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--petroleo); flex: none; }
 .opcion-preparacion span { display: grid; gap: 2px; }
@@ -534,9 +530,7 @@
 .opcion-preparacion--no { background: var(--menta); color: var(--tinta-3); }
 .opcion-preparacion svg { flex: none; margin-top: 2px; }
 
-/* =====================================================================
-   Tablero ejecutivo (Resumen) — admin y supervisor (solo lectura)
-   ===================================================================== */
+/* Tablero ejecutivo (Resumen) — admin y supervisor (solo lectura) */
 .tablero { display: flex; flex-direction: column; gap: 16px; }
 .tablero__filtros { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
 .tablero__filtros .dd { min-width: 200px; }
@@ -642,7 +636,7 @@
 .heroe__pie dt { color: #a9c4c0; font-size: 11px; line-height: 1.25; }
 .heroe__pie dd { margin: 0; color: #fff; font-size: 20px; font-weight: 750; }
 
-/* ---------- Tablero: filas parejas, mismos márgenes, sin huecos ---------- */
+/* Tablero: filas parejas, mismos márgenes, sin huecos */
 .tablero { gap: 14px; }
 .tablero__kpis, .tablero__fila, .tablero .rejilla-vivo { gap: 14px; }
 .tablero__fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }

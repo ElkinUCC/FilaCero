@@ -1,9 +1,4 @@
-"""Servicios de consulta del dominio de atención (solo lectura).
-
-Arman las vistas compuestas que pide la SPA en una sola llamada: la consola del
-asesor y la foto "en vivo" del panel. También las reutiliza el asistente
-FilaCero IA, que así responde con los mismos datos y permisos que ve la persona.
-"""
+"""Servicios de consulta del dominio de atención (solo lectura)."""
 
 from datetime import datetime, time, timedelta
 
@@ -45,8 +40,7 @@ def promedio_segundos(turnos):
 
 
 def construir_panel(agente):
-    """Consola del asesor en una sola llamada: reloj, franja, cola con proyección
-    de puntualidad, recomendación del asistente y resumen de su jornada."""
+    """Consola del asesor en una sola llamada"""
     activo = turno_activo(agente.id)
     ahora = ahora_local()
 
@@ -119,15 +113,13 @@ def construir_panel(agente):
 
 
 def construir_en_vivo():
-    """Foto de la operación en este momento: cada sede activa con su franja,
-    personas en espera, asesores y las últimas reservas que llegaron."""
+    """Foto de la operación en este momento"""
     ahora = ahora_local()
     resultado = []
     for sede in repo.sedes_activas():
         proyeccion = proyectar_cola(sede.id, ahora)
         hoy = [p for p in proyeccion if p["turno"].franja.fecha == ahora.date()]
-        # Próxima franja de hoy con personas esperando (para que se vea que
-        # los turnos sí llegaron aunque la franja en curso esté vacía).
+        # Próxima franja de hoy con personas esperando
         proxima = None
         if hoy:
             primero = hoy[0]["turno"].franja

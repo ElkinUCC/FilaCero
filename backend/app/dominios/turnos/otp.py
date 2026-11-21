@@ -1,8 +1,4 @@
-"""Verificación del celular con código de un solo uso.
-
-Almacén en memoria (un solo proceso en localhost). En modo prueba el código se
-muestra en pantalla; el envío real por SMS (`_enviar_sms`) está fuera del alcance.
-"""
+"""Verificación del celular con código de un solo uso."""
 
 import hmac
 import secrets
@@ -66,19 +62,12 @@ def reiniciar():
         _codigos.clear()
 
 
-# ---------------------------------------------------------------------
 # Identidad del ciudadano a partir de su celular verificado
-# ---------------------------------------------------------------------
 VIGENCIA_TOKEN_SEG = 15 * 60
 
 
 def celular_del_token(datos, propositos=("reserva", "consulta_celular")):
-    """Devuelve el celular de un token de verificación válido.
-
-    Lo usan los módulos de equipos y reclamos: el ciudadano no tiene cuenta y
-    su identidad es el celular que acaba de verificar con el código OTP.
-    Lanza ValueError con un mensaje apto para mostrar.
-    """
+    """Devuelve el celular de un token de verificación válido."""
     from flask import g
     from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 

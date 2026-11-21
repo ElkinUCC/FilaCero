@@ -1,13 +1,4 @@
-"""Administración de cuentas del personal: credenciales, roles y bitácora.
-
-Roles:
-  ADMIN       acceso total.
-  SUPERVISOR  solo lectura del panel (resumen, historial, sedes, asesores).
-  AGENTE      consola de atención en su sede.
-
-Controlador HTTP: valida el rol, delega en ``admin_servicios`` y registra la
-auditoría cuando la operación terminó bien.
-"""
+"""Administración de cuentas del personal: credenciales, roles y bitácora."""
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import current_user

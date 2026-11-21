@@ -1,7 +1,4 @@
-/**
- * Catálogo del panel: sedes y trámites (crear, editar, activar/desactivar, eliminar).
- *   montarCatalogo(contenedor, { tipo: "sedes" | "tramites", titulo, soloLectura })
- */
+/** Catálogo del panel */
 import * as catalogoApi from "../../api/catalogo.api.js";
 import { html, pintar, pintarSiCambia } from "../../utils/dom.js";
 import { FLUJOS } from "../../utils/formatters.js";

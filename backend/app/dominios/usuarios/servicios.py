@@ -26,7 +26,7 @@ from .repositorios import buscar_por_celular, buscar_por_correo, buscar_por_id, 
 ROLES_PERSONAL = ("ADMIN", "SUPERVISOR", "AGENTE")
 
 
-# --- Excepciones de dominio (el app factory las traduce a HTTP) ---
+# Excepciones de dominio (el app factory las traduce a HTTP)
 
 
 class CorreoYaRegistradoError(ConflictoError):
@@ -54,7 +54,6 @@ def emitir_token(usuario):
 
 
 # Hash ficticio para igualar el tiempo de respuesta cuando el correo no existe
-# (evita descubrir correos registrados midiendo tiempos).
 _HASH_FICTICIO = encriptar_password("filacero-tiempo-constante")
 
 
@@ -175,9 +174,7 @@ def cambiar_clave_propia(usuario, actual, nueva):
     return usuario
 
 
-# ---------------------------------------------------------------------
 # Módulo de atención y baja definitiva del personal
-# ---------------------------------------------------------------------
 
 MODULO_MAX = 40
 
@@ -226,13 +223,7 @@ def liberar_modulo_si_choca(usuario):
 
 
 def dar_de_baja(usuario_id, actor_id, roles=ROLES_PERSONAL):
-    """Elimina una cuenta del personal conservando su historial (baja lógica).
-
-    La cuenta deja de aparecer en los listados, no puede volver a ingresar y
-    su correo queda libre para crear una cuenta nueva. Los turnos que atendió
-    y su bitácora siguen apuntando a ella: los indicadores no cambian.
-    Devuelve (usuario, correo_original).
-    """
+    """Elimina una cuenta del personal conservando su historial (baja lógica)."""
     from app.dominios.turnos.modelos import Turno
 
     usuario = db.session.get(Usuario, usuario_id)
@@ -272,9 +263,7 @@ def dar_de_baja(usuario_id, actor_id, roles=ROLES_PERSONAL):
     return usuario, correo_original
 
 
-# ---------------------------------------------------------------------
 # Presencia del asesor (lo que está haciendo cuando no atiende)
-# ---------------------------------------------------------------------
 
 PRESENCIAS = {
     "DISPONIBLE": "Disponible",
@@ -297,9 +286,7 @@ def cambiar_presencia(usuario, presencia, tiene_turno_en_curso=False):
     return usuario
 
 
-# ---------------------------------------------------------------------
 # Cédula del cliente (para dejar y recoger equipos)
-# ---------------------------------------------------------------------
 
 
 def normalizar_documento(valor):
@@ -336,9 +323,7 @@ def revocar_todas_las_sesiones(usuario):
     db.session.commit()
 
 
-# ----------------------------------------------------------------------
 # Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
-# ----------------------------------------------------------------------
 
 
 def obtener_usuario(usuario_id):

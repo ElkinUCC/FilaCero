@@ -1,10 +1,4 @@
-/**
- * Punto de entrada del frontend (JavaScript puro, sin frameworks).
- *
- * Flujo (igual que main.js del proyecto de referencia):
- *   URL (#/ruta) -> matchRoute (router/routes.js) -> resolveRoute (router/guards.js)
- *               -> XPage() pinta el HTML en #app -> mountXPage() enlaza los eventos
- */
+/** Punto de entrada del frontend (JavaScript puro, sin frameworks). */
 import { logout } from "./api/auth.api.js";
 import { EVENTO_SERVIDOR_LENTO, EVENTO_SESION_EXPIRADA } from "./api/http.js";
 import { homeFor } from "./auth/permissions.js";

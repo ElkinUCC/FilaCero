@@ -1,6 +1,6 @@
 # ADR-017 · Bootstrap 5.3 como base visual de la SPA y capas estrictas en el backend
 
-- **Estado**: Nuevo (entrega final, requisitos del curso) · **Atributos**: mantenibilidad, consistencia visual, verificabilidad, disponibilidad de la demo
+- **Estado**: Aceptado · **Atributos**: mantenibilidad, consistencia visual, verificabilidad, disponibilidad de la demo
 - **Relacionados**: ADR-001 (capas), ADR-002 (SPA sin frameworks), riesgo R-07 (cerrado)
 
 ## Contexto

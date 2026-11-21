@@ -17,17 +17,14 @@ export const devolver = accion("devolver");
 /** Rotación: el asesor elige la sede donde atiende (se registra en la bitácora). */
 export const cambiarSede = (puntoId) => http.put("/agente/sede", { punto_id: puntoId });
 
-/**
- * Preparación previa: estado = PENDIENTE | EN_PREPARACION | LISTO | NOVEDAD.
- * La nota la verá el ciudadano al consultar su turno.
- */
+/** Preparación previa: estado = PENDIENTE | EN_PREPARACION | LISTO | NOVEDAD. */
 export const preparar = (turnoId, estado, nota = "") =>
   http.post(`/agente/turnos/${turnoId}/preparacion`, { estado, nota });
 
 /** Qué está haciendo el asesor: DISPONIBLE | PAUSA | ALMUERZO | AUSENTE. */
 export const cambiarPresencia = (presencia) => http.put("/agente/presencia", { presencia });
 
-// ------------------------------------------------------- equipos de clientes
+// equipos de clientes
 export const listarEquipos = (filtros = {}) => http.get(`/equipos/${query(filtros)}`);
 /** datos: { cliente_nombre, cliente_celular, marca, modelo, serial, falla, origen, fecha_compra, nota } */
 export const registrarEquipo = (datos) => http.post("/equipos/", datos);
@@ -39,7 +36,7 @@ export const cambiarEstadoEquipo = (id, estado, nota, documento) =>
     ...(documento ? { documento } : {}),
   });
 
-// ------------------------------------------------------- reclamos
+// reclamos
 export const escribirReclamo = (id, texto) => http.post(`/reclamos/${id}/mensajes`, { texto });
 export const leerReclamo = (id) => http.put(`/reclamos/${id}/leido`, {});
 export const bandejaReclamos = (filtros = {}) => http.get(`/reclamos/${query(filtros)}`);

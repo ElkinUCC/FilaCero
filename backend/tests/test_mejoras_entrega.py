@@ -1,5 +1,4 @@
-"""Pruebas de las mejoras de la entrega final: cola ordenada, un turno en curso por
-agente, autorización de la estimación, consulta pública y errores uniformes."""
+"""Pruebas de cola ordenada y turno en curso por asesor."""
 
 from datetime import date, datetime, time, timedelta
 

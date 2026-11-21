@@ -26,8 +26,7 @@ def registro():
     datos = registro_schema.load(request.get_json(silent=True) or {})
     if not current_app.config.get("REGISTRO_PUBLICO", False):
         return {"error": "El registro público de cuentas está deshabilitado."}, 403
-    # Los errores de negocio (correo repetido, clave débil) los responde el
-    # manejador global de app/errores.py con su código HTTP.
+    # Los errores de negocio
     usuario = registrar_usuario(datos["nombre"], datos["correo"], datos["password"])
     return {
         "mensaje": "Usuario registrado correctamente",

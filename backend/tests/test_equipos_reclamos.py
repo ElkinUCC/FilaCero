@@ -1,5 +1,4 @@
-"""Entrega final (iteración 2): equipos de clientes, garantía, reclamos y
-presencia del asesor."""
+"""Pruebas de equipos, garantía, reclamos y presencia del asesor."""
 
 from datetime import time, timedelta
 
@@ -103,7 +102,7 @@ def _registrar_equipo(client, taller, **extra):
     return r.get_json()["equipo"]
 
 
-# ------------------------------------------------------------------ equipos y entrega
+# equipos y entrega
 
 
 def test_asesor_registra_equipo_y_el_ciudadano_lo_ve(client, taller):
@@ -185,7 +184,7 @@ def test_entregado_no_retrocede(client, taller):
     )
 
 
-# ------------------------------------------------------------------ garantía
+# garantía
 
 
 def test_garantia_valida_un_anio_y_registra_el_equipo(client, taller):
@@ -215,7 +214,7 @@ def test_garantia_valida_un_anio_y_registra_el_equipo(client, taller):
     assert equipo["estado"] == "POR_RECIBIR"
 
 
-# ------------------------------------------------------------------ reclamos
+# reclamos
 
 
 def test_reclamo_en_linea_y_respuesta_del_asesor(client, taller):
@@ -295,7 +294,7 @@ def test_reclamo_corto_se_rechaza(client, taller):
     assert r.status_code == 400
 
 
-# ------------------------------------------------------------------ presencia del asesor
+# presencia del asesor
 
 
 def test_presencia_del_asesor(client, taller):
@@ -362,7 +361,7 @@ def test_consulta_con_codigo_corto(client, taller):
     assert consulta.get_json()["turno"]["codigo_corto"] == f"TU-{codigo[-6:]}"
 
 
-# ------------------------------------------------------------------ tablero ejecutivo
+# tablero ejecutivo
 
 
 def test_tablero_ejecutivo_para_admin_y_supervisor(client, taller, crear_personal, auth):
@@ -406,7 +405,7 @@ def test_consulta_con_codigo_visible_tu(client, taller):
     assert consulta.status_code == 200, consulta.get_json()
 
 
-# ------------------------------------------------------------------ iteración 4
+# minichat y alertas
 
 
 def test_minichat_cliente_asistente_y_asesor(client, taller):

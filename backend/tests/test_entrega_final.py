@@ -1,5 +1,4 @@
-"""Pruebas de la entrega final: preparación previa, módulo de atención,
-baja definitiva de asesores y datos operativos del panel."""
+"""Pruebas de preparación previa y módulo de atención."""
 
 from datetime import time, timedelta
 
@@ -103,7 +102,7 @@ def _turno(codigo):
     return Turno.query.filter_by(codigo=codigo).one()
 
 
-# ------------------------------------------------------------------ preparación previa
+# preparación previa
 
 
 def test_turno_nace_pendiente_de_preparacion(client, escenario):
@@ -196,7 +195,7 @@ def test_tramite_sin_preparacion_no_genera_pendientes(client, admin_auth):
     assert estado_inicial(_db.session.get(Tramite, r.get_json()["tramite"]["id"])) is None
 
 
-# ------------------------------------------------------------------ módulo y sala
+# módulo y sala
 
 
 def test_modulo_no_se_repite_en_la_misma_sede(client, escenario):
@@ -255,7 +254,7 @@ def test_sedes_del_panel_informan_capacidad(client, escenario):
     assert "asesores_activos" not in publico
 
 
-# ------------------------------------------------------------------ baja de asesor
+# baja de asesor
 
 
 def test_eliminar_asesor_conserva_historial(client, escenario):

@@ -1,7 +1,4 @@
-/**
- * Avisos breves (toasts): avisar("Guardado"); avisar("Falló", "error").
- * Se pintan en #toasts (index.html) y desaparecen solos.
- */
+/** Avisos breves (toasts): avisar("Guardado"); avisar("Falló", "error"). */
 import { html } from "../../utils/dom.js";
 import { icono } from "./icon.js";
 

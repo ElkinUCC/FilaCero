@@ -35,9 +35,7 @@ class Turno(TenantScoped, db.Model):
 
     fecha_fin = db.Column(db.DateTime, nullable=True)
 
-    # Preparación previa (back-office): el asesor alista lo que el ciudadano
-    # pidió antes de que llegue. PENDIENTE -> EN_PREPARACION -> LISTO | NOVEDAD.
-    # None = el trámite no requiere preparación.
+    # Preparación previa (back-office): el asesor alista el pedido antes.
     estado_preparacion = db.Column(db.String(20), nullable=True)
     nota_preparacion = db.Column(db.Text, nullable=True)
     fecha_preparacion = db.Column(db.DateTime, nullable=True)

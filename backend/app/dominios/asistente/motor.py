@@ -1,26 +1,9 @@
-"""Motor conversacional local del asistente FilaCero IA.
-
-Entiende la pregunta en español natural (sin tildes, mayúsculas ni signos
-obligatorios), detecta una o varias intenciones y las entidades mencionadas
-(sede, trámite, persona de la cola) y responde con los datos reales del
-contexto. Cada respuesta trae:
-
-    respuesta    texto breve con cifras (admite **negrita** y viñetas "- ")
-    tarjetas     indicadores clave para mostrar como fichas
-    acciones     botones que el frontend puede ejecutar (llamar, preparar, navegar)
-    sugerencias  preguntas de seguimiento para continuar la conversación
-
-Funciona sin internet y sin costo. Si se configura un modelo de lenguaje
-(ver llm.py), este motor sigue calculando cifras, tarjetas y acciones, y el
-modelo solo redacta el texto final con base en esos mismos datos.
-"""
+"""Motor conversacional local del asistente FilaCero IA."""
 
 import re
 import unicodedata
 
-# ----------------------------------------------------------------------
 # Utilidades de lenguaje y formato
-# ----------------------------------------------------------------------
 
 
 def plano(texto):
@@ -130,9 +113,7 @@ class Respuesta:
         }
 
 
-# ======================================================================
 # ASISTENTE GERENCIAL (administrador y supervisor)
-# ======================================================================
 
 INTENCIONES_GERENCIALES = [
     (
@@ -699,9 +680,7 @@ def _recomendaciones_gerenciales(ctx):
     ]
 
 
-# ======================================================================
 # COPILOTO DEL ASESOR
-# ======================================================================
 
 INTENCIONES_ASESOR = [
     ("saludo", ("hola", "buen", "hey", "ayuda", "que puedes", "que sabes")),

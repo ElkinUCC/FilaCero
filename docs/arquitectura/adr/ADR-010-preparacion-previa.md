@@ -1,6 +1,6 @@
 # ADR-010 · Preparación previa como subestado del turno
 
-- **Estado**: **Revisado** (iteración 3) · **Atributos**: cumplimiento de la promesa, usabilidad, modificabilidad
+- **Estado**: Revisado · **Atributos**: cumplimiento de la promesa, usabilidad, modificabilidad
 
 ## Contexto
 Objetivo planteado por el estudiante: que cuando el ciudadano llegue **todo esté hecho** (televisor listo para

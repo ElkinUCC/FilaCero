@@ -1,15 +1,4 @@
-"""Errores de dominio y formato uniforme de respuesta.
-
-Los servicios lanzan excepciones con nombre de negocio (``SedeNoEncontradaError``,
-``CredencialesInvalidasError``...) y **no** conocen HTTP. El app factory registra un
-manejador global que traduce cada excepción a su código HTTP y al formato de error
-del contrato:
-
-    {"success": false, "error": "<mensaje legible>", "detalles": {...}}
-
-Todas heredan de ``ValueError`` para que el código que ya atrapaba ``ValueError``
-siga funcionando igual (compatibilidad hacia atrás).
-"""
+"""Errores de dominio y formato uniforme de respuesta."""
 
 from flask import jsonify
 
@@ -76,8 +65,7 @@ def respuesta_error(mensaje, codigo, detalles=None):
 
 
 def registrar_manejadores_de_dominio(app):
-    """Un único manejador para toda la jerarquía (equivale a los errorhandler
-    por excepción del proyecto de referencia, sin repetir código)."""
+    """Un único manejador para toda la jerarquía"""
 
     @app.errorhandler(ErrorDeDominio)
     def error_de_dominio(error):

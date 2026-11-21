@@ -10,9 +10,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.errores import DatosInvalidosError
 
-# ----------------------------------------------------------------------
 # Contraseñas
-# ----------------------------------------------------------------------
 
 
 def encriptar_password(password):
@@ -37,9 +35,7 @@ def validar_password_segura(password):
         raise DatosInvalidosError("La contraseña debe combinar letras y números.")
 
 
-# ----------------------------------------------------------------------
 # Celular (Colombia: 10 dígitos que inician en 3)
-# ----------------------------------------------------------------------
 
 
 def normalizar_celular(valor):
@@ -57,9 +53,7 @@ def enmascarar_celular(celular):
     return f"{celular[:3]}****{celular[-3:]}"
 
 
-# ----------------------------------------------------------------------
 # Autorización
-# ----------------------------------------------------------------------
 
 
 def requiere_token(func):
@@ -82,11 +76,7 @@ def usuario_autenticado():
 
 
 def requiere_rol(*roles):
-    """Verifica JWT y que el rol ACTUAL en base de datos esté permitido.
-
-    Así un usuario desactivado o al que se le cambió el rol pierde el acceso
-    de inmediato, aunque su token aún no haya expirado.
-    """
+    """Verifica JWT y que el rol ACTUAL en base de datos esté permitido."""
 
     def decorator(func):
         @wraps(func)
@@ -116,10 +106,7 @@ def requiere_rol(*roles):
     return decorator
 
 
-# ----------------------------------------------------------------------
 # Límite de peticiones en memoria (ventana deslizante por IP)
-# Suficiente para una sola instancia. Con varias instancias usar Redis.
-# ----------------------------------------------------------------------
 
 _registros = defaultdict(deque)
 _candado = threading.Lock()

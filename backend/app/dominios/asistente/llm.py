@@ -1,16 +1,4 @@
-"""Redacción opcional con un modelo de lenguaje (Claude de Anthropic).
-
-Se activa solo si el servidor tiene ANTHROPIC_API_KEY. Sin clave, o si el
-proveedor falla o tarda, el asistente responde con el motor local: la
-aplicación nunca depende de un servicio externo para funcionar.
-
-Garantías:
-- El modelo recibe un resumen de indicadores SIN celulares, cédulas ni
-  apellidos (ver contexto.resumen_para_modelo).
-- No tiene herramientas ni acceso a la base de datos: solo redacta con los
-  datos que se le entregan, y se le exige no inventar cifras.
-- Usa la librería estándar (urllib): no agrega dependencias.
-"""
+"""Redacción opcional con un modelo de lenguaje (Claude de Anthropic)."""
 
 import json
 import logging

@@ -1,7 +1,4 @@
-/**
- * Acceso seguro a localStorage (puede no estar disponible: modo privado,
- * almacenamiento bloqueado). Nunca lanza errores.
- */
+/** Acceso seguro a localStorage (puede no estar disponible). */
 
 export function leerLocal(clave) {
   try {

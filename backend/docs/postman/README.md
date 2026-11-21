@@ -3,11 +3,11 @@
 ## Archivos
 
 - `FilaCero.postman_collection.json`: 66 peticiones en 9 carpetas con aserciones, que recorren los flujos principales de la API (52 de las 76 rutas). Equipos, reclamos y el asistente se prueban con `pytest` y `simulacion.py`; la lista completa de rutas sale con `flask --app run routes`.
-- `FilaCero.local.postman_environment.json`: entorno local. Las claves van **vacías**: complétalas tú.
+- `FilaCero.local.postman_environment.json`: entorno local. Las claves van vacías y se llenan en Postman.
 
 ## Preparación
 
-1. `python simulacion.py --cargar` (copia las claves que imprime) y `python app.py`.
+1. En `backend/`: `python simulacion.py --cargar` (muestra las claves de prueba) y `python run.py`.
 2. En Postman, importa la colección y el entorno, y selecciona **FilaCero - Local**.
 3. Completa `clave_admin` y `clave_agente`. Cambia `fecha` por la fecha de mañana.
 4. Ejecuta la colección completa con **Run collection**. Los login guardan los tokens solos (`token_admin`, `token_agente`, `token_cliente`) y la reserva guarda `codigo_turno`.

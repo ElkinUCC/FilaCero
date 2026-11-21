@@ -1,7 +1,4 @@
-/**
- * Historial de turnos con filtros (texto, estado, sede, fechas) y paginación.
- *   montarHistorial(contenedor, { titulo })
- */
+/** Historial de turnos con filtros */
 import * as adminApi from "../../api/admin.api.js";
 import { listarSedes } from "../../api/catalogo.api.js";
 import { html, pintarSiCambia } from "../../utils/dom.js";

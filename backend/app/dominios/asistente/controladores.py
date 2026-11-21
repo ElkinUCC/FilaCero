@@ -1,13 +1,4 @@
-"""API del asistente FilaCero IA.
-
-    GET  /api/v1/asistente/sugerencias   preguntas iniciales según el rol
-    POST /api/v1/asistente/preguntar     { pregunta, historial?, dias?, punto_id? }
-
-Administrador y supervisor reciben el asistente gerencial (tablero, sedes en
-vivo, taller, reclamos y proyección de mañana). El asesor recibe el copiloto
-de su consola (cola, franja, preparación y jornada). El rol sale del JWT:
-nadie puede pedir datos de otro rol cambiando el cuerpo de la petición.
-"""
+"""API del asistente FilaCero IA."""
 
 import logging
 

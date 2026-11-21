@@ -1,8 +1,4 @@
-/**
- * Usuarios y permisos (solo ADMIN): cuentas del personal, rol, bloqueo,
- * contraseña temporal y eliminación.
- *   montarUsuarios(contenedor, { titulo })
- */
+/** Usuarios y permisos (solo ADMIN) */
 import * as adminApi from "../../api/admin.api.js";
 import { listarSedes } from "../../api/catalogo.api.js";
 import { html, pintar, pintarSiCambia } from "../../utils/dom.js";

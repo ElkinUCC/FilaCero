@@ -1,15 +1,7 @@
-/**
- * Voz y accesibilidad sin librerías (Web Speech API del navegador).
- *
- *   hablar(texto)      -> lee un texto en español
- *   anunciar(texto)    -> lo anuncia a lectores de pantalla (región aria-live)
- *   crearLlamadoPorVoz -> anuncia el turno llamado y lo repite cada 20 s (ADR-009)
- */
+/** Voz y accesibilidad sin librerías (Web Speech API del navegador). */
 import { guardarLocal, leerLocal } from "./storage.js";
 
-/* ------------------------------------------------------------------
-   Avisos para lectores de pantalla
-   ------------------------------------------------------------------ */
+/* Avisos para lectores de pantalla */
 let region = null;
 function regionViva() {
   if (!region) {
@@ -32,7 +24,7 @@ export function anunciar(texto) {
 
 export const vozDisponible = () => "speechSynthesis" in window;
 
-/** Habla en español con la voz del navegador. Devuelve false si no hay voz. */
+/** Habla en español con la voz del navegador. */
 export function hablar(texto) {
   if (!vozDisponible()) return false;
   window.speechSynthesis.cancel();
@@ -45,9 +37,7 @@ export function hablar(texto) {
   return true;
 }
 
-/* ------------------------------------------------------------------
-   Llamado por voz desde la consola del asesor
-   ------------------------------------------------------------------ */
+/* Llamado por voz desde la consola del asesor */
 export const INTERVALO_LLAMADO_MS = 20000;
 const MAX_REPETICIONES = 9; // 9 x 20 s = 3 min (tiempo máximo de llegada)
 const CLAVE = "filacero_llamado_voz";
@@ -59,7 +49,7 @@ export function articuloModulo(modulo) {
   return FEMENINOS.includes(primera) ? "a la" : "al";
 }
 
-/** "Módulo 2" -> "al Módulo 2"; "Taquilla 1" -> "a la Taquilla 1". */
+/** "Módulo 2" -> "al Módulo 2" */
 export function destinoHablado(modulo, asesor) {
   const texto = String(modulo || "").trim();
   if (!texto) return asesor ? `con el asesor ${asesor}` : "al punto de atención";
@@ -78,10 +68,7 @@ export function vozActivada() {
   return leerLocal(CLAVE) !== "no";
 }
 
-/**
- * Controlador del llamado por voz. La consola le informa el turno actual
- * en cada actualización con actualizar(turno, modulo, asesor).
- */
+/** Controlador del llamado por voz. */
 export function crearLlamadoPorVoz() {
   const estado = { activo: vozActivada(), llamadoId: null, texto: "", veces: 0, proxima: null };
   let intervalo = null;

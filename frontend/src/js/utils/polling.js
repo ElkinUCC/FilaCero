@@ -1,13 +1,4 @@
-/**
- * Consulta periódica ("en vivo" sin botón de actualizar).
- *
- *   const sondeo = crearSondeo(() => api.algo(), 5000, ({ datos, error, actualizado }) => pintar());
- *   sondeo.refrescar();   // fuerza una consulta ya
- *   sondeo.detener();     // al salir de la página
- *
- * Se pausa cuando la pestaña no está visible y refresca al volver. Si una
- * consulta falla se conserva el último dato y se informa el error.
- */
+/** Consulta periódica ("en vivo" sin botón de actualizar). */
 export function crearSondeo(cargar, intervaloMs, alCambiar) {
   const estado = { datos: null, error: "", cargando: true, actualizado: null };
   let solicitud = 0;

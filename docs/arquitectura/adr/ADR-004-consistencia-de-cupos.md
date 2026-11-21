@@ -1,6 +1,6 @@
 # ADR-004 · Consistencia de cupos bajo concurrencia
 
-- **Estado**: **Revisado en la entrega final** · **Atributos**: consistencia (prioridad 1), rendimiento · **Riesgos**: R-01
+- **Estado**: Revisado · **Atributos**: consistencia (prioridad 1), rendimiento · **Riesgos**: R-01
 
 ## Contexto
 La promesa de FilaCero es que la franja reservada se cumple. Eso exige que **nunca** haya más turnos que

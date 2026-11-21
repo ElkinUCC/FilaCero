@@ -90,7 +90,7 @@ def primera_franja(cliente, base, dias=1):
     return r.get_json()["franjas"]
 
 
-# ---------------------------------------------------------------- horario
+# horario
 
 
 def test_franjas_automaticas_todos_los_dias_24_horas(app, base):
@@ -135,7 +135,7 @@ def test_agente_no_atiende_fuera_de_horario_si_esta_restringido(app, base, monke
     assert "horario" in r.get_json()["error"]
 
 
-# ---------------------------------------------------------------- OTP
+# OTP
 
 
 def test_otp_rechaza_codigo_incorrecto_y_limita_intentos(app):
@@ -164,7 +164,7 @@ def test_otp_sin_modo_prueba_no_revela_codigo(app):
     assert "codigo_prueba" not in r.get_json()
 
 
-# ---------------------------------------------------------------- flujo público
+# flujo público
 
 
 def test_reserva_consulta_y_cancelacion_publica(app, base):
@@ -314,7 +314,7 @@ def test_limite_de_turnos_activos_por_cliente(app, base):
     assert codigos == [201, 201, 201, 400]
 
 
-# ---------------------------------------------------------------- agente
+# agente
 
 
 def _reservar_directo(base, celular=CELULAR, dias=0, hora=None):
@@ -370,7 +370,7 @@ def test_agente_devuelve_turno_a_la_cola(app, base):
     assert r.get_json()["turno"]["estado"] == "ESPERANDO"
 
 
-# ---------------------------------------------------------------- seguridad
+# seguridad
 
 
 def test_usuario_desactivado_pierde_acceso_aunque_tenga_token(app, base):
@@ -483,7 +483,7 @@ def test_metricas_por_sede_incluyen_nombre(app, base):
     assert datos["sedes"][0]["nombre"] == "Sede Centro"
 
 
-# ---------------------------------------------------------------- regresiones
+# regresiones
 
 
 def test_cola_solo_hoy_oculta_turnos_de_otros_dias(app, base):
@@ -523,8 +523,7 @@ def test_pantalla_de_sala_no_expone_datos_personales(app, base):
     r = app.test_client().get(f"/api/v1/turnos/publico/sala?sede_id={base['sede'].id}").get_json()
     llamado = r["llamados"][0]
     assert llamado["codigo"] == f"TU-{turno.codigo[-6:]}"
-    # ADR-008: la sala muestra el nombre completo de la persona llamada,
-    # pero nunca su celular ni otros datos de contacto.
+    # ADR-008: la sala muestra el nombre completo de la persona llamada
     assert llamado["nombre"] == "Cliente Demo"
     assert "celular" not in str(r) and CELULAR not in str(r)
     assert app.test_client().get("/api/v1/turnos/publico/sala").get_json()["sede"] is None
@@ -546,8 +545,7 @@ def test_pantalla_de_sala_puede_abreviar_nombres(app, base):
 
 
 def test_consulta_por_celular_exige_otp_y_devuelve_lista(client, base):
-    # Un celular verificado para consulta general puede listar sus turnos,
-    # pero no puede usar el token de reserva para consultar información.
+    # Un celular verificado para consulta general puede listar sus turnos
     token_consulta = verificar_celular(client, CELULAR, proposito="consulta_celular")
     respuesta = client.post(
         "/api/v1/turnos/publico/consultar-por-celular",

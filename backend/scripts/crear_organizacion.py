@@ -1,10 +1,4 @@
-"""Provisiona una organización en una instalación ya migrada de FilaCero.
-
-Ejemplo:
-python scripts/crear_organizacion.py --nombre "Cooperativa Norte" \\
-  --slug cooperativa-norte --industria cooperativa --pais CO \\
-  --zona-horaria America/Bogota --idioma es --moneda COP
-"""
+"""Provisiona una organización en una instalación ya migrada de FilaCero."""
 
 import argparse
 import re

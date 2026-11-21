@@ -1,12 +1,4 @@
-"""Zona horaria en la que se GUARDAN las fechas/horas en la base de datos.
-
-Todas las columnas DATETIME se guardan en hora de Colombia (America/Bogota,
-UTC-5, sin horario de verano) y sin zona ("naive"), para que al abrir la base
-de datos se lean igual que en la app. Al enviarlas al navegador se agrega el
-desfase (-05:00) para que el frontend las interprete sin ambigüedad.
-
-Este módulo no depende de Flask ni de la BD: lo usan los modelos y servicios.
-"""
+"""Zona horaria en la que se GUARDAN las fechas/horas en la base de datos."""
 
 import os
 from datetime import datetime

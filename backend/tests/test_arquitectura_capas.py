@@ -1,14 +1,4 @@
-"""Pruebas de arquitectura (fitness functions) del monolito modular por capas.
-
-Comprueban automáticamente las reglas de dependencia documentadas en
-docs/arquitectura/04-arquitectura-logica.md:
-
-1. Los controladores no acceden a la base de datos (sin ``db``, ``.query`` ni SQL) ni
-   importan repositorios: siempre pasan por el servicio del dominio.
-2. Cada dominio con persistencia tiene sus capas: modelos, repositorios, servicios,
-   DTO y controlador.
-3. Los servicios y repositorios no dependen de Flask ni de la capa HTTP.
-"""
+"""Pruebas de arquitectura (fitness functions) del monolito modular por capas."""
 
 import ast
 import pathlib

@@ -1,8 +1,4 @@
-"""Servicio de la pantalla de sala de espera (pública, sin datos personales sensibles).
-
-La TV de cada sede consulta cada 4 s: turnos llamados en los últimos 30 minutos
-(con módulo y asesor) y los próximos en espera. Nunca incluye el celular (ADR-008).
-"""
+"""Servicio de la pantalla de sala de espera (pública, sin datos personales sensibles)."""
 
 from datetime import timedelta
 

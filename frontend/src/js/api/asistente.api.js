@@ -1,7 +1,4 @@
-/**
- * Asistente FilaCero IA (/api/v1/asistente). El rol sale del token: el
- * administrador recibe el asistente gerencial y el asesor su copiloto.
- */
+/** Asistente FilaCero IA (/api/v1/asistente). */
 import { http } from "./http.js";
 
 export const sugerenciasAsistente = () => http.get("/asistente/sugerencias");

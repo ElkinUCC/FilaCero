@@ -1,9 +1,4 @@
-/**
- * Sesión del personal (token JWT + datos básicos del usuario).
- *
- * Única puerta para leer o escribir la sesión: ningún componente toca
- * localStorage directamente. El ciudadano no tiene sesión (reserva sin cuenta).
- */
+/** Sesión del personal (token JWT + datos básicos del usuario). */
 import { guardarLocal, leerLocal } from "../utils/storage.js";
 
 const CLAVE_TOKEN = "filacero_token";

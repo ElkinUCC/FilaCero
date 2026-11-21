@@ -1,9 +1,4 @@
-"""Servicios del panel administrativo para asesores, historial y métricas.
-
-Contienen las reglas de negocio y las validaciones que antes estaban en el
-controlador (deuda R-07, corregida): el controlador solo traduce HTTP.
-Lanzan errores de dominio (``app.errores``); ninguno conoce Flask.
-"""
+"""Servicios del panel administrativo para asesores, historial y métricas."""
 
 from dataclasses import dataclass
 from datetime import date
@@ -27,9 +22,7 @@ from .despacho import cumplimiento
 CAMPOS_FILTRO = ("desde", "hasta", "punto_id", "tramite_id", "estado")
 
 
-# ---------------------------------------------------------------------
 # Filtros del historial y de las métricas
-# ---------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -145,9 +138,7 @@ def leer_parametros_tablero(args):
     return parsear_fecha(args.get("desde")), parsear_fecha(args.get("hasta")), dias, punto_id
 
 
-# ---------------------------------------------------------------------
 # Asesores
-# ---------------------------------------------------------------------
 
 
 def listar_agentes():

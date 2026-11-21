@@ -35,12 +35,7 @@ def consultar_disponibilidad(punto_id=None, tramite_id=None, fecha=None):
 
 
 def franjas_reservables(sede_id, tramite_id, fecha_texto):
-    """Franjas que se pueden reservar hoy por sede, trámite y fecha (YYYY-MM-DD).
-
-    Si la sede o el trámite no tienen franjas ese día, se generan según el horario
-    configurado. Una franja está disponible si quedan cupos en ella Y en la sede
-    completa a esa hora (cupo de sede = asesores activos × 3, ver app/horario.py).
-    """
+    """Franjas que se pueden reservar hoy por sede, trámite y fecha (YYYY-MM-DD)."""
     if not sede_id or not tramite_id or not fecha_texto:
         raise DatosInvalidosError("Debes indicar sede_id, tramite_id y fecha (YYYY-MM-DD).")
     try:

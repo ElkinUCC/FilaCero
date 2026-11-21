@@ -56,11 +56,7 @@ def consultar_cola(usuario_id):
 
 
 def cambiar_sede_propia(usuario_id, punto_id):
-    """Rotación: el asesor elige en qué sede atiende hoy.
-
-    El cupo de ambas sedes se recalcula solo (cupo = 3 x asesores activos).
-    No se permite cambiar con un turno llamado o en atención.
-    """
+    """Rotación: el asesor elige en qué sede atiende hoy."""
     from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 
     if not isinstance(punto_id, int) or isinstance(punto_id, bool):
@@ -210,9 +206,7 @@ def devolver_a_cola(usuario_id, turno_id):
         raise
 
 
-# ----------------------------------------------------------------------
 # Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
-# ----------------------------------------------------------------------
 
 
 def obtener_asesor(usuario_id):

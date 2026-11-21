@@ -1,8 +1,4 @@
-"""Tablero ejecutivo: indicadores del periodo comparados con el periodo anterior.
-
-Lo consumen el administrador y el supervisor (este último solo lectura).
-Todo se calcula en una pasada sobre los turnos del rango, sin consultas por fila.
-"""
+"""Tablero ejecutivo: indicadores del periodo comparados con el periodo anterior."""
 
 from collections import Counter
 from datetime import date, timedelta
@@ -167,11 +163,7 @@ def _var(actual, anterior):
 
 
 def hallazgos(datos):
-    """Asistente de métricas: convierte los números del tablero en lecturas accionables.
-
-    Reglas explícitas y explicables (sin modelos externos): cada hallazgo dice
-    qué pasó, cuánto y qué hacer. Tono: bien | atencion | alerta | info.
-    """
+    """Asistente de métricas: convierte los números del tablero en lecturas accionables."""
     k, a = datos["kpis"], datos["kpis_anterior"]
     out = []
 

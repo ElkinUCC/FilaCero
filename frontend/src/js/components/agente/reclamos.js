@@ -1,10 +1,4 @@
-/**
- * Bandeja de reclamos de la sede. Los que llegan "en línea" se responden aquí
- * (minichat) y la respuesta la ve el ciudadano al consultar con su celular;
- * los "presenciales" además tienen un turno reservado.
- *
- *   montarReclamos(contenedor, { onPendientes }) -> función de limpieza
- */
+/** Bandeja de reclamos de la sede. */
 import * as agenteApi from "../../api/agente.api.js";
 import { html, pintar } from "../../utils/dom.js";
 import { ESTADOS_RECLAMO, fechaHora, haceTiempo } from "../../utils/formatters.js";

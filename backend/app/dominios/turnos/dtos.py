@@ -82,9 +82,7 @@ def turno_publico_response(turno):
     }
 
 
-# ---------------------------------------------------------------------
 # Pantalla de sala (pública): nunca incluye el celular
-# ---------------------------------------------------------------------
 
 
 def _nombre_corto(nombre):
@@ -95,11 +93,7 @@ def _nombre_corto(nombre):
 
 
 def nombre_para_sala(nombre):
-    """Nombre que se muestra y se anuncia en la sala de espera.
-
-    Por defecto, completo (la persona se reconoce sin ambigüedad cuando hay
-    nombres repetidos). Con SALA_NOMBRE_COMPLETO=false se abrevia (ADR-008).
-    """
+    """Nombre que se muestra y se anuncia en la sala de espera."""
     from flask import current_app
 
     if current_app.config.get("SALA_NOMBRE_COMPLETO", True):

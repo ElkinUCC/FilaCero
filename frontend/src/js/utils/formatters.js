@@ -1,7 +1,4 @@
-/**
- * Formato de fechas, horas, duraciones y estados para mostrar en pantalla.
- * Todas las fechas se interpretan en la zona horaria de Bogotá.
- */
+/** Formato de fechas, horas, duraciones y estados para mostrar en pantalla. */
 
 export const ZONA = "America/Bogota";
 
@@ -139,10 +136,7 @@ export function haceTiempo(iso) {
   return d === 1 ? "ayer" : `hace ${d} días`;
 }
 
-/**
- * Código visible de un turno, con el mismo formato corto que equipos (EQ-) y
- * reclamos (RC-): "TU-13ACE4". El código completo solo se usa internamente.
- */
+/** Código visible y corto de un turno: "TU-13ACE4". */
 export function codigoTurno(turno) {
   if (!turno) return "";
   if (turno.codigo_corto) return turno.codigo_corto;

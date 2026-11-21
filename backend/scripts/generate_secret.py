@@ -1,10 +1,4 @@
-"""
-Genera claves seguras para el archivo .env.
-
-    python scripts/generate_secret.py
-
-Copia las dos líneas en tu .env. NUNCA compartas estas claves ni las subas a Git.
-"""
+"""Genera claves seguras para el archivo .env."""
 
 import secrets
 

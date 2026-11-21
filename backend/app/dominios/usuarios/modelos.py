@@ -12,8 +12,7 @@ class Usuario(TenantScoped, db.Model):
 
     celular = db.Column(db.String(20), nullable=True, index=True)
 
-    # Cédula del cliente. Se registra al dejar un equipo en la sede y se exige
-    # al recibirlo de vuelta: el celular identifica, la cédula autoriza la entrega.
+    # Cédula del cliente.
     documento = db.Column(db.String(20), nullable=True, index=True)
 
     nombre = db.Column(db.String(100), nullable=False)
@@ -31,16 +30,12 @@ class Usuario(TenantScoped, db.Model):
     punto_asignado = db.relationship("Punto", foreign_keys=[punto_asignado_id])
 
     # Taquilla o módulo donde atiende el asesor ("Módulo 2", "Taquilla 1").
-    # Se anuncia en la sala de espera y en el llamado por voz.
     modulo = db.Column(db.String(40), nullable=True)
 
-    # Baja definitiva (lógica): la cuenta desaparece de los listados y no puede
-    # volver a ingresar, pero sus turnos atendidos y su bitácora se conservan.
+    # Baja definitiva (lógica)
     eliminado_en = db.Column(db.DateTime, nullable=True)
 
-    # Lo que el asesor está haciendo cuando no atiende: DISPONIBLE, PAUSA,
-    # ALMUERZO o AUSENTE (fuera de turno). Lo elige en su consola; el panel lo
-    # muestra como estado del asesor. None equivale a DISPONIBLE.
+    # Lo que el asesor está haciendo cuando no atiende
     presencia = db.Column(db.String(20), nullable=True)
     presencia_desde = db.Column(db.DateTime, nullable=True)
 
@@ -55,10 +50,7 @@ class Usuario(TenantScoped, db.Model):
     intentos_fallidos = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     bloqueado_hasta = db.Column(db.DateTime, nullable=True)
 
-    # Revocación de sesiones (cambio de clave, de rol, desactivación o "cerrar
-    # sesión"). Cada token lleva la versión vigente al emitirse (claim "ver");
-    # al revocar, la versión sube y todos los tokens anteriores dejan de servir
-    # en la siguiente petición, aunque se hayan emitido en el mismo segundo.
+    # Revocación de sesiones (cambio de clave, de rol, desactivación o "cerrar sesión").
     sesiones_desde = db.Column(db.DateTime, nullable=True)  # fecha de la última revocación
     version_sesion = db.Column(db.Integer, nullable=False, default=0, server_default="0")
 

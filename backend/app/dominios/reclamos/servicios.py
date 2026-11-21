@@ -1,10 +1,4 @@
-"""Servicios del dominio Reclamos.
-
-El ciudadano radica su reclamo en línea (con el celular verificado) y elige
-si lo sigue por este medio o en persona; en el segundo caso, además reserva un
-turno del trámite de reclamos. Los asesores de la sede lo gestionan y la
-respuesta queda visible para el ciudadano al consultar con su celular.
-"""
+"""Servicios del dominio Reclamos."""
 
 import secrets
 
@@ -101,9 +95,7 @@ def gestionar(asesor, reclamo_id, estado, respuesta=None):
     return reclamo
 
 
-# ---------------------------------------------------------------------
 # Minichat
-# ---------------------------------------------------------------------
 
 MENSAJE_MAX = 600
 
@@ -190,9 +182,7 @@ def marcar_leidos(reclamos, lado):
         db.session.commit()
 
 
-# ----------------------------------------------------------------------
 # Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
-# ----------------------------------------------------------------------
 
 
 def obtener_reclamo(reclamo_id):

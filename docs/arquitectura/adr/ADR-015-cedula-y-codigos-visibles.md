@@ -1,6 +1,6 @@
 # ADR-015 · Cédula para entregar equipos y códigos visibles uniformes
 
-- **Estado**: Nuevo (iteración 3) · **Atributos**: seguridad (autorización de la entrega), usabilidad, privacidad
+- **Estado**: Aceptado · **Atributos**: seguridad (autorización de la entrega), usabilidad, privacidad
 
 ## Contexto
 1. Un equipo se podía entregar con solo el celular del cliente. El celular **identifica** (llega el código SMS),

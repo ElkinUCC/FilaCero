@@ -25,9 +25,7 @@ from .repositorios import (
 
 MAX_TURNOS_ACTIVOS_POR_CLIENTE = 3
 
-# Reservas de una misma sede se procesan de a una (ver ADR-0004):
-#  - candado en memoria: protege entre hilos del mismo proceso (waitress);
-#  - SELECT ... FOR UPDATE sobre la sede: protege entre procesos en MySQL.
+# Reservas de una misma sede se procesan de a una (ver ADR-0004)
 _candados_sede = defaultdict(threading.Lock)
 _candado_global = threading.Lock()
 
@@ -125,8 +123,7 @@ def _crear_turno(
     try:
         usuario = db.session.get(Usuario, usuario_id)
         tramite = db.session.get(Tramite, tramite_id)
-        # Bloquea la sede: las reservas de una misma sede se procesan en fila
-        # (en MySQL), así nunca se supera el cupo de la franja.
+        # Bloquea la sede
         punto = db.session.query(Punto).filter_by(id=punto_id).with_for_update().first()
 
         if not usuario or not usuario.activo:
@@ -157,8 +154,7 @@ def _crear_turno(
         if reservados >= franja.capacidad:
             raise ConflictoError("La franja ya no tiene cupos disponibles.")
 
-        # Regla de puntualidad: la sede no recibe más personas por franja de
-        # las que sus asesores alcanzan a atender (3 por asesor cada 30 min).
+        # Regla de puntualidad
         if ocupacion_sede(punto_id, franja.fecha, franja.hora_inicio) >= capacidad_sede(punto_id):
             raise ConflictoError("La franja ya no tiene cupos disponibles.")
 
@@ -230,18 +226,11 @@ def cancelar_turno_publico(turno):
         raise
 
 
-# ---------------------------------------------------------------------
 # Vínculos según el tipo de trámite (entrega, garantía, reclamo)
-# ---------------------------------------------------------------------
 
 
 def validar_vinculos_del_flujo(tramite_id, usuario, datos):
-    """Valida, ANTES de reservar, lo que exige el tipo de trámite.
-
-    ENTREGA:  un equipo del ciudadano que esté listo.
-    GARANTIA: marca, fecha de compra (máximo 1 año) y falla del televisor.
-    RECLAMO:  opcionalmente, el reclamo ya radicado que seguirá en persona.
-    """
+    """Valida, ANTES de reservar, lo que exige el tipo de trámite."""
     from app.dominios.equipos.servicios import datos_garantia, equipo_para_entrega
     from app.dominios.reclamos.repositorios import obtener as obtener_reclamo
 
@@ -280,9 +269,7 @@ def vincular_al_turno(turno, usuario, punto_id, vinculos):
     return turno
 
 
-# ----------------------------------------------------------------------
 # Consultas para la capa de presentación (ADR-017: controlador → servicio → repositorio)
-# ----------------------------------------------------------------------
 
 
 def buscar_turno_por_codigo(codigo, celular=None):

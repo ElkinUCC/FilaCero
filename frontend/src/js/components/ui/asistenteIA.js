@@ -1,14 +1,4 @@
-/**
- * Asistente FilaCero IA: botón flotante + panel de conversación.
- *
- *   montarAsistenteIA(contenedor, { titulo, subtitulo, onAccion }) -> función de limpieza
- *     titulo     "FilaCero IA" (panel administrativo) o "Copiloto IA" (consola del asesor)
- *     onAccion   ejecuta los botones que propone el asistente:
- *                { tipo: "llamar" | "preparar", turno_id } · { tipo: "navegar" | "seccion", destino }
- *
- * La conversación se conserva mientras la pestaña esté abierta (no se guarda
- * en el navegador porque puede contener nombres de clientes).
- */
+/** Asistente FilaCero IA: botón flotante + panel de conversación. */
 import { preguntarAsistente, sugerenciasAsistente } from "../../api/asistente.api.js";
 import { crudo, esc, html, pintar } from "../../utils/dom.js";
 import { icono } from "./icon.js";

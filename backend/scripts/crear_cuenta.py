@@ -1,16 +1,4 @@
-"""
-Crea (o actualiza) una cuenta del personal. La contraseña se escribe a mano
-y NO queda en ningún archivo: solo su hash en la base de datos.
-
-    python scripts/crear_cuenta.py elkinadmin@filacero.com ADMIN "Elkin Administrador"
-    python scripts/crear_cuenta.py elkinagente@filacero.com AGENTE "Elkin Asesor" "Sede Centro"
-    python scripts/crear_cuenta.py admin@cooperativa.com ADMIN "Admin Cooperativa" --organizacion-id 2
-
-Para que la cuenta no se pueda desactivar desde el panel y sobreviva a
-`python simulacion.py --cargar`, agrégala en tu .env:
-
-    CUENTAS_PROTEGIDAS=elkinadmin@filacero.com,elkinagente@filacero.com
-"""
+"""Crea (o actualiza) una cuenta del personal."""
 
 import argparse
 import getpass

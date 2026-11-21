@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FilaCero · Turnos</title>
     <meta name="theme-color" content="#0f2a2e" />
-    <!-- Seguridad en localhost: solo scripts propios (sin scripts en línea) y llamadas a la API del puerto 5000. -->
-    <!-- Todo se sirve desde este mismo origen (Bootstrap y la fuente están en public/vendor): funciona sin internet. -->
+    <!-- Seguridad: solo scripts propios y llamadas a la API local. -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' http://*:5000; base-uri 'self'; form-action 'self'; object-src 'none'" />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
 
-    <!-- Estilos. Base: Bootstrap 5.3.9 (copia local, sin CDN) + tema que lo conecta con el diseño de FilaCero. -->
-    <!-- El orden importa: Bootstrap y su tema primero, luego base y componentes, cada página y responsive al final. -->
+    <!-- Estilos: Bootstrap 5.3 local, tema propio y hojas de cada página. -->
     <link rel="stylesheet" href="public/vendor/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="src/css/bootstrap-tema.css" />
     <link rel="stylesheet" href="src/css/fuentes.css" />
@@ -28,13 +26,13 @@
     <link rel="stylesheet" href="src/css/responsive.css" />
   </head>
   <body>
-    <!-- Contenedor único del SPA: main.js pinta aquí la página de la ruta actual. -->
+    <!-- Contenedor del SPA: main.js pinta aquí la página actual. -->
     <div id="app"></div>
 
     <!-- Avisos breves (toasts) y aviso de servidor lento. -->
     <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 
-    <!-- Configuración (URL del backend y organización) y punto de entrada. -->
+    <!-- Configuración y punto de entrada. -->
     <script type="module" src="src/js/main.js"></script>
   </body>
 </html>

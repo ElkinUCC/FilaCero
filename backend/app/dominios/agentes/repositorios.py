@@ -1,9 +1,4 @@
-"""Acceso a datos del dominio de atención (consola del asesor y panel administrativo).
-
-Todas las consultas del módulo viven aquí: los controladores no consultan la base
-de datos y los servicios no construyen SQL. El filtro multiempresa lo aplica el ORM
-(``TenantScoped``), por eso ninguna consulta repite ``organizacion_id``.
-"""
+"""Acceso a datos del dominio de atención (consola del asesor y panel administrativo)."""
 
 from sqlalchemy import func
 
@@ -18,9 +13,7 @@ from app.dominios.usuarios.modelos import Usuario
 ESTADOS_EN_CURSO = ("LLAMADO", "EN_ATENCION")
 
 
-# ---------------------------------------------------------------------
 # Asesores
-# ---------------------------------------------------------------------
 
 
 def obtener_agente(usuario_id):
@@ -59,9 +52,7 @@ def asesores_activos_de_sede(punto_id):
     return Usuario.query.filter_by(rol="AGENTE", activo=True, punto_asignado_id=punto_id).all()
 
 
-# ---------------------------------------------------------------------
 # Sedes
-# ---------------------------------------------------------------------
 
 
 def obtener_sede(punto_id):
@@ -72,9 +63,7 @@ def sedes_activas():
     return Punto.query.filter_by(activo=True).order_by(Punto.nombre).all()
 
 
-# ---------------------------------------------------------------------
 # Turnos de la consola
-# ---------------------------------------------------------------------
 
 
 def obtener_cola(punto_id):
@@ -111,17 +100,11 @@ def turnos_recientes(limite=8):
     return Turno.query.order_by(Turno.hora_solicitud.desc(), Turno.id.desc()).limit(limite).all()
 
 
-# ---------------------------------------------------------------------
 # Turnos del panel administrativo (historial y métricas)
-# ---------------------------------------------------------------------
 
 
 def consulta_turnos_admin(filtros):
-    """Consulta base del historial y las métricas con los filtros ya validados.
-
-    ``filtros`` es un ``FiltrosTurnos`` (ver ``admin_servicios``). Las fechas se
-    aplican sobre la fecha de la cita (franja), no sobre la fecha de reserva.
-    """
+    """Consulta base del historial y las métricas con los filtros ya validados."""
     consulta = Turno.query.join(Franja, Turno.franja_id == Franja.id)
     if filtros.desde:
         consulta = consulta.filter(Franja.fecha >= filtros.desde)

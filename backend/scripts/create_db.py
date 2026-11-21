@@ -1,14 +1,4 @@
-"""
-Crea la base de datos MySQL de FilaCero si no existe.
-
-Lee las credenciales del archivo .env (nunca del código):
-    DB_USER, DB_PASSWORD, DB_HOST (localhost), DB_PORT (3307),
-    DB_NAME (filacero_db), DB_CHARSET (utf8mb4)
-
-Uso (carpeta backend, venv activo):
-    python scripts/create_db.py
-    flask db upgrade
-"""
+"""Crea la base de datos MySQL de FilaCero si no existe."""
 
 import os
 import sys

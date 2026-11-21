@@ -1,8 +1,4 @@
-/**
- * Guardas de navegación (guards.js, igual que en el proyecto de referencia).
- * Deciden qué ve cada persona según su sesión y su rol. El backend vuelve a
- * validar todo: estas guardas solo evitan pantallas que van a fallar.
- */
+/** Guardas de navegación: revisan sesión y rol antes de abrir una ruta. */
 import { hasRole, homeFor, isAuthenticated } from "../auth/permissions.js";
 
 /** Sin sesión -> al portal con el acceso del personal abierto. */
@@ -15,13 +11,7 @@ export function requireRole(usuario, roles) {
   return hasRole(usuario, roles) ? null : { forbidden: true };
 }
 
-/**
- * Resuelve qué mostrar para una URL:
- *   { route, params }  -> pintar la página
- *   { redirect }       -> cambiar de URL
- *   { forbidden }      -> 403
- *   { notFound }       -> 404
- */
+/** Resuelve qué mostrar para una URL */
 export function resolveRoute(match, usuario) {
   if (!match) return { notFound: true };
   const { route } = match;

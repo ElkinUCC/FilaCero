@@ -1,7 +1,4 @@
-/**
- * Asesores: personas que atienden en cada sede (crear, editar, retirar, eliminar).
- *   montarAgentes(contenedor, { titulo, soloLectura })
- */
+/** Asesores: personas que atienden en cada sede */
 import * as adminApi from "../../api/admin.api.js";
 import { listarSedes } from "../../api/catalogo.api.js";
 import { html, pintar, pintarSiCambia } from "../../utils/dom.js";

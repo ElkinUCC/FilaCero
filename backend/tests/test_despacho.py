@@ -83,7 +83,7 @@ def bd_naive(dt):
     return a_bd(dt)
 
 
-# ---------------------------------------------------------------- cupos
+# cupos
 
 
 def test_un_asesor_atiende_maximo_3_por_franja_sumando_tramites(app, base):
@@ -129,7 +129,7 @@ def test_disponibilidad_refleja_cupo_de_la_sede(app, base):
     assert otras[0]["hora_inicio"] == "00:00" and otras[0]["disponibles"] == 1
 
 
-# ---------------------------------------------------------------- despacho
+# despacho
 
 
 def test_recomienda_pausa_activa_si_va_adelantado(app, base):

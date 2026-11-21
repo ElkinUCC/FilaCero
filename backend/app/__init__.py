@@ -1,16 +1,4 @@
-"""App factory de FilaCero.
-
-Igual que el proyecto de referencia: crea la app, inicializa extensiones,
-registra un blueprint por dominio y los manejadores globales de error.
-
-    app/
-      __init__.py      <- este archivo (crear_app / create_app)
-      config.py        <- configuración leída del .env
-      errores.py       <- excepciones de dominio + formato de error
-      seguridad.py     <- JWT, roles, contraseñas, límites por IP
-      horario.py       <- reglas de horario y cupo por sede
-      dominios/<dominio>/{controladores,servicios,repositorios,modelos,dtos}.py
-"""
+"""App factory de FilaCero."""
 
 import logging
 import os
@@ -40,12 +28,7 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
-    # Consistencia de cupos (ADR-004): en MySQL/InnoDB el aislamiento por
-    # defecto (REPEATABLE READ) fija la "foto" de los datos en la primera
-    # lectura de la transacción, antes de tomar el bloqueo de la sede, y el
-    # conteo de cupos puede quedar desactualizado bajo concurrencia. Con
-    # READ COMMITTED cada consulta ve lo ya confirmado por quien liberó el
-    # bloqueo. SQLite (pruebas) no admite este nivel y se omite.
+    # Consistencia de cupos (ADR-004)
     opciones_motor = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
     if str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).startswith("mysql"):
         opciones_motor.setdefault("isolation_level", "READ COMMITTED")
@@ -66,8 +49,7 @@ def create_app(test_config=None):
     migrate.init_app(app, db)
     jwt.init_app(app)
 
-    # El aislamiento se aplica en el ORM, no depende de que cada controlador
-    # recuerde agregar manualmente el filtro por organización.
+    # El aislamiento se aplica en el ORM
     from app.tenancy import instalar_aislamiento_multiempresa, resolver_organizacion_peticion
 
     instalar_aislamiento_multiempresa()
@@ -227,9 +209,6 @@ def _registrar_manejadores(app):
         except (KeyError, TypeError, ValueError):
             return None
         # Token emitido antes de un cambio de credenciales / rol / logout.
-        # Los JWT heredados pueden no incluir org_id. En ese caso, la
-        # organización se deriva del usuario en resolver_organizacion_peticion;
-        # si el claim sí existe, debe coincidir exactamente con la BD.
         if usuario and "org_id" in payload:
             try:
                 if int(payload["org_id"]) != int(usuario.organizacion_id):
@@ -250,9 +229,7 @@ def _registrar_manejadores(app):
             return False
         if usuario is None or not usuario.activo:
             return False
-        # Compatibilidad con tokens anteriores a multiempresa: la ausencia
-        # del claim no autoriza elegir un tenant; el middleware lo resuelve
-        # desde la cuenta autenticada. Un claim presente y falso sí se rechaza.
+        # Compatibilidad con tokens anteriores a multiempresa
         if "org_id" in payload:
             try:
                 if int(payload["org_id"]) != int(usuario.organizacion_id):
@@ -270,5 +247,5 @@ def _registrar_manejadores(app):
         return jsonify({"error": "Sesión inválida. Inicia sesión de nuevo."}), 401
 
 
-# Nombre en español, igual que en el proyecto de referencia (run.py lo usa).
+# Nombre en español que usa run.py.
 crear_app = create_app

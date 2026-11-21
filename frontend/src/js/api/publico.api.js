@@ -1,7 +1,4 @@
-/**
- * Portal del ciudadano y pantalla de sala: rutas públicas (sin token).
- * El ciudadano no tiene cuenta: se identifica con su celular verificado por código.
- */
+/** Portal del ciudadano y pantalla de sala: rutas públicas (sin token). */
 import { http, query } from "./http.js";
 
 const publico = { sinToken: true };
@@ -56,8 +53,7 @@ export const cancelarTurno = (codigo, celular, tokenVerificacion) =>
 export const pantallaSala = (sedeId) =>
   http.get(`/turnos/publico/sala${query({ sede_id: sedeId })}`, publico);
 
-// ------------------------------------------------------- equipos y reclamos
-// Requieren el token del celular verificado (OTP): el ciudadano no tiene cuenta.
+// equipos y reclamos (requieren el celular verificado con OTP)
 const conToken = (celular, tokenVerificacion, extra = {}) => ({
   celular, token_verificacion: tokenVerificacion, ...extra,
 });

@@ -1,8 +1,4 @@
-/**
- * Selector de lo que está haciendo el asesor: Disponible, En pausa, En almuerzo
- * o Fuera de turno. El panel administrativo lo muestra como su estado actual.
- * La página guarda si el menú está abierto y pinta con presenciaHTML().
- */
+/** Selector de lo que está haciendo el asesor: Disponible, En pausa, En almuerzo o Fuera de turno. */
 import { html } from "../../utils/dom.js";
 import { horaDe, PRESENCIAS } from "../../utils/formatters.js";
 import { icono } from "../ui/icon.js";

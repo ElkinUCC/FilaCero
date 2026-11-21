@@ -1,9 +1,4 @@
-/**
- * Consola del asesor con asistente de despacho. Ruta: #/agente (rol AGENTE)
- *
- * Secciones: Atención (puesto + cola), Equipos (taller) y Reclamos.
- * Se actualiza sola: panel cada 5 s, reclamos cada 12 s y reloj cada segundo.
- */
+/** Consola del asesor con asistente de despacho. */
 import * as agenteApi from "../api/agente.api.js";
 import { listarSedes } from "../api/publico.api.js";
 import { montarEquipos } from "../components/agente/equipos.js";
@@ -89,7 +84,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
   const raiz = document.querySelector(".ag");
   const zona = (nombre) => raiz.querySelector(`[data-${nombre}]`);
 
-  // ------------------------------------------------------------ estado
+  // estado
   const s = {
     sedes: [],
     seccion: "atencion",
@@ -123,7 +118,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
   const p = () => panel.estado.datos;
   const actual = () => p()?.actual;
 
-  // ------------------------------------------------------------ acciones
+  // acciones
   async function ejecutar(accion, exito, alTerminar) {
     s.ocupado = true;
     render();
@@ -258,7 +253,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     render();
   }
 
-  // ------------------------------------------------------------ alertas emergentes del asistente
+  // alertas emergentes del asistente
   function emitir(clave, alerta) {
     if (avisadas.has(clave)) return;
     avisadas.add(clave);
@@ -300,7 +295,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     }
   }
 
-  // ------------------------------------------------------------ vistas
+  // vistas
   function barraHTML() {
     const datos = p();
     const franja = datos?.franja_actual;
@@ -677,7 +672,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     );
   }
 
-  // ------------------------------------------------------------ pintar
+  // pintar
   const renderBarra = () => pintarSiCambia(zona("barra"), barraHTML());
   const renderTabs = () => pintarSiCambia(zona("tabs"), html`${tabsHTML()}`);
   const renderAlertas = () => pintarSiCambia(zona("alertas"), html`${alertasHTML()}`);
@@ -693,8 +688,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     );
     renderTabs();
     if (s.seccion === "atencion") {
-      // Solo se repinta si cambió algo; las animaciones de entrada no se repiten
-      // mientras el turno del puesto siga siendo el mismo.
+      // Solo se repinta si cambió algo
       const clave = `${actual()?.id}-${actual()?.estado}-${Boolean(s.cierre)}`;
       const cambio = pintarSiCambia(zona("seccion"), atencionHTML());
       if (cambio) zona("seccion").classList.toggle("repintado", clave === colaVista);
@@ -758,7 +752,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     revisarAlertas();
   }
 
-  // ------------------------------------------------------------ datos en vivo
+  // datos en vivo
   /** Llegó el panel: hora del servidor, voz, turnos nuevos y re-pintado. */
   function alLlegarPanel(estado) {
     const datos = estado.datos;
@@ -816,7 +810,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     })
     .catch(() => {});
 
-  // ------------------------------------------------------------ eventos
+  // eventos
   const acciones = {
     llamar: (b) => llamar(b.dataset.id ? Number(b.dataset.id) : undefined),
     iniciar: (b) => ejecutar(() => agenteApi.iniciar(Number(b.dataset.id))),

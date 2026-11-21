@@ -1,8 +1,4 @@
-"""Contratos JSON (DTO) del dominio de atención.
-
-Los DTO definen la forma pública de los datos: el controlador solo los devuelve
-y nunca arma diccionarios a partir de modelos.
-"""
+"""Contratos JSON (DTO) del dominio de atención."""
 
 from app.dominios.turnos.dtos import turno_response
 from app.dominios.usuarios.dtos import usuario_response

@@ -1,8 +1,4 @@
-"""Servicios de la organización: validar y aplicar cambios de configuración.
-
-Solo se modifican campos permitidos con formato válido; el JSON de configuración
-no puede guardar credenciales (deben ir en un almacén de secretos).
-"""
+"""Servicios de la organización: validar y aplicar cambios de configuración."""
 
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError

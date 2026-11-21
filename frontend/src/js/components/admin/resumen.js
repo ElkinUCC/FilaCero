@@ -1,8 +1,4 @@
-/**
- * Resumen: tablero ejecutivo del panel (indicadores, tendencia, operación en
- * vivo, demanda por hora, taller, reclamos, sedes y trámites).
- *   montarResumen(contenedor, { titulo, soloLectura })
- */
+/** Resumen: tablero ejecutivo del panel */
 import * as adminApi from "../../api/admin.api.js";
 import { listarSedes } from "../../api/publico.api.js";
 import { html, pintarSiCambia } from "../../utils/dom.js";
