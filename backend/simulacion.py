@@ -56,13 +56,15 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app.tiempo import a_bd, ahora_bd  # noqa: E402  (hora Colombia, como se guarda)
 
 VERDE, ROJO, AMBAR, GRIS, NEGRITA, FIN = (
     "\033[32m",
@@ -501,7 +503,7 @@ def cargar_semana(
     clientes = _clientes(db, rnd)
     ahora = ahora_local()
     hoy = ahora.date()
-    utc = lambda d: d.astimezone(UTC).replace(tzinfo=None)  # noqa: E731
+    utc = a_bd  # fechas con zona -> hora Colombia sin zona (como se guardan)
     pesos = [s[3] for s in SERVICIOS]
     codigos = {codigo for (codigo,) in Turno.query.with_entities(Turno.codigo).all()}
     totales = {"ATENDIDO": 0, "NO_ASISTIO": 0, "CANCELADO": 0, "ESPERANDO": 0}
@@ -754,7 +756,7 @@ _CODIGOS_SIM = set()
 def _nuevo_equipo(cliente, sede, rnd, estado, origen="REPARACION", asesor=None, momento=None):
     from app.dominios.equipos.modelos import Equipo
 
-    momento = momento or datetime.now(UTC).replace(tzinfo=None)
+    momento = momento or ahora_bd()
     return Equipo(
         codigo=_codigo_unico("EQ", rnd, _CODIGOS_SIM),
         cliente_id=cliente.id,
@@ -783,7 +785,7 @@ def _simular_vinculos(turno, servicio, cliente, sede, asesores, rnd, ahora):
 
     flujo = FLUJOS_SERVICIO.get(servicio.nombre)
     asesor = asesores[0] if asesores else None
-    momento = turno.hora_solicitud or ahora.astimezone(UTC).replace(tzinfo=None)
+    momento = turno.hora_solicitud or a_bd(ahora)
     pendiente = turno.estado == "ESPERANDO"
     if flujo == "ENTREGA":
         estado = "LISTO" if pendiente or turno.estado != "ATENDIDO" else "ENTREGADO"
@@ -817,7 +819,7 @@ def _simular_equipos_y_reclamos(db, datos, rnd):
     from app.dominios.reclamos.modelos import Reclamo
     from app.dominios.usuarios.modelos import Usuario
 
-    ahora = datetime.now(UTC).replace(tzinfo=None)
+    ahora = ahora_bd()
     clientes = Usuario.query.filter_by(rol="CLIENTE").limit(80).all()
     for i, cliente in enumerate(clientes[:48]):
         sede = datos["sedes"][i % len(datos["sedes"])]
@@ -915,7 +917,7 @@ def _simular_preparacion(turno, servicio, asesores, rnd, ahora):
         return
     turno.preparado_por_id = responsable.id
     momento = min(ahora, ahora - timedelta(minutes=rnd.randint(5, 240)))
-    turno.fecha_preparacion = momento.astimezone(UTC).replace(tzinfo=None)
+    turno.fecha_preparacion = a_bd(momento)
     if estado == "LISTO":
         turno.nota_preparacion = rnd.choice(NOTAS_LISTO)
     elif estado == "NOVEDAD":
@@ -1068,7 +1070,7 @@ def comando_cuentas(args):
                 "CUENTAS_PROTEGIDAS=elkinadmin@filacero.co,elkinagente@filacero.co"
             )
             return 1
-        ahora = datetime.now(UTC).replace(tzinfo=None)
+        ahora = ahora_bd()
         problemas = 0
         for correo in correos:
             print(f"\n{NEGRITA}{correo}{FIN}")
@@ -1326,7 +1328,7 @@ def _agentes_demo_automaticos():
 
 def _cerrar_vinculos(db, turno, agente_id):
     """Al terminar la atención, el equipo o el reclamo del turno avanzan como en la sede."""
-    ahora = datetime.now(UTC).replace(tzinfo=None)
+    ahora = ahora_bd()
     if turno.equipo is not None:
         equipo = turno.equipo
         if equipo.estado == "LISTO":
@@ -1459,7 +1461,7 @@ def _liberar_asesores_trabados(db, agentes, minutos=10):
     from app.dominios.agentes.servicios import finalizar_atencion, marcar_no_asistio
     from app.dominios.turnos.modelos import Turno
 
-    limite = datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=minutos)
+    limite = ahora_bd() - timedelta(minutes=minutos)
     trabados = Turno.query.filter(
         Turno.agente_id.in_([a.id for a in agentes]),
         Turno.estado.in_(("LLAMADO", "EN_ATENCION")),
@@ -1513,7 +1515,7 @@ def _registrar_sesion_agentes(db, agentes, accion, detalle):
     """Registra entrada/salida de los agentes demo para que aparezcan en Actividad."""
     from app.dominios.auditoria.modelos import Auditoria
 
-    instante = datetime.now(UTC).replace(tzinfo=None)
+    instante = ahora_bd()
     for agente in agentes:
         db.session.add(
             Auditoria(

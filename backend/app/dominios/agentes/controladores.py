@@ -13,7 +13,7 @@ from app.dominios.auditoria.servicios import registrar
 from app.dominios.turnos.dtos import turno_response
 from app.dominios.turnos.preparacion import registrar_preparacion
 from app.dominios.usuarios.servicios import PRESENCIAS, cambiar_presencia, dar_de_baja
-from app.horario import a_iso_utc
+from app.horario import a_iso
 from app.seguridad import requiere_rol
 
 from . import admin_servicios
@@ -101,7 +101,7 @@ def cambiar_presencia_propia():
     return {
         "mensaje": f"Tu estado: {PRESENCIAS[agente.presencia]}.",
         "presencia": agente.presencia,
-        "presencia_desde": a_iso_utc(agente.presencia_desde),
+        "presencia_desde": a_iso(agente.presencia_desde),
     }, 200
 
 

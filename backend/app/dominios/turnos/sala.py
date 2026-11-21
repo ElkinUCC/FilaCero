@@ -4,11 +4,12 @@ La TV de cada sede consulta cada 4 s: turnos llamados en los últimos 30 minutos
 (con módulo y asesor) y los próximos en espera. Nunca incluye el celular (ADR-008).
 """
 
-from datetime import UTC, timedelta
+from datetime import timedelta
 
 from app.dominios.sedes.repositorios import obtener_activos as sedes_activas
 from app.dominios.sedes.repositorios import obtener_por_id as obtener_sede
 from app.horario import ahora_local, hoy_local, info_horario
+from app.tiempo import a_bd
 
 from . import repositorios as repo
 from .dtos import turno_llamado_sala_response, turno_siguiente_sala_response
@@ -23,8 +24,7 @@ def pantalla_de_sala(sede_id):
         return {"sedes": sedes, "sede": None}
 
     hoy = hoy_local()
-    desde = (ahora_local() - timedelta(minutes=MINUTOS_VISIBLES)).astimezone(UTC)
-    desde = desde.replace(tzinfo=None)
+    desde = a_bd(ahora_local() - timedelta(minutes=MINUTOS_VISIBLES))
     return {
         "sedes": sedes,
         "sede": {"id": sede.id, "nombre": sede.nombre, "direccion": sede.direccion},

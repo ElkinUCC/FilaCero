@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.errores import DatosInvalidosError
+from app.tiempo import a_iso  # noqa: F401  (reexportado para los DTOs)
 
 
 def _organizacion_actual():
@@ -213,9 +214,3 @@ def validar_fecha_reservable(fecha):
     if not dia_habil(fecha):
         raise DatosInvalidosError("No hay atención ese día.")
 
-
-def a_iso_utc(valor):
-    """Fechas guardadas en UTC sin zona -> ISO con sufijo Z para el navegador."""
-    if valor is None:
-        return None
-    return valor.replace(microsecond=0).isoformat() + "Z"

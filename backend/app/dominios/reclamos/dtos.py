@@ -1,4 +1,4 @@
-from app.horario import a_iso_utc
+from app.horario import a_iso
 
 ESTADOS_RECLAMO = {
     "RADICADO": "Radicado",
@@ -28,7 +28,7 @@ def mensaje_response(m):
         "autor": m.autor,
         "autor_nombre": m.autor_nombre,
         "texto": m.texto,
-        "fecha": a_iso_utc(m.fecha),
+        "fecha": a_iso(m.fecha),
     }
 
 
@@ -48,7 +48,7 @@ def _hilo(reclamo):
                     reclamo.gestionado_por.nombre if reclamo.gestionado_por else "Asesor"
                 ),
                 "texto": reclamo.respuesta,
-                "fecha": a_iso_utc(reclamo.fecha_respuesta),
+                "fecha": a_iso(reclamo.fecha_respuesta),
             },
         )
     return hilo
@@ -67,8 +67,8 @@ def reclamo_response(reclamo, *, publica=False):
         "respuesta": reclamo.respuesta,
         "sede": reclamo.punto.nombre if reclamo.punto else None,
         "equipo": _equipo(reclamo),
-        "fecha": a_iso_utc(reclamo.fecha_creacion),
-        "fecha_respuesta": a_iso_utc(reclamo.fecha_respuesta),
+        "fecha": a_iso(reclamo.fecha_creacion),
+        "fecha_respuesta": a_iso(reclamo.fecha_respuesta),
         "mensajes": _hilo(reclamo),
         "sin_leer": sum(
             1

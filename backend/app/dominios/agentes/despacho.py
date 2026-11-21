@@ -13,7 +13,7 @@ atendido dentro de esa franja. Para lograrlo el asistente combina:
    ausente.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from flask import current_app
 
@@ -31,6 +31,7 @@ from app.horario import (
     duracion_max_atencion_min,
     zona,
 )
+from app.tiempo import desde_bd
 
 ESPERA_LLEGADA_SEG = 3 * 60  # tras llamar, si no llega en 3 min se sugiere "no asistió"
 
@@ -40,11 +41,11 @@ ESPERA_LLEGADA_SEG = 3 * 60  # tras llamar, si no llega en 3 min se sugiere "no 
 # ----------------------------------------------------------------------
 
 
-def _local(dt_utc_naive):
-    """Fechas guardadas en UTC sin zona -> hora local con zona."""
-    if dt_utc_naive is None:
+def _local(dt_bd):
+    """Fechas guardadas (hora Colombia sin zona) -> hora local con zona."""
+    if dt_bd is None:
         return None
-    return dt_utc_naive.replace(tzinfo=UTC).astimezone(zona())
+    return desde_bd(dt_bd).astimezone(zona())
 
 
 def _limites_franja(turno):

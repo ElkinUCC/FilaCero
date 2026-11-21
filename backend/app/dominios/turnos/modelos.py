@@ -1,7 +1,6 @@
-from datetime import UTC, datetime
-
 from app import db
 from app.tenancy import TenantScoped
+from app.tiempo import ahora_bd
 
 
 class Turno(TenantScoped, db.Model):
@@ -13,7 +12,7 @@ class Turno(TenantScoped, db.Model):
     hora_solicitud = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=lambda: ahora_bd(),
     )
 
     estado = db.Column(db.String(30), nullable=False, default="ESPERANDO")

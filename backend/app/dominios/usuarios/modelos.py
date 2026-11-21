@@ -1,7 +1,6 @@
-from datetime import UTC, datetime
-
 from app import db
 from app.tenancy import TenantScoped
+from app.tiempo import ahora_bd, desde_bd
 
 
 class Usuario(TenantScoped, db.Model):
@@ -68,7 +67,7 @@ class Usuario(TenantScoped, db.Model):
         return self.eliminado_en is not None
 
     def revocar_sesiones(self):
-        self.sesiones_desde = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+        self.sesiones_desde = ahora_bd(microsegundos=False)
         self.version_sesion = (self.version_sesion or 0) + 1
 
     @property
@@ -84,14 +83,14 @@ class Usuario(TenantScoped, db.Model):
             return payload["ver"] == (self.version_sesion or 0)
         # Tokens sin versión (emitidos antes de esta mejora): regla por fecha.
         if self.sesiones_desde:
-            limite = int(self.sesiones_desde.replace(tzinfo=UTC).timestamp())
+            limite = int(desde_bd(self.sesiones_desde).timestamp())
             return int(payload.get("iat", 0)) >= limite
         return True
 
     fecha_creacion = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=lambda: ahora_bd(),
     )
 
     def __repr__(self):

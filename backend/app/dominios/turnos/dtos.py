@@ -1,4 +1,4 @@
-from app.horario import a_iso_utc
+from app.horario import a_iso
 from app.seguridad import enmascarar_celular
 
 from .preparacion import preparacion_response
@@ -28,7 +28,7 @@ def turno_response(turno):
         "fecha": turno.franja.fecha.isoformat(),
         "hora_inicio": turno.franja.hora_inicio.strftime("%H:%M"),
         "hora_fin": turno.franja.hora_fin.strftime("%H:%M"),
-        "hora_solicitud": a_iso_utc(turno.hora_solicitud),
+        "hora_solicitud": a_iso(turno.hora_solicitud),
         "estado": turno.estado,
         "detalle_necesidad": turno.detalle_necesidad,
         "respuestas_solicitud": turno.respuestas_solicitud or [],
@@ -48,9 +48,9 @@ def turno_response(turno):
         "franja_id": turno.franja_id,
         "agente_id": turno.agente_id,
         "agente_nombre": turno.agente.nombre if turno.agente else None,
-        "fecha_llamado": a_iso_utc(turno.fecha_llamado),
-        "fecha_inicio": a_iso_utc(turno.fecha_inicio),
-        "fecha_fin": a_iso_utc(turno.fecha_fin),
+        "fecha_llamado": a_iso(turno.fecha_llamado),
+        "fecha_inicio": a_iso(turno.fecha_inicio),
+        "fecha_fin": a_iso(turno.fecha_fin),
         "agente_modulo": turno.agente.modulo if turno.agente else None,
         "requiere_preparacion": bool(turno.tramite and turno.tramite.requiere_preparacion),
         "preparacion": preparacion_response(turno),
@@ -115,7 +115,7 @@ def turno_llamado_sala_response(turno):
         "asesor": " ".join((turno.agente.nombre if turno.agente else "").split()),
         "modulo": turno.agente.modulo if turno.agente else None,
         "estado": turno.estado,
-        "llamado": a_iso_utc(turno.fecha_llamado),
+        "llamado": a_iso(turno.fecha_llamado),
     }
 
 

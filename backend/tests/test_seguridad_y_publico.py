@@ -1,4 +1,4 @@
-from datetime import UTC, timedelta
+from datetime import timedelta
 
 import pytest
 from flask_jwt_extended import create_access_token
@@ -11,6 +11,7 @@ from app.dominios.turnos import otp
 from app.dominios.usuarios.modelos import Usuario
 from app.horario import hoy_local
 from app.seguridad import encriptar_password, reiniciar_limites
+from app.tiempo import ahora_bd
 
 CELULAR = "3001234567"
 
@@ -513,12 +514,11 @@ def test_cancelacion_publica_con_celular_incorrecto_responde_400(app, base):
 
 
 def test_pantalla_de_sala_no_expone_datos_personales(app, base):
-    from datetime import datetime
 
     turno = _reservar_directo(base)
     turno.estado = "LLAMADO"
     turno.agente_id = base["agente"].id
-    turno.fecha_llamado = datetime.now(UTC).replace(tzinfo=None)
+    turno.fecha_llamado = ahora_bd()
     db.session.commit()
     r = app.test_client().get(f"/api/v1/turnos/publico/sala?sede_id={base['sede'].id}").get_json()
     llamado = r["llamados"][0]
@@ -531,14 +531,13 @@ def test_pantalla_de_sala_no_expone_datos_personales(app, base):
 
 
 def test_pantalla_de_sala_puede_abreviar_nombres(app, base):
-    from datetime import datetime
 
     app.config["SALA_NOMBRE_COMPLETO"] = False
     try:
         turno = _reservar_directo(base)
         turno.estado = "LLAMADO"
         turno.agente_id = base["agente"].id
-        turno.fecha_llamado = datetime.now(UTC).replace(tzinfo=None)
+        turno.fecha_llamado = ahora_bd()
         db.session.commit()
         r = app.test_client().get(f"/api/v1/turnos/publico/sala?sede_id={base['sede'].id}")
         assert r.get_json()["llamados"][0]["nombre"] == "Cliente D."

@@ -1,7 +1,6 @@
-from datetime import UTC, datetime
-
 from app import db
 from app.tenancy import TenantScoped
+from app.tiempo import ahora_bd
 
 
 class Auditoria(TenantScoped, db.Model):
@@ -14,7 +13,7 @@ class Auditoria(TenantScoped, db.Model):
         db.DateTime,
         nullable=False,
         index=True,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=lambda: ahora_bd(),
     )
     usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True, index=True)
     accion = db.Column(db.String(40), nullable=False, index=True)

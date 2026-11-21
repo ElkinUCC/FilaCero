@@ -5,18 +5,19 @@ asesor y la foto "en vivo" del panel. También las reutiliza el asistente
 FilaCero IA, que así responde con los mismos datos y permisos que ve la persona.
 """
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 
 from app.dominios.turnos.dtos import turno_response
 from app.dominios.turnos.preparacion import pendientes
 from app.horario import (
-    a_iso_utc,
+    a_iso,
     ahora_local,
     duracion_max_atencion_min,
     hoy_local,
     info_horario,
     zona,
 )
+from app.tiempo import a_bd
 
 from . import repositorios as repo
 from .despacho import cumplimiento, estado_franja_actual, proyectar_cola, recomendar
@@ -24,10 +25,9 @@ from .dtos import asesor_en_vivo_response, turno_reciente_response
 from .servicios import consultar_cola, en_horario_de_atencion, turno_activo
 
 
-def rango_utc_de_hoy():
-    """Inicio y fin del día local expresados en UTC sin zona (como se guardan)."""
-    inicio = datetime.combine(hoy_local(), time.min, tzinfo=zona())
-    inicio = inicio.astimezone(UTC).replace(tzinfo=None)
+def rango_bd_de_hoy():
+    """Inicio y fin del día local en la zona de la BD, sin zona (como se guardan)."""
+    inicio = a_bd(datetime.combine(hoy_local(), time.min, tzinfo=zona()))
     return inicio, inicio + timedelta(days=1)
 
 
@@ -58,7 +58,7 @@ def construir_panel(agente):
     except ValueError as e:
         error = str(e)
 
-    desde, hasta = rango_utc_de_hoy()
+    desde, hasta = rango_bd_de_hoy()
     mios_hoy = repo.turnos_cerrados_del_agente(agente.id, desde, hasta)
     recientes = sorted(
         [t for t in mios_hoy if t.estado in ("ATENDIDO", "NO_ASISTIO")],
@@ -90,7 +90,7 @@ def construir_panel(agente):
             "sede_direccion": sede.direccion if sede else None,
             "modulo": agente.modulo,
             "presencia": agente.presencia or "DISPONIBLE",
-            "presencia_desde": a_iso_utc(agente.presencia_desde),
+            "presencia_desde": a_iso(agente.presencia_desde),
         },
         "error": error,
         "en_horario": en_horario_de_atencion(),

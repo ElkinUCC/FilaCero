@@ -9,11 +9,12 @@ Reglas:
 """
 
 import secrets
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 
 from app import db
 from app.dominios.sedes.modelos import Punto
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
+from app.tiempo import ahora_bd
 
 from .dtos import ESTADOS_EQUIPO
 from .modelos import Equipo
@@ -36,7 +37,7 @@ MARCAS = [
 
 
 def _ahora():
-    return datetime.now(UTC).replace(tzinfo=None)
+    return ahora_bd()
 
 
 def _texto(valor, campo, maximo, obligatorio=False):

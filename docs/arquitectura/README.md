@@ -25,7 +25,7 @@ leerse juntos y verificarse contra el código.
 | 10 | [Evolución](10-evolucion.md) | ¿Cómo cambia la arquitectura ante nuevos requisitos? | Escenarios de cambio y artefactos realmente afectados |
 | 11 | [Seguridad](11-seguridad.md) | ¿Qué amenazas se revisaron, qué se corrigió y qué riesgo queda? | STRIDE, auditoría de dependencias, riesgos aceptados |
 | 12 | [Diagramas UML](../diagramas/README.md) | ¿Cómo se ve el sistema en notación UML? | Casos de uso, clases, entidad-relación, paquetes, componentes, despliegue y secuencias |
-| 13 | [Evidencias de la entrega](../entrega/) | ¿Cómo se presenta? | Informe HTML del proyecto (fases 01–05) y guiones de sustentación |
+| 13 | [Evidencias de la entrega](../entrega/) | ¿Cómo se presenta? | Informe HTML del proyecto (fases 01–05) |
 
 ## Resumen ejecutivo
 

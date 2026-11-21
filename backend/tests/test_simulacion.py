@@ -158,12 +158,13 @@ def test_catalogo_incluye_supervisor_demo_y_no_duplica_cuentas(app, db):
 
 def test_atencion_automatica_solo_avanza_los_turnos_simulados(app, db, monkeypatch):
     import random
-    from datetime import UTC, date, datetime, time, timedelta
+    from datetime import date, time, timedelta
 
     from app.dominios.agentes import servicios as servicios_agente
     from app.dominios.franjas.modelos import Franja
     from app.dominios.turnos.modelos import Turno
     from app.dominios.usuarios.modelos import Usuario
+    from app.tiempo import ahora_bd
     from simulacion import (
         ASESORES,
         _agentes_demo_automaticos,
@@ -191,7 +192,7 @@ def test_atencion_automatica_solo_avanza_los_turnos_simulados(app, db, monkeypat
     )
     db.session.add(franja)
     db.session.flush()
-    ahora = datetime.now(UTC).replace(tzinfo=None)
+    ahora = ahora_bd()
     personas = [
         Usuario(
             nombre=f"Cliente de prueba {indice}",

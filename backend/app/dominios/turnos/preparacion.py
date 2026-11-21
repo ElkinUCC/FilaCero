@@ -18,10 +18,9 @@ Reglas:
     - La nota es visible para el ciudadano: máximo 500 caracteres.
 """
 
-from datetime import UTC, datetime
-
 from app import db
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
+from app.tiempo import ahora_bd
 
 from .modelos import Turno
 from .repositorios import ESTADOS_ACTIVOS
@@ -45,13 +44,13 @@ def preparacion_response(turno, *, publica=False):
     estado = turno.estado_preparacion
     if not estado:
         return None
-    from app.horario import a_iso_utc
+    from app.horario import a_iso
 
     datos = {
         "estado": estado,
         "texto": ESTADOS_PREPARACION.get(estado, estado),
         "nota": turno.nota_preparacion,
-        "fecha": a_iso_utc(turno.fecha_preparacion),
+        "fecha": a_iso(turno.fecha_preparacion),
     }
     if not publica:
         datos["preparado_por"] = turno.preparado_por.nombre if turno.preparado_por else None
@@ -91,7 +90,7 @@ def registrar_preparacion(agente_id, turno_id, estado, nota=None):
         turno.fecha_preparacion = None
         turno.preparado_por_id = None
     else:
-        turno.fecha_preparacion = datetime.now(UTC).replace(tzinfo=None)
+        turno.fecha_preparacion = ahora_bd()
         turno.preparado_por_id = agente.id
     db.session.commit()
     return turno

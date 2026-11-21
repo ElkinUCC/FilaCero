@@ -1,5 +1,5 @@
 from app.dominios.usuarios.servicios import documento_enmascarado
-from app.horario import a_iso_utc
+from app.horario import a_iso
 from app.seguridad import enmascarar_celular
 
 ESTADOS_EQUIPO = {
@@ -28,7 +28,7 @@ def _base(equipo):
         "fecha_compra": equipo.fecha_compra.isoformat() if equipo.fecha_compra else None,
         "punto_id": equipo.punto_id,
         "sede": equipo.punto.nombre if equipo.punto else None,
-        "fecha_actualizacion": a_iso_utc(equipo.fecha_actualizacion),
+        "fecha_actualizacion": a_iso(equipo.fecha_actualizacion),
     }
 
 
@@ -45,8 +45,8 @@ def equipo_response(equipo):
                 equipo.cliente.documento if equipo.cliente else None
             ),
             "registrado_por": equipo.registrado_por.nombre if equipo.registrado_por else None,
-            "fecha_registro": a_iso_utc(equipo.fecha_registro),
-            "fecha_entrega": a_iso_utc(equipo.fecha_entrega),
+            "fecha_registro": a_iso(equipo.fecha_registro),
+            "fecha_entrega": a_iso(equipo.fecha_entrega),
         }
     )
     return datos

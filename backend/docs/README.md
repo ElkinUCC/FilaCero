@@ -55,7 +55,7 @@ FilaCero/
 └── docs/
     ├── diagramas/                 # UML: casos de uso, clases, ER, paquetes, arquitectura…
     ├── arquitectura/              # documento de arquitectura y ADR
-    └── entrega/                   # guion del video y lista de entrega
+    └── entrega/                   # informe del proyecto (HTML)
 ```
 
 ## Requisitos
@@ -145,7 +145,7 @@ ORGANIZATION_SLUG: "filacero-demo",        // organización de las reservas púb
 
 - Diagramas UML (PNG, SVG y fuente PlantUML): [`docs/diagramas/`](../../docs/diagramas/README.md)
 - Documento de arquitectura y ADR: [`docs/arquitectura/`](../../docs/arquitectura/README.md)
-- Informe del proyecto y guion del video: [`docs/entrega/`](../../docs/entrega/)
+- Informe del proyecto: [`docs/entrega/`](../../docs/entrega/)
 
 ## Ejecutar las pruebas
 

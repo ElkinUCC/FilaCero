@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 from app import db
 from app.dominios.sedes.modelos import Punto
 from app.horario import _config_operativa, ahora_local, apertura, cierre, dia_habil
+from app.tiempo import ahora_bd
 
 from .repositorios import (
     obtener_agente,
@@ -15,7 +14,7 @@ from .repositorios import (
 
 
 def _utc_ahora():
-    return datetime.now(UTC).replace(tzinfo=None)
+    return ahora_bd()
 
 
 def en_horario_de_atencion():

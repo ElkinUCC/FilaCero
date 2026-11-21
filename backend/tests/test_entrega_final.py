@@ -1,7 +1,7 @@
 """Pruebas de la entrega final: preparación previa, módulo de atención,
 baja definitiva de asesores y datos operativos del panel."""
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import time, timedelta
 
 import pytest
 
@@ -11,6 +11,7 @@ from app.dominios.sedes.modelos import Punto
 from app.dominios.turnos.modelos import Turno
 from app.dominios.usuarios.modelos import Usuario
 from app.horario import hoy_local
+from app.tiempo import ahora_bd
 
 CELULAR = "3005557788"
 
@@ -232,7 +233,7 @@ def test_sala_muestra_nombre_completo_y_modulo(client, escenario):
     turno = _turno(escenario["codigo"])
     turno.estado = "LLAMADO"
     turno.agente_id = escenario["agente_id"]
-    turno.fecha_llamado = datetime.now(UTC).replace(tzinfo=None)
+    turno.fecha_llamado = ahora_bd()
     turno.franja.fecha = hoy_local()
     _db.session.commit()
 

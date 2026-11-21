@@ -1,6 +1,6 @@
 """Regla de puntualidad (cupo por sede y franja) y asistente de despacho."""
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 from flask_jwt_extended import create_access_token
@@ -14,6 +14,7 @@ from app.dominios.turnos.servicios import crear_turno
 from app.dominios.usuarios.modelos import Usuario
 from app.dominios.usuarios.servicios import registrar_cliente_publico
 from app.horario import capacidad_sede, hoy_local, zona
+from app.tiempo import a_bd
 
 
 @pytest.fixture
@@ -78,8 +79,8 @@ def local(fecha, hh, mm, ss=0):
     return datetime.combine(fecha, time(hh, mm, ss), tzinfo=zona())
 
 
-def utc_naive(dt):
-    return dt.astimezone(UTC).replace(tzinfo=None)
+def bd_naive(dt):
+    return a_bd(dt)
 
 
 # ---------------------------------------------------------------- cupos
@@ -138,8 +139,8 @@ def test_recomienda_pausa_activa_si_va_adelantado(app, base):
     ahora = local(MANANA(), 10, 5)
     previo.estado = "ATENDIDO"
     previo.agente_id = base["agente"].id
-    previo.fecha_inicio = utc_naive(ahora - timedelta(minutes=2, seconds=30))
-    previo.fecha_fin = utc_naive(ahora - timedelta(seconds=30))  # duró 2 minutos
+    previo.fecha_inicio = bd_naive(ahora - timedelta(minutes=2, seconds=30))
+    previo.fecha_fin = bd_naive(ahora - timedelta(seconds=30))  # duró 2 minutos
     db.session.commit()
 
     plan = proyectar_cola(base["sede"].id, ahora)
@@ -172,7 +173,7 @@ def test_alerta_cuando_la_atencion_supera_10_minutos(app, base):
     ahora = local(MANANA(), 10, 15)
     turno.estado = "EN_ATENCION"
     turno.agente_id = base["agente"].id
-    turno.fecha_inicio = utc_naive(ahora - timedelta(minutes=11))
+    turno.fecha_inicio = bd_naive(ahora - timedelta(minutes=11))
     db.session.commit()
     rec = recomendar(base["agente"], turno, proyectar_cola(base["sede"].id, ahora), ahora)
     assert rec["accion"] == "finalizar" and rec["nivel"] == "urgente"
@@ -184,7 +185,7 @@ def test_sugiere_no_asistio_si_no_llega_en_3_minutos(app, base):
     ahora = local(MANANA(), 10, 10)
     turno.estado = "LLAMADO"
     turno.agente_id = base["agente"].id
-    turno.fecha_llamado = utc_naive(ahora - timedelta(minutes=4))
+    turno.fecha_llamado = bd_naive(ahora - timedelta(minutes=4))
     db.session.commit()
     rec = recomendar(base["agente"], turno, proyectar_cola(base["sede"].id, ahora), ahora)
     assert rec["accion"] == "ausente"
@@ -196,8 +197,8 @@ def test_indicador_de_puntualidad(app, base):
     b = reservar(base, f, base["t1"], "3000000002")
     for turno, inicio in ((a, local(MANANA(), 10, 5)), (b, local(MANANA(), 10, 40))):
         turno.estado = "ATENDIDO"
-        turno.fecha_inicio = utc_naive(inicio)
-        turno.fecha_fin = utc_naive(inicio + timedelta(minutes=8))
+        turno.fecha_inicio = bd_naive(inicio)
+        turno.fecha_fin = bd_naive(inicio + timedelta(minutes=8))
     db.session.commit()
     datos = cumplimiento([a, b])
     assert datos["puntualidad_pct"] == 50.0 and datos["dentro_tiempo_max_pct"] == 100.0

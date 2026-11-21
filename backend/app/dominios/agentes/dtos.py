@@ -6,7 +6,7 @@ y nunca arma diccionarios a partir de modelos.
 
 from app.dominios.turnos.dtos import turno_response
 from app.dominios.usuarios.dtos import usuario_response
-from app.horario import a_iso_utc
+from app.horario import a_iso
 
 
 def cola_response(turnos):
@@ -68,7 +68,7 @@ def turno_reciente_response(turno):
         "fecha": turno.franja.fecha.isoformat(),
         "hora": f"{turno.franja.hora_inicio:%H:%M}",
         "estado": turno.estado,
-        "reservado": a_iso_utc(turno.hora_solicitud),
+        "reservado": a_iso(turno.hora_solicitud),
     }
 
 

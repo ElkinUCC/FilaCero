@@ -1,6 +1,6 @@
 import secrets
 import string
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 from flask_jwt_extended import create_access_token
 
@@ -18,6 +18,7 @@ from app.seguridad import (
     validar_password_segura,
     verificar_password,
 )
+from app.tiempo import ahora_bd
 
 from .modelos import Usuario
 from .repositorios import buscar_por_celular, buscar_por_correo, buscar_por_id, guardar
@@ -86,7 +87,7 @@ def iniciar_sesion(correo, password):
 
     from flask import current_app
 
-    ahora = datetime.now(UTC).replace(tzinfo=None)
+    ahora = ahora_bd()
 
     if usuario.bloqueado_hasta and usuario.bloqueado_hasta > ahora:
         minutos = int((usuario.bloqueado_hasta - ahora).total_seconds() // 60) + 1
@@ -260,7 +261,7 @@ def dar_de_baja(usuario_id, actor_id, roles=ROLES_PERSONAL):
 
     correo_original = usuario.correo
     usuario.activo = False
-    usuario.eliminado_en = datetime.now(UTC).replace(tzinfo=None)
+    usuario.eliminado_en = ahora_bd()
     usuario.punto_asignado_id = None
     usuario.modulo = None
     usuario.correo = f"baja-{usuario.id}-{secrets.token_hex(4)}@eliminado.filacero.local"
@@ -291,7 +292,7 @@ def cambiar_presencia(usuario, presencia, tiene_turno_en_curso=False):
         raise ConflictoError("Termina o devuelve el turno en curso antes de salir a pausa.")
     if usuario.presencia != presencia:
         usuario.presencia = presencia
-        usuario.presencia_desde = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+        usuario.presencia_desde = ahora_bd(microsegundos=False)
         db.session.commit()
     return usuario
 
@@ -331,7 +332,7 @@ def revocar_todas_las_sesiones(usuario):
     usuario.revocar_sesiones()
     if usuario.rol == "AGENTE":
         usuario.presencia = "AUSENTE"
-        usuario.presencia_desde = datetime.now(UTC).replace(tzinfo=None)
+        usuario.presencia_desde = ahora_bd()
     db.session.commit()
 
 

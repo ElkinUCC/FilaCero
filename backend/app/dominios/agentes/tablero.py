@@ -244,9 +244,10 @@ def hallazgos(datos):
 
 
 def construir_tablero(desde=None, hasta=None, dias=None, punto_id=None):
-    from datetime import UTC, datetime, time
+    from datetime import datetime, time
 
     from app.horario import zona
+    from app.tiempo import a_bd
 
     desde, hasta = _rango(desde, hasta, dias)
     largo = (hasta - desde).days + 1
@@ -256,8 +257,8 @@ def construir_tablero(desde=None, hasta=None, dias=None, punto_id=None):
     actuales = _turnos(desde, hasta, punto_id)
     anteriores = _turnos(prev_desde, prev_hasta, punto_id)
 
-    def a_utc(d):
-        return datetime.combine(d, time.min, tzinfo=zona()).astimezone(UTC).replace(tzinfo=None)
+    def a_bd_dia(d):
+        return a_bd(datetime.combine(d, time.min, tzinfo=zona()))
 
     datos = {
         "periodo": {"desde": desde.isoformat(), "hasta": hasta.isoformat(), "dias": largo},
@@ -269,7 +270,7 @@ def construir_tablero(desde=None, hasta=None, dias=None, punto_id=None):
         "por_hora": _por_hora(actuales),
         "por_tramite": _ranking(actuales, "tramite", lambda o: o.nombre),
         "por_sede": _ranking(actuales, "punto", lambda o: o.nombre),
-        **_taller(punto_id, a_utc(desde), a_utc(hasta + timedelta(days=1))),
+        **_taller(punto_id, a_bd_dia(desde), a_bd_dia(hasta + timedelta(days=1))),
     }
     datos["hallazgos"] = hallazgos(datos)
     return datos

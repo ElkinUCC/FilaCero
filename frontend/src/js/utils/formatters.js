@@ -127,7 +127,7 @@ export const FLUJOS = {
   RECLAMO: { texto: "Reclamo", detalle: "Radica en línea o lo sigue en persona." },
 };
 
-/** "Hace 12 min" desde una fecha ISO UTC. */
+/** "Hace 12 min" desde una fecha ISO con desfase (-05:00). */
 export function haceTiempo(iso) {
   if (!iso) return "";
   const min = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));

@@ -1,6 +1,5 @@
-from datetime import UTC, datetime
-
 from app import db
+from app.tiempo import ahora_bd
 
 
 class Organizacion(db.Model):
@@ -20,7 +19,7 @@ class Organizacion(db.Model):
     creada_en = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        default=lambda: ahora_bd(),
     )
 
     usuarios = db.relationship("Usuario", back_populates="organizacion")
@@ -50,6 +49,6 @@ def _crear_organizacion_inicial(_tabla, conexion, **_kwargs):
             plan="essential",
             estado="activa",
             configuracion={},
-            creada_en=datetime.now(UTC).replace(tzinfo=None),
+            creada_en=ahora_bd(),
         )
     )

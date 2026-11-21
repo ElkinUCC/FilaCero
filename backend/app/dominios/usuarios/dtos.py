@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields, pre_load, validate
 
-from app.horario import a_iso_utc
+from app.horario import a_iso
 
 
 class _Base(Schema):
@@ -38,9 +38,9 @@ def usuario_response(usuario):
         "modulo": usuario.modulo,
         "documento": f"···{usuario.documento[-4:]}" if usuario.documento else None,
         "presencia": usuario.presencia or "DISPONIBLE",
-        "presencia_desde": a_iso_utc(usuario.presencia_desde),
+        "presencia_desde": a_iso(usuario.presencia_desde),
         "debe_cambiar_clave": bool(usuario.debe_cambiar_clave),
         "protegida": usuario.protegida,
-        "ultimo_acceso": a_iso_utc(usuario.ultimo_acceso),
-        "fecha_creacion": a_iso_utc(usuario.fecha_creacion),
+        "ultimo_acceso": a_iso(usuario.ultimo_acceso),
+        "fecha_creacion": a_iso(usuario.fecha_creacion),
     }

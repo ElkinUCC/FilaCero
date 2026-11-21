@@ -1,11 +1,10 @@
-from datetime import UTC, datetime
-
 from app import db
 from app.tenancy import TenantScoped
+from app.tiempo import ahora_bd
 
 
 def _ahora():
-    return datetime.now(UTC).replace(tzinfo=None)
+    return ahora_bd()
 
 
 class Reclamo(TenantScoped, db.Model):

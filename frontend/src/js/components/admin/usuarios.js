@@ -174,7 +174,7 @@ export function montarUsuarios(contenedor, { titulo }) {
             enlaceDetalle({ texto: `${u.nombre}${esYo ? " (tú)" : ""}`, id: u.id, avatar: u.nombre[0] }),
             html`<span class="rol rol--${r.tono}">${r.nombre}</span>`,
             u.rol === "AGENTE" ? u.sede || html`<span class="tenue">Sin sede</span>` : html`<span class="tenue">No aplica</span>`,
-            html`<span title="${u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString("es-CO") : ""}">${hace(u.ultimo_acceso)}</span>`,
+            html`<span title="${u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString("es-CO", { timeZone: "America/Bogota" }) : ""}">${hace(u.ultimo_acceso)}</span>`,
             estadoInsignia(u.activo ? "ok" : "cancelado", u.activo ? "Activo" : "Bloqueado"),
             html`
               ${botonFila({ accion: "editar", id: u.id, ic: "editar", titulo: `Editar ${u.nombre}` })}

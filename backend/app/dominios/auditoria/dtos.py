@@ -1,6 +1,6 @@
 """Contrato JSON (DTO) de los eventos de la bitácora."""
 
-from app.horario import a_iso_utc
+from app.horario import a_iso
 
 # Catálogo de acciones auditables y su texto legible en el panel.
 ACCIONES = {
@@ -34,7 +34,7 @@ ACCIONES = {
 def evento_response(evento):
     return {
         "id": evento.id,
-        "fecha": a_iso_utc(evento.fecha),
+        "fecha": a_iso(evento.fecha),
         "accion": evento.accion,
         "accion_texto": ACCIONES.get(evento.accion, evento.accion),
         "detalle": evento.detalle,

@@ -7,11 +7,11 @@ respuesta queda visible para el ciudadano al consultar con su celular.
 """
 
 import secrets
-from datetime import UTC, datetime
 
 from app import db
 from app.dominios.sedes.modelos import Punto
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
+from app.tiempo import ahora_bd
 
 from .dtos import CATEGORIAS, ESTADOS_RECLAMO
 from .modelos import MensajeReclamo, Reclamo
@@ -83,7 +83,7 @@ def gestionar(asesor, reclamo_id, estado, respuesta=None):
     reclamo.estado = estado
     if respuesta is not None and respuesta != reclamo.respuesta:
         reclamo.respuesta = respuesta
-        reclamo.fecha_respuesta = datetime.now(UTC).replace(tzinfo=None)
+        reclamo.fecha_respuesta = ahora_bd()
         # La respuesta también queda en el chat (si no es lo último que ya se escribió).
         ultimo = next((m for m in reversed(reclamo.mensajes) if m.autor == "ASESOR"), None)
         if not ultimo or ultimo.texto != respuesta:
