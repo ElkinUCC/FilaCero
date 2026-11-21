@@ -7,11 +7,11 @@ from app import create_app, db
 from app.dominios.franjas.modelos import Franja
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
-from app.dominios.turnos import otp
 from app.dominios.usuarios.modelos import Usuario
 from app.horario import hoy_local
 from app.seguridad import encriptar_password, reiniciar_limites
 from app.tiempo import ahora_bd
+from scripts.turnos import otp
 
 CELULAR = "3001234567"
 

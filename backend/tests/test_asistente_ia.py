@@ -5,11 +5,11 @@ from datetime import time, timedelta
 import pytest
 
 from app import db as _db
-from app.dominios.asistente import llm
-from app.dominios.asistente.motor import fecha, plano
 from app.dominios.franjas.modelos import Franja
 from app.dominios.sedes.modelos import Punto
 from app.horario import hoy_local
+from scripts.asistente import llm
+from scripts.asistente.motor import fecha, plano
 
 CELULAR = "3007778899"
 URL = "/api/v1/asistente/preguntar"
@@ -159,8 +159,8 @@ def test_con_proveedor_usa_su_texto_y_si_falla_vuelve_al_motor_local(
 
 
 def test_resumen_para_el_modelo_no_incluye_datos_personales(app, operacion):
-    from app.dominios.asistente.contexto import contexto_asesor, resumen_para_modelo
     from app.dominios.usuarios.modelos import Usuario
+    from scripts.asistente.contexto import contexto_asesor, resumen_para_modelo
 
     asesor = Usuario.query.filter_by(rol="AGENTE").first()
     texto = str(resumen_para_modelo(contexto_asesor(asesor)))

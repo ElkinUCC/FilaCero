@@ -4,8 +4,8 @@ from flask import Blueprint, request
 from flask_jwt_extended import current_user
 
 from app.dominios.auditoria.servicios import registrar as auditar
-from app.dominios.turnos.otp import celular_del_token
 from app.seguridad import limitar, requiere_rol
+from scripts.turnos.otp import celular_del_token
 
 from .dtos import ESTADOS_EQUIPO, equipo_publico_response, equipo_response
 from .servicios import (

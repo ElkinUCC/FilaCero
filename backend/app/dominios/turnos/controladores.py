@@ -4,11 +4,11 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from app.dominios.usuarios.servicios import registrar_cliente_publico
 from app.seguridad import enmascarar_celular, limitar, normalizar_celular
+from scripts.turnos import otp
+from scripts.turnos.prediccion import estimar_espera, tiempo_espera_autorizado
+from scripts.turnos.sala import pantalla_de_sala
 
-from . import otp
 from .dtos import turno_publico_response, turno_response
-from .prediccion import estimar_espera, tiempo_espera_autorizado
-from .sala import pantalla_de_sala
 from .servicios import (
     buscar_turno_por_codigo,
     cancelar_turno,

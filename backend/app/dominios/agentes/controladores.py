@@ -5,13 +5,13 @@ from flask_jwt_extended import current_user, get_jwt_identity
 
 from app.dominios.auditoria.servicios import registrar
 from app.dominios.turnos.dtos import turno_response
-from app.dominios.turnos.preparacion import registrar_preparacion
 from app.dominios.usuarios.servicios import PRESENCIAS, cambiar_presencia, dar_de_baja
 from app.horario import a_iso
 from app.seguridad import requiere_rol
+from scripts.agentes.consultas import construir_en_vivo, construir_panel
+from scripts.turnos.preparacion import registrar_preparacion
 
-from . import admin_servicios
-from .consultas import construir_en_vivo, construir_panel
+from . import servicios
 from .dtos import (
     agente_admin_response,
     cola_response,
@@ -183,7 +183,7 @@ def preparar(turno_id):
 @admin_agentes_bp.get("/")
 @requiere_rol("ADMIN", "SUPERVISOR")
 def listar_agentes():
-    agentes = admin_servicios.listar_agentes()
+    agentes = servicios.listar_agentes()
     return (
         jsonify(
             {"total": len(agentes), "agentes": [agente_admin_response(a, t) for a, t in agentes]}
@@ -196,11 +196,11 @@ def listar_agentes():
 @requiere_rol("ADMIN")
 def crear_agente():
     try:
-        agente = admin_servicios.crear_agente(request.get_json(silent=True) or {})
+        agente = servicios.crear_agente(request.get_json(silent=True) or {})
     except ValueError as error:
         return _error(error)
     registrar("usuario_creado", f"{agente.correo} como Asesor")
-    respuesta = agente_admin_response(agente, admin_servicios.turno_en_curso(agente))
+    respuesta = agente_admin_response(agente, servicios.turno_en_curso(agente))
     return jsonify({"mensaje": "Agente creado.", "agente": respuesta}), 201
 
 
@@ -208,11 +208,11 @@ def crear_agente():
 @requiere_rol("ADMIN")
 def actualizar_agente(usuario_id):
     try:
-        agente = admin_servicios.actualizar_agente(usuario_id, request.get_json(silent=True) or {})
+        agente = servicios.actualizar_agente(usuario_id, request.get_json(silent=True) or {})
     except ValueError as error:
         return _error(error)
     registrar("usuario_editado", agente.correo)
-    respuesta = agente_admin_response(agente, admin_servicios.turno_en_curso(agente))
+    respuesta = agente_admin_response(agente, servicios.turno_en_curso(agente))
     return jsonify({"mensaje": "Agente actualizado.", "agente": respuesta}), 200
 
 
@@ -230,7 +230,7 @@ def eliminar_agente(usuario_id):
 def asignar_sede(usuario_id):
     datos = request.get_json(silent=True) or {}
     try:
-        agente = admin_servicios.asignar_sede(usuario_id, datos.get("punto_id"))
+        agente = servicios.asignar_sede(usuario_id, datos.get("punto_id"))
     except ValueError as error:
         return _error(error)
     return (
@@ -249,7 +249,7 @@ def asignar_sede(usuario_id):
 @requiere_rol("ADMIN")
 def desasignar_sede(usuario_id):
     try:
-        agente = admin_servicios.desasignar_sede(usuario_id)
+        agente = servicios.desasignar_sede(usuario_id)
     except ValueError as error:
         return _error(error)
     return (
@@ -268,7 +268,7 @@ def desasignar_sede(usuario_id):
 @requiere_rol("ADMIN", "SUPERVISOR")
 def obtener_metricas():
     try:
-        return jsonify(admin_servicios.metricas(request.args)), 200
+        return jsonify(servicios.metricas(request.args)), 200
     except ValueError as error:
         return _error(error)
 
@@ -277,10 +277,10 @@ def obtener_metricas():
 @requiere_rol("ADMIN", "SUPERVISOR")
 def tablero_ejecutivo():
     """Tablero ejecutivo del periodo frente al periodo anterior (solo lectura)."""
-    from .tablero import construir_tablero
+    from scripts.agentes.tablero import construir_tablero
 
     try:
-        datos = construir_tablero(*admin_servicios.leer_parametros_tablero(request.args))
+        datos = construir_tablero(*servicios.leer_parametros_tablero(request.args))
     except ValueError as error:
         mensaje = str(error)
         if "invalid literal" in mensaje:
@@ -293,7 +293,7 @@ def tablero_ejecutivo():
 @requiere_rol("ADMIN", "SUPERVISOR")
 def historial_turnos():
     try:
-        pagina, por_pagina, total, turnos = admin_servicios.historial(request.args)
+        pagina, por_pagina, total, turnos = servicios.historial(request.args)
     except ValueError as error:
         return _error(error)
     return jsonify(historial_response(pagina, por_pagina, total, turnos)), 200
@@ -303,7 +303,7 @@ def historial_turnos():
 @requiere_rol("ADMIN", "SUPERVISOR")
 def metricas_por_sede():
     try:
-        return jsonify(totales_sede_response(admin_servicios.totales_por_sede(request.args))), 200
+        return jsonify(totales_sede_response(servicios.totales_por_sede(request.args))), 200
     except ValueError as error:
         return _error(error)
 
@@ -312,7 +312,7 @@ def metricas_por_sede():
 @requiere_rol("ADMIN", "SUPERVISOR")
 def metricas_por_tramite():
     try:
-        filas = admin_servicios.totales_por_tramite(request.args)
+        filas = servicios.totales_por_tramite(request.args)
     except ValueError as error:
         return _error(error)
     return jsonify(totales_tramite_response(filas)), 200

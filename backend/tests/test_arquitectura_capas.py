@@ -5,7 +5,20 @@ import pathlib
 
 import pytest
 
-DOMINIOS = pathlib.Path(__file__).resolve().parents[1] / "app" / "dominios"
+RAIZ = pathlib.Path(__file__).resolve().parents[1]
+DOMINIOS = RAIZ / "app" / "dominios"
+SCRIPTS = RAIZ / "scripts"
+
+# Estructura estándar de cada dominio del monolito modular.
+CAPAS_ESTANDAR = {
+    "__init__.py",
+    "controladores.py",
+    "dtos.py",
+    "modelos.py",
+    "repositorios.py",
+    "servicios.py",
+}
+CARPETAS_DOMINIO = sorted(p for p in DOMINIOS.iterdir() if p.is_dir() and p.name != "__pycache__")
 
 # Controlador = cualquier módulo de dominio que declare un Blueprint de Flask.
 CONTROLADORES = sorted(
@@ -79,5 +92,23 @@ def test_servicios_y_repositorios_no_dependen_de_http(ruta):
 
 def test_todos_los_blueprints_estan_en_la_capa_de_presentacion():
     """Los Blueprints solo viven en archivos de controlador (no en servicios ni repositorios)."""
-    nombres = {p.name for p in CONTROLADORES}
-    assert nombres <= {"controladores.py", "admin_controladores.py", "disponibilidad.py"}
+    assert {p.name for p in CONTROLADORES} == {"controladores.py"}
+
+
+@pytest.mark.parametrize("carpeta", CARPETAS_DOMINIO, ids=lambda p: p.name)
+def test_cada_dominio_tiene_exactamente_la_estructura_estandar(carpeta):
+    """Cada dominio: controladores, dtos, modelos, repositorios y servicios; nada más.
+
+    La lógica auxiliar (OTP, predicción, preparación, despacho, asistente…) vive en scripts/.
+    """
+    archivos = {p.name for p in carpeta.glob("*.py")}
+    assert archivos == CAPAS_ESTANDAR, (
+        f"{carpeta.name}: sobran {sorted(archivos - CAPAS_ESTANDAR)} "
+        f"/ faltan {sorted(CAPAS_ESTANDAR - archivos)}"
+    )
+
+
+@pytest.mark.parametrize("ruta", sorted(SCRIPTS.rglob("*.py")), ids=lambda p: p.name)
+def test_los_scripts_no_exponen_endpoints(ruta):
+    """Los scripts son lógica de apoyo: las rutas HTTP solo se declaran en los controladores."""
+    assert "Blueprint(" not in ruta.read_text(encoding="utf-8")

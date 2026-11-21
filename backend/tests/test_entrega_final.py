@@ -190,7 +190,7 @@ def test_tramite_sin_preparacion_no_genera_pendientes(client, admin_auth):
     # La preparación la decide el tipo de atención, no una casilla suelta.
     assert r.get_json()["tramite"]["requiere_preparacion"] is False
     from app.dominios.tramites.modelos import Tramite
-    from app.dominios.turnos.preparacion import estado_inicial
+    from scripts.turnos.preparacion import estado_inicial
 
     assert estado_inicial(_db.session.get(Tramite, r.get_json()["tramite"]["id"])) is None
 

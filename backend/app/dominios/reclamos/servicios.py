@@ -111,7 +111,8 @@ def _texto_mensaje(texto):
 
 def escribir_cliente(cliente, radicado, texto):
     """El ciudadano escribe; el asistente contesta al instante y el asesor ve la alerta."""
-    from .asistente import NOMBRE, responder
+    from scripts.asistente.minichat_reclamos import NOMBRE, responder
+
     from .repositorios import por_radicado
 
     texto = _texto_mensaje(texto)

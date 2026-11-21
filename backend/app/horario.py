@@ -213,4 +213,3 @@ def validar_fecha_reservable(fecha):
         raise DatosInvalidosError(f"Solo puedes reservar con hasta {maximo} días de anticipación.")
     if not dia_habil(fecha):
         raise DatosInvalidosError("No hay atención ese día.")
-

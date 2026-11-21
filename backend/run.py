@@ -13,5 +13,3 @@ if __name__ == "__main__":
     if app.config.get("DEBUG") and not debug:
         print("Aviso: FLASK_DEBUG ignorado porque FLASK_HOST no es localhost.")
     app.run(host=host, port=int(os.getenv("FLASK_PORT", "5000")), debug=debug)
-
-

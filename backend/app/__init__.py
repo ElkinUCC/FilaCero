@@ -67,12 +67,11 @@ def create_app(test_config=None):
     # Modelos: registrar todos antes de usar migraciones.
     from app.dominios.agentes.controladores import admin_agentes_bp, agentes_bp
     from app.dominios.asistente.controladores import asistente_bp
+    from app.dominios.auditoria.controladores import auditoria_bp
     from app.dominios.auditoria.modelos import Auditoria  # noqa: F401
     from app.dominios.equipos.controladores import equipos_bp
     from app.dominios.equipos.modelos import Equipo  # noqa: F401
-    from app.dominios.franjas.admin_controladores import admin_franjas_bp
-    from app.dominios.franjas.controladores import franjas_bp
-    from app.dominios.franjas.disponibilidad import disponibilidad_bp
+    from app.dominios.franjas.controladores import admin_franjas_bp, disponibilidad_bp, franjas_bp
     from app.dominios.franjas.modelos import Franja  # noqa: F401
     from app.dominios.organizaciones.controladores import organizaciones_bp
     from app.dominios.organizaciones.modelos import Organizacion  # noqa: F401
@@ -84,8 +83,7 @@ def create_app(test_config=None):
     from app.dominios.tramites.modelos import Tramite  # noqa: F401
     from app.dominios.turnos.controladores import turnos_bp
     from app.dominios.turnos.modelos import Turno  # noqa: F401
-    from app.dominios.usuarios.admin_controladores import admin_usuarios_bp
-    from app.dominios.usuarios.controladores import usuarios_bp
+    from app.dominios.usuarios.controladores import admin_usuarios_bp, usuarios_bp
     from app.dominios.usuarios.modelos import Usuario  # noqa: F401
 
     app.register_blueprint(usuarios_bp, url_prefix="/api/v1/usuarios")
@@ -98,6 +96,7 @@ def create_app(test_config=None):
     app.register_blueprint(admin_agentes_bp, url_prefix="/api/v1/admin/agentes")
     app.register_blueprint(disponibilidad_bp, url_prefix="/api/v1/franjas")
     app.register_blueprint(admin_usuarios_bp, url_prefix="/api/v1/admin/usuarios")
+    app.register_blueprint(auditoria_bp, url_prefix="/api/v1/admin/usuarios")
     app.register_blueprint(organizaciones_bp, url_prefix="/api/v1/organizacion")
     app.register_blueprint(equipos_bp, url_prefix="/api/v1/equipos")
     app.register_blueprint(reclamos_bp, url_prefix="/api/v1/reclamos")

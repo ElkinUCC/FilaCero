@@ -2,8 +2,10 @@
 
 from datetime import datetime, time, timedelta
 
+from app.dominios.agentes import repositorios as repo
+from app.dominios.agentes.dtos import asesor_en_vivo_response, turno_reciente_response
+from app.dominios.agentes.servicios import consultar_cola, en_horario_de_atencion, turno_activo
 from app.dominios.turnos.dtos import turno_response
-from app.dominios.turnos.preparacion import pendientes
 from app.horario import (
     a_iso,
     ahora_local,
@@ -13,11 +15,8 @@ from app.horario import (
     zona,
 )
 from app.tiempo import a_bd
-
-from . import repositorios as repo
-from .despacho import cumplimiento, estado_franja_actual, proyectar_cola, recomendar
-from .dtos import asesor_en_vivo_response, turno_reciente_response
-from .servicios import consultar_cola, en_horario_de_atencion, turno_activo
+from scripts.agentes.despacho import cumplimiento, estado_franja_actual, proyectar_cola, recomendar
+from scripts.turnos.preparacion import pendientes
 
 
 def rango_bd_de_hoy():

@@ -1,11 +1,10 @@
 """Preparación previa del turno (capa de servicio del dominio Turnos)."""
 
 from app import db
+from app.dominios.turnos.modelos import Turno
+from app.dominios.turnos.repositorios import ESTADOS_ACTIVOS
 from app.errores import ConflictoError, DatosInvalidosError, NoEncontradoError
 from app.tiempo import ahora_bd
-
-from .modelos import Turno
-from .repositorios import ESTADOS_ACTIVOS
 
 ESTADOS_PREPARACION = {
     "PENDIENTE": "Pendiente de preparar",

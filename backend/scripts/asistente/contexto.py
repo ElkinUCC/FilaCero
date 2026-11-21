@@ -3,24 +3,13 @@
 from collections import Counter
 from datetime import timedelta
 
-from sqlalchemy.orm import contains_eager
-
-from app.dominios.franjas.modelos import Franja
-from app.dominios.reclamos.modelos import Reclamo
-from app.dominios.turnos.modelos import Turno
+from app.dominios.asistente import repositorios as repo
 from app.horario import hoy_local, info_horario
 
 
 def _reservas_manana(punto_id=None):
     manana = hoy_local() + timedelta(days=1)
-    consulta = (
-        Turno.query.join(Franja, Turno.franja_id == Franja.id)
-        .options(contains_eager(Turno.franja))
-        .filter(Franja.fecha == manana, Turno.estado == "ESPERANDO")
-    )
-    if punto_id:
-        consulta = consulta.filter(Turno.punto_id == punto_id)
-    turnos = consulta.all()
+    turnos = repo.reservas_en_espera(manana, punto_id)
     por_sede = Counter(t.punto.nombre for t in turnos if t.punto)
     por_hora = Counter(t.franja.hora_inicio.hour for t in turnos)
     pico = max(por_hora.items(), key=lambda x: x[1]) if por_hora else None
@@ -34,8 +23,8 @@ def _reservas_manana(punto_id=None):
 
 def contexto_gerencial(dias=7, punto_id=None):
     """Datos para administrador y supervisor."""
-    from app.dominios.agentes.consultas import construir_en_vivo
-    from app.dominios.agentes.tablero import construir_tablero
+    from scripts.agentes.consultas import construir_en_vivo
+    from scripts.agentes.tablero import construir_tablero
 
     tablero = construir_tablero(dias=dias, punto_id=punto_id)
     vivo = construir_en_vivo()
@@ -52,13 +41,10 @@ def contexto_gerencial(dias=7, punto_id=None):
 
 def contexto_asesor(agente):
     """Datos para el asesor: su consola, su cola y su bandeja de reclamos."""
-    from app.dominios.agentes.consultas import construir_panel
+    from scripts.agentes.consultas import construir_panel
 
     panel = construir_panel(agente)
-    reclamos = Reclamo.query
-    if agente.punto_asignado_id:
-        reclamos = reclamos.filter(Reclamo.punto_id == agente.punto_asignado_id)
-    estados = Counter(estado for (estado,) in reclamos.with_entities(Reclamo.estado))
+    estados = Counter(repo.estados_de_reclamos(agente.punto_asignado_id))
     return {
         "rol": "asesor",
         "panel": panel,

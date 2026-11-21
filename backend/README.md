@@ -29,10 +29,20 @@ backend/
 │           ├── repositorios.py    consultas a la base de datos
 │           └── modelos.py         tablas (SQLAlchemy)
 ├── migrations/         migraciones de Alembic
-├── scripts/            crear la BD, generar claves, crear cuentas y organizaciones
+├── scripts/
+│   ├── crear_cuenta.py, create_db.py, …   tareas de consola (BD, claves, cuentas, organizaciones)
+│   ├── turnos/      otp.py · prediccion.py · preparacion.py · sala.py
+│   ├── agentes/     despacho.py · consultas.py · tablero.py
+│   └── asistente/   motor.py · contexto.py · llm.py · minichat_reclamos.py
 ├── tests/              pruebas con pytest
 └── docs/postman/       colección de Postman
 ```
+
+Todas las carpetas de `app/dominios/` tienen **exactamente** la misma estructura (`controladores`, `dtos`,
+`modelos`, `repositorios`, `servicios`). La lógica de apoyo que no es una capa —el código OTP, la predicción de
+espera, la preparación previa, la pantalla de sala, el despacho de la cola, el tablero ejecutivo y el asistente
+FilaCero IA— vive en `scripts/`, y los servicios de cada dominio la invocan. Los dominios que no tienen tablas
+propias (`agentes`, `asistente`) declaran en su `modelos.py` las entidades que leen.
 
 La regla que seguimos es que cada capa solo habla con la de abajo: el controlador llama al servicio, el
 servicio al repositorio y el repositorio a la base de datos. Hay una prueba
@@ -155,6 +165,23 @@ Todos están bajo `/api/v1`.
 | GET · POST · PUT | `/admin/agentes/` | Asesores y su sede |
 | GET · POST · PUT | `/admin/usuarios/` | Personal, roles y estado |
 | GET | `/admin/usuarios/auditoria` | Bitácora |
+
+## ¿Dónde se llenan las colas?
+
+La cola **no es una tabla aparte**: es la consulta de los turnos en estado `ESPERANDO` de una sede, ordenados
+por la fecha y hora de su franja. Se llena cada vez que se reserva un turno.
+
+| Paso | Frontend | Backend |
+|---|---|---|
+| 1. El ciudadano reserva (OTP + franja) | `components/cliente/reservarTurno.js` → `publicoApi.reservarTurno()` | `POST /api/v1/turnos/publico` → `turnos/controladores.solicitar_turno_publico` |
+| 2. Se crea el turno en la cola | — | `turnos/servicios.crear_turno` guarda el `Turno` con `estado="ESPERANDO"` (con candado por sede para no pasar el cupo) |
+| 3. Se arma la cola de la sede | — | `turnos/repositorios.consulta_cola(punto_id)` (la usa `agentes/repositorios`) |
+| 4. Se ordena y proyecta la hora | — | `scripts/agentes/despacho.proyectar_cola` y `scripts/agentes/consultas.construir_panel` |
+| 5. El asesor la ve | `pages/AgentePage.js` consulta cada 5 s `agenteApi.obtenerPanel()` y la pinta en `colaHTML()` | `GET /api/v1/agente/panel` |
+| 6. Sale de la cola | botón **Llamar siguiente** | `POST /api/v1/agente/llamar-siguiente` cambia el turno a `LLAMADO` |
+
+Con datos de ejemplo la cola se llena con `python simulacion.py --cargar` (semana demo) o
+`python simulacion.py --en-vivo` (crea reservas solas durante la demo, por la misma API pública).
 
 ## Pruebas
 

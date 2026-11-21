@@ -1,4 +1,4 @@
-from app.dominios.turnos import otp
+from scripts.turnos import otp
 
 
 def test_otp_sin_modo_prueba_se_envia_sin_devolverse_en_la_respuesta(app, client, monkeypatch):

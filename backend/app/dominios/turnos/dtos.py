@@ -1,7 +1,6 @@
 from app.horario import a_iso
 from app.seguridad import enmascarar_celular
-
-from .preparacion import preparacion_response
+from scripts.turnos.preparacion import preparacion_response
 
 
 def _equipo(turno, publica=False):

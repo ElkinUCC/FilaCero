@@ -10,8 +10,7 @@ from app.dominios.franjas.modelos import Franja
 from app.dominios.reclamos.modelos import Reclamo
 from app.dominios.turnos.modelos import Turno
 from app.horario import hoy_local
-
-from .despacho import cumplimiento
+from scripts.agentes.despacho import cumplimiento
 
 MAX_DIAS = 92
 ESTADOS_EQUIPO = ("POR_RECIBIR", "RECIBIDO", "EN_REPARACION", "LISTO", "ENTREGADO")

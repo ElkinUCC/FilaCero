@@ -10,9 +10,9 @@ from app.dominios.tramites.modelos import Tramite
 from app.dominios.usuarios.modelos import Usuario
 from app.errores import ConflictoError
 from app.horario import ahora_local, capacidad_sede, ocupacion_sede, zona
+from scripts.turnos.preparacion import estado_inicial
 
 from .modelos import Turno
-from .preparacion import estado_inicial
 from .repositorios import (
     ESTADOS_ACTIVOS,
     guardar,

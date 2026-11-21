@@ -4,11 +4,10 @@ from datetime import timedelta
 
 from app.dominios.sedes.repositorios import obtener_activos as sedes_activas
 from app.dominios.sedes.repositorios import obtener_por_id as obtener_sede
+from app.dominios.turnos import repositorios as repo
+from app.dominios.turnos.dtos import turno_llamado_sala_response, turno_siguiente_sala_response
 from app.horario import ahora_local, hoy_local, info_horario
 from app.tiempo import a_bd
-
-from . import repositorios as repo
-from .dtos import turno_llamado_sala_response, turno_siguiente_sala_response
 
 MINUTOS_VISIBLES = 30
 

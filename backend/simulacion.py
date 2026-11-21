@@ -1201,8 +1201,8 @@ def comando_cargar(args, solo_borrar=False):
         _simular_equipos_y_reclamos(db, datos, random.Random(args.semilla))
         _restaurar_protegidas(db, protegidas)
 
-        from app.dominios.agentes.despacho import cumplimiento
         from app.dominios.turnos.modelos import Turno
+        from scripts.agentes.despacho import cumplimiento
 
         c = cumplimiento(Turno.query.filter_by(estado="ATENDIDO").all())
         total = sum(t.values())
@@ -1294,7 +1294,7 @@ def _avanzar_atenciones_simuladas(db, trabajos, agentes, instante, rnd):
         marcar_no_asistio,
     )
     from app.dominios.turnos.modelos import Turno
-    from app.dominios.turnos.preparacion import registrar_preparacion
+    from scripts.turnos.preparacion import registrar_preparacion
 
     if not trabajos or not agentes:
         return

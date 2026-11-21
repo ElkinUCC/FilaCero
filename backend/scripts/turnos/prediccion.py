@@ -2,9 +2,8 @@
 
 from datetime import datetime
 
+from app.dominios.turnos import repositorios as repo
 from app.errores import NoEncontradoError
-
-from . import repositorios as repo
 
 
 def _predecir_duracion(turno):

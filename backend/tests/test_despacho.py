@@ -6,7 +6,6 @@ import pytest
 from flask_jwt_extended import create_access_token
 
 from app import create_app, db
-from app.dominios.agentes.despacho import cumplimiento, proyectar_cola, recomendar
 from app.dominios.franjas.modelos import Franja
 from app.dominios.sedes.modelos import Punto
 from app.dominios.tramites.modelos import Tramite
@@ -15,6 +14,7 @@ from app.dominios.usuarios.modelos import Usuario
 from app.dominios.usuarios.servicios import registrar_cliente_publico
 from app.horario import capacidad_sede, hoy_local, zona
 from app.tiempo import a_bd
+from scripts.agentes.despacho import cumplimiento, proyectar_cola, recomendar
 
 
 @pytest.fixture

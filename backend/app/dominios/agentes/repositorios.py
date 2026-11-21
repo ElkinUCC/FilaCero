@@ -3,12 +3,9 @@
 from sqlalchemy import func
 
 from app import db
-from app.dominios.franjas.modelos import Franja
-from app.dominios.sedes.modelos import Punto
-from app.dominios.tramites.modelos import Tramite
-from app.dominios.turnos.modelos import Turno
 from app.dominios.turnos.repositorios import consulta_cola
-from app.dominios.usuarios.modelos import Usuario
+
+from .modelos import Franja, Punto, Tramite, Turno, Usuario
 
 ESTADOS_EN_CURSO = ("LLAMADO", "EN_ATENCION")
 
