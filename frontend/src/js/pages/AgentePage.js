@@ -14,6 +14,7 @@ import { icono } from "../components/ui/icon.js";
 import { confirmar } from "../components/ui/modal.js";
 import { avisar } from "../components/ui/toast.js";
 import { html, pintarSiCambia } from "../utils/dom.js";
+import { guardarLocal, leerLocal } from "../utils/storage.js";
 import {
   codigoTurno, duracion, ESTADOS_EQUIPO, fechaCorta, horaDe, iniciales, PREPARACION, PRESENCIAS, primerNombre, textoPreparacion,
   valorRespuesta, ZONA,
@@ -22,6 +23,8 @@ import { crearSondeo } from "../utils/polling.js";
 import { anunciar, crearLlamadoPorVoz, destinoHablado } from "../utils/voz.js";
 
 const LLEGADA_MAX_SEG = 180;
+/** El asistente de despacho es opcional: el asesor lo enciende cuando lo necesita. */
+const CLAVE_ASISTENTE = "filacero.agente.asistente";
 const PUNTUALIDAD = {
   a_tiempo: { texto: "A tiempo", tono: "ok" },
   en_riesgo: { texto: "En riesgo", tono: "riesgo" },
@@ -96,6 +99,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     recienLlegados: new Set(),
     reclamosPendientes: null,
     alertas: [],
+    asistenteActivo: leerLocal(CLAVE_ASISTENTE) === "1",
   };
   let desfase = 0;
   let limpiarSeccion = null;
@@ -285,7 +289,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
       }
     }
     const sig = datos?.cola?.find((t) => t.es_hoy);
-    if (sig && !actual() && ["atrasado", "en_riesgo"].includes(sig.puntualidad)) {
+    if (s.asistenteActivo && sig && !actual() && ["atrasado", "en_riesgo"].includes(sig.puntualidad)) {
       emitir(`tarde-${sig.id}-${sig.puntualidad}`, {
         tono: sig.puntualidad === "atrasado" ? "atrasado" : "riesgo", icono: "megafono",
         titulo: `${primerNombre(sig.usuario_nombre)} ${sig.puntualidad === "atrasado" ? "ya está fuera de su franja" : "está por salirse de su franja"}`,
@@ -375,30 +379,49 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     }
   }
 
+  /** Pausa activa: siempre visible (no depende del asistente). */
+  function pausaHTML() {
+    if (!s.pausaHasta) return "";
+    return html`
+      <section class="asistente asistente--pausa" aria-live="polite">
+        ${icono("reloj", 22)}
+        <div class="asistente__texto">
+          <span class="asistente__tag">Pausa activa</span>
+          <h2 data-pausa-restante>—</h2>
+          <p>Levántate, estira cuello y espalda, toma agua. La franja va a tiempo.</p>
+        </div>
+        <div class="asistente__acciones"><button class="btn btn--primario" data-accion="terminar-pausa">Terminar pausa</button></div>
+      </section>`;
+  }
+
+  /** Asistente de despacho: apartado opcional encima de la cola (apagado por defecto). */
   function asistenteHTML() {
     const rec = p()?.recomendacion;
-    if (s.pausaHasta) {
-      return html`
-        <section class="asistente asistente--pausa" aria-live="polite">
-          ${icono("reloj", 22)}
-          <div class="asistente__texto">
-            <span class="asistente__tag">Pausa activa</span>
-            <h2 data-pausa-restante>—</h2>
-            <p>Levántate, estira cuello y espalda, toma agua. La franja va a tiempo.</p>
-          </div>
-          <div class="asistente__acciones"><button class="btn btn--primario" data-accion="terminar-pausa">Terminar pausa</button></div>
-        </section>`;
+    const activo = s.asistenteActivo;
+    let cuerpo = "";
+    if (activo && !s.pausaHasta) {
+      cuerpo = rec
+        ? html`
+            <div class="asistente asistente--lateral asistente--${rec.nivel}" aria-live="polite">
+              ${icono(ICONO_ACCION[rec.accion] || "campana", 20)}
+              <div class="asistente__texto">
+                <h2>${rec.titulo}</h2>
+                <p>${rec.motivo}</p>
+              </div>
+              <div class="asistente__acciones">${botonesAsistente(rec)}</div>
+            </div>`
+        : html`<div class="esqueleto" style="height: 56px; width: 100%"></div>`;
     }
-    if (!rec) return html`<section class="asistente"><div class="esqueleto" style="height: 60px; width: 100%"></div></section>`;
     return html`
-      <section class="asistente asistente--${rec.nivel}" aria-live="polite">
-        ${icono(ICONO_ACCION[rec.accion] || "campana", 22)}
-        <div class="asistente__texto">
-          <span class="asistente__tag">Asistente de despacho</span>
-          <h2>${rec.titulo}</h2>
-          <p>${rec.motivo}</p>
+      <section class="despacho ${activo ? "despacho--activo" : ""}" aria-label="Asistente de despacho (opcional)">
+        <div class="despacho__cabeza">
+          <span class="despacho__titulo">${icono("chispa", 16)} Asistente de despacho <small>Opcional</small></span>
+          <button type="button" class="despacho__switch" role="switch" aria-checked="${activo ? "true" : "false"}" data-accion="asistente"
+            title="${activo ? "Ocultar el asistente de despacho y el Copiloto IA" : "Mostrar sugerencias de a quién llamar y el Copiloto IA"}">
+            <span class="despacho__pista"><span></span></span>${activo ? "Activado" : "Activar"}
+          </button>
         </div>
-        <div class="asistente__acciones">${botonesAsistente(rec)}</div>
+        ${cuerpo}
       </section>`;
   }
 
@@ -581,7 +604,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
         <h3>${g.t.es_hoy ? "Hoy" : fechaCorta(g.t.fecha)} · ${g.t.hora_inicio}–${g.t.hora_fin}<small>${g.items.length}</small></h3>
         ${g.items.map((t) => {
           const pu = PUNTUALIDAD[t.puntualidad] || {};
-          const recomendado = rec?.turno_id === t.id && !actual();
+          const recomendado = s.asistenteActivo && rec?.turno_id === t.id && !actual();
           return html`
             <div class="cola__item ${recomendado ? "cola__item--rec" : ""} ${s.recienLlegados.has(t.id) ? "cola__item--nuevo" : ""}">
               <span class="cola__hora" title="Hora proyectada de inicio">${t.es_hoy ? t.inicio_proyectado : t.hora_inicio}</span>
@@ -638,7 +661,7 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
           ${totalProximos
             ? html`
                 <div class="cola__proximos">
-                  <button type="button" class="cola__desplegar" aria-expanded="${s.verProximos}" data-accion="proximos">
+                  <button type="button" class="cola__desplegar" aria-expanded="${s.verProximos ? "true" : "false"}" data-accion="proximos">
                     ${icono("abajo", 16, { clase: s.verProximos ? "girado" : "" })} Próximos días <small>${totalProximos}</small>
                   </button>
                   ${s.verProximos ? proximos.map(grupoHTML) : ""}
@@ -652,8 +675,8 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
     return html`
       <main class="ag__cuerpo" id="contenido" tabindex="-1">
         <h1 class="visually-hidden">Consola de atención${p()?.agente?.sede ? ` · ${p().agente.sede}` : ""}</h1>
-        <div class="ag__principal">${asistenteHTML()}${puestoHTML()}${jornadaHTML()}</div>
-        ${colaHTML()}
+        <div class="ag__principal">${pausaHTML()}${puestoHTML()}${jornadaHTML()}</div>
+        <div class="ag__lateral">${asistenteHTML()}${colaHTML()}</div>
       </main>`;
   }
 
@@ -832,6 +855,12 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
       });
     },
     seccion: (b) => cambiarSeccion(b.dataset.valor),
+    asistente: () => {
+      s.asistenteActivo = !s.asistenteActivo;
+      guardarLocal(CLAVE_ASISTENTE, s.asistenteActivo ? "1" : null);
+      mostrarCopiloto();
+      render();
+    },
     proximos: () => {
       s.verProximos = !s.verProximos;
       render();
@@ -909,6 +938,12 @@ export function mountAgentePage({ usuario, onSalir, onUsuario }) {
       } else if (a.tipo === "seccion") cambiarSeccion(a.destino);
     },
   });
+
+  /** El Copiloto IA (chat) también es parte del asistente opcional. */
+  function mostrarCopiloto() {
+    zona("ia").hidden = !s.asistenteActivo;
+  }
+  mostrarCopiloto();
 
   const reloj1s = window.setInterval(tick, 1000);
   render();

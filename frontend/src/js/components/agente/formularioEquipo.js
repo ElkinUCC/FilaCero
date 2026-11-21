@@ -30,32 +30,27 @@ export function abrirFormularioEquipo({ inicial = {}, alGuardado }) {
 
   const cuerpo = () => html`
     <form id="form-equipo" class="formulario">
-      <div class="row row-cols-1 row-cols-sm-2 g-3">
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
         <label><span class="etiqueta">Celular del cliente</span>
           <span class="campo">${icono("celular", 17)}<input id="eq-cliente_celular" data-eq="cliente_celular" inputmode="numeric" value="${form.cliente_celular}" placeholder="3001234567" /></span>
         </label>
         <label><span class="etiqueta">Nombre del cliente</span>
           <span class="campo">${icono("usuario", 17)}<input id="eq-cliente_nombre" data-eq="cliente_nombre" value="${form.cliente_nombre}" maxlength="100" /></span>
         </label>
+        <label><span class="etiqueta">Cédula del titular</span>
+          <span class="campo">${icono("ficha", 17)}<input id="eq-cliente_documento" data-eq="cliente_documento" inputmode="numeric" autocomplete="off" value="${form.cliente_documento}" placeholder="Se exige al entregar" /></span>
+          ${inicial.cliente_documento ? html`<small class="formulario__ayuda">Ya registrada: termina en ${inicial.cliente_documento.replace(/^·+/, "")}. Debe coincidir.</small>` : ""}
+        </label>
       </div>
-      <label><span class="etiqueta">Cédula del titular</span>
-        <span class="campo">${icono("ficha", 17)}<input id="eq-cliente_documento" data-eq="cliente_documento" inputmode="numeric" autocomplete="off" value="${form.cliente_documento}" placeholder="Solo números · se exige al entregar" /></span>
-        ${inicial.cliente_documento ? html`<small class="formulario__ayuda">Ya registrada: termina en ${inicial.cliente_documento.replace(/^·+/, "")}. Debe coincidir.</small>` : ""}
-      </label>
       <div>
         <span class="etiqueta">Marca</span>
         <div class="wz__chips eq__marcas">
           ${s.marcas.map((m) => html`<button type="button" class="wz__chip ${form.marca === m ? "activo" : ""}" data-marca="${m}">${m}</button>`)}
         </div>
       </div>
-      <div class="row row-cols-1 row-cols-sm-2 g-3">
+      <div class="row row-cols-1 row-cols-sm-2 ${form.origen === "GARANTIA" ? "row-cols-lg-4" : "row-cols-lg-3"} g-3">
         <label><span class="etiqueta">Modelo o tamaño</span><span class="campo"><input id="eq-modelo" data-eq="modelo" value="${form.modelo}" maxlength="60" placeholder='55" 4K' /></span></label>
         <label><span class="etiqueta">Serial</span><span class="campo"><input id="eq-serial" data-eq="serial" value="${form.serial}" maxlength="60" placeholder="Opcional" /></span></label>
-      </div>
-      <label><span class="etiqueta">Falla reportada</span>
-        <span class="campo"><textarea id="eq-falla" data-eq="falla" rows="2" maxlength="300" placeholder="Ej. No enciende, el led parpadea">${form.falla}</textarea></span>
-      </label>
-      <div class="row row-cols-1 row-cols-sm-2 g-3">
         <div>
           <span class="etiqueta">Tipo de ingreso</span>
           <div class="segmentos eq__origen">
@@ -67,16 +62,21 @@ export function abrirFormularioEquipo({ inicial = {}, alGuardado }) {
               <span class="campo">${icono("calendario", 17)}<input id="eq-fecha_compra" data-eq="fecha_compra" type="date" max="${hoyISO()}" min="${hoyISO(-365)}" value="${form.fecha_compra}" /></span></label>`
           : ""}
       </div>
-      <label><span class="etiqueta">Nota para el cliente (opcional)</span>
-        <span class="campo"><input id="eq-nota" data-eq="nota" value="${form.nota}" maxlength="300" placeholder="Ej. Pasa a diagnóstico hoy" /></span>
-      </label>
+      <div class="row row-cols-1 row-cols-md-2 g-3">
+        <label><span class="etiqueta">Falla reportada</span>
+          <span class="campo"><textarea id="eq-falla" data-eq="falla" rows="2" maxlength="300" placeholder="Ej. No enciende, el led parpadea">${form.falla}</textarea></span>
+        </label>
+        <label><span class="etiqueta">Nota para el cliente (opcional)</span>
+          <span class="campo"><textarea id="eq-nota" data-eq="nota" rows="2" maxlength="300" placeholder="Ej. Pasa a diagnóstico hoy">${form.nota}</textarea></span>
+        </label>
+      </div>
       ${mensajeError(s.error)}
     </form>`;
 
   const v = abrirModal({
     titulo: "Recibir equipo",
     descripcion: "Queda con el celular y la cédula del titular: con el celular sigue el avance y reserva la entrega; con la cédula lo recibe.",
-    ancho: 600,
+    ancho: 860,
     cuerpo: cuerpo(),
     pie: pie(),
   });

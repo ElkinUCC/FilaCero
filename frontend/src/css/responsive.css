@@ -165,7 +165,7 @@ img, svg { max-width: 100%; }
   .ag__principal { display: contents; }
   .ag__principal > .asistente { order: 1; }
   .ag__principal > .puesto { order: 2; }
-  .ag__cuerpo > .cola { order: 3; position: static; max-height: none; }
+  .ag__cuerpo > .ag__lateral { order: 3; position: static; max-height: none; }
   .ag__principal > .jornada { order: 4; }
   .ag__principal > .ag__recientes { order: 5; }
 }

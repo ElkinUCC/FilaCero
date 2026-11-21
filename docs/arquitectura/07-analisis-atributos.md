@@ -89,7 +89,7 @@ MySQL (la API es sin estado salvo el límite de peticiones y el candado local, a
 ## 7. Mantenibilidad y verificabilidad
 
 - Estructura repetible por módulo (controlador/servicio/repositorio/modelo/DTO).
-- **222 pruebas** automatizadas en verde (≈ 45 s; incluye 58 pruebas de arquitectura de capas), más 50 comprobaciones de punta a punta contra el servidor real.
+- **249 pruebas** automatizadas (248 en verde y 1 omitida; incluye 85 pruebas de arquitectura de capas), más 50 comprobaciones de punta a punta contra el servidor real.
 - Migraciones versionadas y reversibles; la de esta entrega fue probada en subida y bajada.
 - Componentes de UI reutilizables (`admin/tablaSeccion.js`, `ui/modal.js` con `abrirDetalle`) que **imponen** la regla de diseño del panel.
 - Deuda técnica R-07 corregida en la entrega final y protegida por `tests/test_arquitectura_capas.py`.

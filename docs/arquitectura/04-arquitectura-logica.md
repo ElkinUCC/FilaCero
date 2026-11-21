@@ -42,7 +42,7 @@ flowchart TB
 
 1. Las dependencias van **hacia abajo**: controlador → servicio → repositorio → modelo. Nunca al revés.
 2. Un módulo usa a otro **a través de su servicio o DTO**, no de su controlador (p. ej. *Atención y despacho*
-   usa `turnos.preparacion` y `usuarios.servicios.dar_de_baja`).
+   usa `scripts.turnos.preparacion` y `usuarios.servicios.dar_de_baja`).
 3. Las reglas de capacidad viven en **un solo lugar** (`app/horario.py`); reserva, disponibilidad, despacho y
    panel las consultan, no las duplican.
 4. Las excepciones de dominio (`DatosInvalidosError`, `ConflictoError`, `NoEncontradoError`…) se lanzan en la
@@ -52,7 +52,7 @@ flowchart TB
 
 > **Deuda técnica corregida (R-07, entrega final)**: los endpoints de métricas, historial, asesores, sala,
 > disponibilidad, usuarios y organización ya no consultan la base de datos desde el controlador. Las consultas
-> están en `repositorios.py`, las reglas en `servicios.py` / `admin_servicios.py` / `consultas.py` y las respuestas
+> están en `repositorios.py`, las reglas en `servicios.py` (con apoyo de `backend/scripts/`) y las respuestas
 > en `dtos.py`. Los controladores tampoco importan repositorios: las lecturas simples pasan por funciones del servicio
 > (`buscar_turno_por_codigo`, `equipos_de_sede`, `reclamos_de_sede`, `obtener_asesor`…). La regla 1 la verifica
 > `tests/test_arquitectura_capas.py` (ADR-017).
@@ -60,7 +60,7 @@ flowchart TB
 > **Excepción declarada a la regla 2 (acoplamiento por modelo)**: algunos módulos importan el **modelo** de otro
 > para contar o validar, con importación diferida para no crear ciclos de arranque: `franjas` y `usuarios` leen
 > `turnos.modelos.Turno` (cupos ocupados, turno en curso), `sedes` lee `franjas.modelos.Franja` y
-> `turnos.preparacion` usa `agentes.repositorios.obtener_agente`. Es un ciclo lógico `turnos ↔ agentes` aceptado
+> `scripts.turnos.preparacion` usa `agentes.repositorios.obtener_agente`. Es un ciclo lógico `turnos ↔ agentes` aceptado
 > dentro del mismo proceso (trade-off T-12 y riesgo R-11 en [09](09-tradeoffs-riesgos.md)); el plan es exponer
 > esas consultas en `turnos/repositorios.py`. El [diagrama de paquetes](../diagramas/README.md) muestra todas las dependencias.
 
@@ -142,7 +142,7 @@ para el panel); `resumen.por_preparar` en la consola.
 
 ### 4.2 API ↔ Proveedor SMS
 
-Interfaz `turnos/otp.py`. En localhost (`FILACERO_OTP_TEST_MODE=true`) el código se devuelve en la respuesta
+Interfaz `scripts/turnos/otp.py`. En localhost (`FILACERO_OTP_TEST_MODE=true`) el código se devuelve en la respuesta
 para la demostración, y **solo** a peticiones hechas desde el mismo equipo (127.0.0.1). El envío real por SMS
 (`_enviar_sms`) es el punto de extensión identificado y queda fuera del alcance de la entrega.
 

@@ -35,8 +35,8 @@ extrae como servicio de solo lectura alimentado por la misma BD o por eventos.
 
 | Elemento | Impacto |
 |---|---|
-| `turnos/preparacion.py` | Publica un evento "preparación cambiada" después del `commit` |
-| Nuevo componente *Notificaciones* | Envía por el proveedor (reutiliza la interfaz de `otp.py`) con reintentos |
+| `scripts/turnos/preparacion.py` | Publica un evento "preparación cambiada" después del `commit` |
+| Nuevo componente *Notificaciones* | Envía por el proveedor (reutiliza la interfaz de `scripts/turnos/otp.py`) con reintentos |
 | Integración | Envío asíncrono (cola en tabla o Redis) para que un proveedor lento no frene al asesor |
 | Costo | Variable por mensaje (I-02) |
 | Privacidad | Consentimiento explícito del canal al reservar (I-03) |

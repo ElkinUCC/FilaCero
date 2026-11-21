@@ -156,13 +156,69 @@
 .ag__recientes li { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid #e3ebe8; font-size: 14px; }
 .ag__recientes li:first-child { border-top: 0; }
 
-/* Cola */
-.cola {
+/* Columna lateral: asistente opcional + cola */
+.ag__lateral {
   position: sticky;
   top: 82px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  min-width: 0;
   max-height: calc(100vh - 100px);
+}
+
+/* Asistente de despacho (opcional, apagado por defecto) */
+.despacho {
+  flex: none;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-l);
+  background: var(--papel);
+  overflow: hidden;
+}
+.despacho__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; }
+.despacho__titulo { display: inline-flex; align-items: center; gap: 7px; color: var(--tinta-2); font-size: 14px; font-weight: 700; }
+.despacho__titulo .fc-icon { color: var(--petroleo); }
+.despacho__titulo small { padding: 2px 7px; border-radius: 99px; background: var(--menta-2); color: var(--tinta-3); font-size: 10.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+.despacho__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tinta-2);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.despacho__switch:hover { background: #f1f6f4; }
+.despacho__pista { position: relative; width: 34px; height: 20px; border-radius: 99px; background: #c9d6d3; transition: background .2s ease; }
+.despacho__pista span { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 20%); transition: transform .2s ease; }
+.despacho__switch[aria-checked="true"] .despacho__pista { background: var(--petroleo); }
+.despacho__switch[aria-checked="true"] .despacho__pista span { transform: translateX(14px); }
+.despacho--activo > .esqueleto { margin: 0 14px 14px; width: auto !important; }
+
+/* Variante compacta del asistente dentro de la columna lateral */
+.asistente.asistente--lateral {
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  margin: 0 10px 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.asistente--lateral h2 { margin: 0 0 2px; font-size: 15.5px; }
+.asistente--lateral p { font-size: 13px; line-height: 1.45; }
+.asistente--lateral .asistente__acciones { grid-column: 1 / -1; justify-content: flex-start; }
+.asistente--lateral .asistente__acciones .btn { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+
+/* Cola */
+.cola {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   border: 1px solid var(--linea);
   border-radius: var(--radio-l);
   background: var(--papel);
@@ -225,7 +281,8 @@
 /* Adaptable */
 @media (max-width: 1050px) {
   .ag__cuerpo { grid-template-columns: 1fr; }
-  .cola { position: static; max-height: none; }
+  .ag__lateral { position: static; max-height: none; }
+  .cola { max-height: none; }
   .ag__dia { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ag__dia div:nth-child(4) { border-left: 0; }
   .ag__dia div:nth-child(n + 4) { border-top: 1px solid var(--linea); }
@@ -568,7 +625,12 @@
 .taller__avanzar:hover:not(:disabled) { background: var(--petroleo); color: #fff; }
 .taller__col--listo .taller__avanzar:hover:not(:disabled) { background: var(--verde); }
 .taller__vacio { padding: 18px 6px; color: var(--tinta-3); font-size: 13px; text-align: center; }
-.etapas--equipo { margin-bottom: 4px; }
+/* Recorrido del equipo: las 4 etapas caben en el ancho del modal (sin scroll lateral) */
+.etapas--equipo { width: 100%; margin-bottom: 4px; }
+.etapas--equipo .etapas__paso { gap: 5px; min-width: 0; font-size: 12px; white-space: nowrap; }
+.etapas--equipo .etapas__paso + .etapas__paso { flex: 1 1 0; }
+.etapas--equipo .etapas__paso + .etapas__paso::before { flex: 1 1 auto; width: auto; min-width: 8px; margin: 0 6px; }
+.etapas--equipo .etapas__icono { flex: none; width: 26px; height: 26px; }
 .eq__marcas { margin-top: 6px; }
 .eq__origen { margin-top: 6px; }
 

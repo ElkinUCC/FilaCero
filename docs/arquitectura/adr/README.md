@@ -21,4 +21,5 @@ decisión cambió durante el desarrollo no la borramos: la marcamos como revisad
 | [014](ADR-014-presencia-del-asesor.md) | Presencia del asesor | Aceptado | Usabilidad |
 | [015](ADR-015-cedula-y-codigos-visibles.md) | Cédula para entregar equipos y códigos cortos | Aceptado | Seguridad, usabilidad |
 | [016](ADR-016-minichat-y-alertas.md) | Minichat con asistente automático y alertas | Aceptado | Usabilidad |
-| [017](ADR-017-bootstrap-y-capas-estrictas.md) | Bootstrap 5.3 y capas estrictas en el backend | Aceptado | Mantenibilidad |
+| [017](ADR-017-bootstrap-y-capas-estrictas.md) | Bootstrap 5.3 y capas estrictas en el backend | Revisado | Mantenibilidad |
+| [018](ADR-018-estructura-estandar-y-scripts.md) | Estructura estándar por dominio y lógica de apoyo en `scripts/` | Aceptado | Mantenibilidad |

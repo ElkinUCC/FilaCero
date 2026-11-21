@@ -131,11 +131,14 @@ Cada módulo de dominio repite la misma **estructura por capas**:
 
 | Capa | Archivo | Responsabilidad | Puede depender de |
 |---|---|---|---|
-| Controlador (presentación HTTP) | `controladores.py`, `admin_controladores.py` | Recibir la petición, validar rol, devolver JSON | Servicios, DTO, Seguridad, Auditoría |
-| Servicio (aplicación / negocio) | `servicios.py`, `despacho.py`, `preparacion.py` | Reglas de negocio y transacciones | Repositorios, Modelos, Horario, Errores |
+| Controlador (presentación HTTP) | `controladores.py` | Recibir la petición, validar rol, devolver JSON | Servicios, DTO, Seguridad, Auditoría |
+| Servicio (aplicación / negocio) | `servicios.py` (apoyado en `backend/scripts/`) | Reglas de negocio y transacciones | Repositorios, Modelos, Horario, Errores |
 | Repositorio (acceso a datos) | `repositorios.py` | Consultas reutilizables, bloqueos | Modelos |
 | Modelo (persistencia) | `modelos.py` | Entidades SQLAlchemy | `TenantScoped` |
 | DTO (contrato) | `dtos.py` | Forma pública de los datos (incluye versiones públicas que enmascaran) | Modelos |
+
+La lógica de apoyo (OTP, predicción de espera, preparación, sala, despacho, tablero y asistente IA) no es una
+capa: vive en `backend/scripts/` y la usan los servicios ([ADR-018](adr/ADR-018-estructura-estandar-y-scripts.md)).
 
 ## C3 · Componentes de la SPA FilaCero
 

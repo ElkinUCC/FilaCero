@@ -28,11 +28,11 @@ aceptado** con su mitigación y su camino de evolución.
 | Contraseñas con hash (`werkzeug.security`) y política de contraseña segura | `app/seguridad.py` |
 | Bloqueo de cuenta tras intentos fallidos (`429`) y revocación inmediata de sesiones (`ver` en el JWT) | `usuarios/servicios.py`, ADR-005 |
 | Autorización por rol en cada endpoint (`@requiere_rol`) y por sede para equipos, reclamos y preparación (`409` a otra sede) | controladores y servicios |
-| Ciudadano sin cuenta: OTP de 6 dígitos + token firmado con propósito, organización y vigencia | `turnos/otp.py`, `turnos/controladores.py` |
+| Ciudadano sin cuenta: OTP de 6 dígitos + token firmado con propósito, organización y vigencia | `scripts/turnos/otp.py`, `turnos/controladores.py` |
 | Límite de peticiones por IP en OTP, consulta y radicación | `app/seguridad.py` (`limitar`) |
 | Cabeceras: `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options`, `nosniff` en la API; CSP estricta en el frontend (`<meta>` en `index.html`) | `app/__init__.py`, `frontend/index.html` |
 | CORS con lista blanca de orígenes (`CORS_ALLOWED_ORIGINS`) | `app/config.py` |
-| Código OTP de prueba solo para peticiones desde el mismo equipo; depurador solo en 127.0.0.1; aviso si la clave JWT es corta | `turnos/otp.py`, `run.py`, `app/config.py` |
+| Código OTP de prueba solo para peticiones desde el mismo equipo; depurador solo en 127.0.0.1; aviso si la clave JWT es corta | `scripts/turnos/otp.py`, `run.py`, `app/config.py` |
 | Aislamiento multiempresa por `organizacion_id` en cada consulta | ADR-006 |
 | Celular y serial enmascarados en las vistas públicas | DTO públicos |
 | Bitácora de acciones sensibles (entregas, bajas, cambios de rol) | módulo `auditoria` |
@@ -61,6 +61,6 @@ Repetir antes de cada entrega: `pip-audit -r requirements.txt`.
 
 ```powershell
 cd backend
-python -m pytest tests/ -q                 # 222 passed, 1 skipped
+python -m pytest tests/ -q                 # 248 passed, 1 skipped
 pip-audit -r requirements.txt              # No known vulnerabilities found
 ```
