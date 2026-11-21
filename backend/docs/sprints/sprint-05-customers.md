@@ -279,3 +279,12 @@ El sprint solo debe marcarse como completado cuando los criterios de aceptación
 | HU-21 | Como cliente, quiero cancelar una reserva permitida. | Se valida propiedad y estado y se libera capacidad. |
 
 **Pendiente de integración externa:** si el entorno usa OTP de prueba, no documentar el envío SMS real como terminado.
+
+## Cierre en la entrega final
+
+Los pendientes registrados en este sprint quedaron resueltos así:
+
+- Contratos reales de los endpoints: `frontend/docs/CONTRATO-BACKEND-FRONTEND.md` y `backend/README.md`; respuestas con el formato uniforme `success`/`error`.
+- Concurrencia probada contra MySQL (ver ADR-004) y suite automatizada en verde (222 aprobadas).
+- Integración con la interfaz web completada en el sprint 09.
+- El envío real de SMS sigue fuera del alcance: el OTP funciona en modo prueba local y así se documenta.

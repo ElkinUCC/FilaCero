@@ -34,13 +34,16 @@ backend/
 │       ├── franjas/            # franjas y disponibilidad
 │       ├── turnos/             # reserva pública + OTP, consulta, sala, predicción
 │       ├── agentes/            # ciclo de atención, métricas, despacho.py (EDF)
+│       ├── equipos/            # equipos de clientes, taller, garantía y entrega con cédula
+│       ├── reclamos/           # radicación, gestión y minichat
+│       ├── asistente/          # asistente FilaCero IA (motor local; Claude opcional)
 │       └── auditoria/          # bitácora de acciones sensibles
 │           ├── controladores.py   # Blueprints: HTTP de entrada y salida
 │           ├── dtos.py            # Validación (Marshmallow) y forma pública de los datos
 │           ├── servicios.py       # Reglas de negocio + excepciones del dominio
 │           ├── repositorios.py    # Consultas a la base de datos
 │           └── modelos.py         # Tablas (SQLAlchemy)
-├── migrations/versions/        # 9 migraciones Alembic
+├── migrations/versions/        # 15 migraciones Alembic
 ├── scripts/                    # create_db.py · generate_secret.py · promover_admin.py
 ├── tests/                      # conftest.py (fixtures) + pruebas por tema
 └── docs/                       # conceptos, validación manual, postman, roadmap, sprints
@@ -167,7 +170,9 @@ el estado de atención de cada sede y se actualiza cada 15 segundos.
 
 ---
 
-## Endpoints (54 rutas bajo `/api/v1`)
+## Endpoints (76 rutas bajo `/api/v1`)
+
+Lista completa y siempre actualizada, con método y URL: `flask --app run routes` (en `backend/`, con el venv activo).
 
 **Público.** Límite por IP; el ciudadano no tiene cuenta.
 
@@ -200,6 +205,28 @@ el estado de atención de cada sede y se actualiza cada 15 segundos.
 | GET | `/api/v1/agente/cola` · `/actual` | Cola ordenada por franja · turno en curso |
 | POST | `/api/v1/agente/llamar-siguiente` | Llama al siguiente (EDF) |
 | POST | `/api/v1/agente/turnos/<id>/{llamar,iniciar,finalizar,no-asistio,devolver}` | Ciclo de atención |
+| POST | `/api/v1/agente/turnos/<id>/preparacion` | Avanza la preparación del pedido (pendiente → en preparación → listo) |
+| PUT | `/api/v1/agente/presencia` · `/api/v1/agente/sede` | Estado del asesor (disponible, pausa…) · sede de trabajo |
+
+**Equipos y reclamos** (asesor y panel; rutas `publico` para el ciudadano con OTP)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET · POST | `/api/v1/equipos/` | Tablero del taller · recibir un equipo |
+| PUT | `/api/v1/equipos/<id>/estado` | Cambia el estado; la entrega exige la cédula del titular |
+| GET | `/api/v1/equipos/catalogo` | Marcas y estados |
+| POST | `/api/v1/equipos/publico/mios` | Equipos del ciudadano |
+| GET | `/api/v1/reclamos/` · `/catalogo` | Bandeja de reclamos · categorías |
+| PUT | `/api/v1/reclamos/<id>` · `/<id>/leido` | Gestionar · marcar leído |
+| POST | `/api/v1/reclamos/<id>/mensajes` | Respuesta del personal en el minichat |
+| POST | `/api/v1/reclamos/publico` · `/publico/mios` · `/publico/mensajes` | Radicar · consultar · escribir (ciudadano) |
+
+**Asistente y organización**
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST · GET | `/api/v1/asistente/preguntar` · `/sugerencias` | Asistente FilaCero IA (ADMIN, SUPERVISOR, AGENTE) |
+| GET · PATCH | `/api/v1/organizacion/actual` | Datos de la organización activa |
 
 **Administración** (`ADMIN`; `SUPERVISOR` en solo lectura)
 
@@ -209,7 +236,7 @@ el estado de atención de cada sede y se actualiza cada 15 segundos.
 | POST · PUT · DELETE | `/api/v1/tramites/` · `/api/v1/tramites/<id>` | CRUD de trámites |
 | GET · POST · PATCH | `/api/v1/franjas/` · `/api/v1/admin/franjas/` · `/<id>` | Franjas manuales |
 | GET | `/api/v1/admin/agentes/metricas[/sedes\|/tramites]` | Indicadores de puntualidad |
-| GET | `/api/v1/admin/agentes/en-vivo` · `/historial` | Sedes ahora · historial paginado |
+| GET | `/api/v1/admin/agentes/en-vivo` · `/historial` · `/tablero` | Sedes ahora · historial paginado · tablero ejecutivo |
 | GET · POST · PUT | `/api/v1/admin/agentes/` · `/<id>` · `/<id>/sede` | Asesores y su sede |
 | GET · POST · PUT | `/api/v1/admin/usuarios/` · `/<id>` | Personal, roles y estado (solo ADMIN) |
 | POST | `/api/v1/admin/usuarios/<id>/restablecer-clave` | Clave temporal que se muestra una sola vez |
@@ -217,7 +244,7 @@ el estado de atención de cada sede y se actualiza cada 15 segundos.
 
 **Compatibilidad** (rutas de los primeros sprints, para el rol `CLIENTE` con cuenta): `POST /api/v1/usuarios/registro`, `POST /api/v1/turnos/`, `GET /api/v1/turnos/mis-turnos`, `POST /api/v1/turnos/<id>/cancelar`, `GET /api/v1/turnos/<id>/tiempo-espera`.
 
-La colección completa, con ejemplos y aserciones, está en [`docs/postman/`](docs/postman/README.md).
+La colección Postman de los flujos principales, con ejemplos y aserciones, está en [`docs/postman/`](docs/postman/README.md).
 
 ---
 
@@ -232,3 +259,12 @@ La colección completa, con ejemplos y aserciones, está en [`docs/postman/`](do
 | `test_franjas_turnos.py` · `test_despacho.py` | Disponibilidad, cupo por sede y asistente EDF |
 | `test_concurrencia.py` · `test_reservas_concurrentes.py` | Cero sobrecupo con reservas simultáneas |
 | `test_rutas_sprints.py` | Que todas las rutas clave estén registradas |
+| `test_arquitectura_capas.py` | Reglas de capas: controladores sin BD ni repositorios; servicios sin Flask |
+| `test_multiempresa.py` | Aislamiento entre organizaciones |
+| `test_seguridad_sesiones_otp.py` | Revocación de sesiones y propósito del permiso OTP |
+| `test_rotacion_y_cuentas_protegidas.py` | Rotación de sede del asesor y cuentas protegidas |
+| `test_preparacion_atencion.py` · `test_entrega_final.py` | Preparación previa, módulo de atención y baja lógica de asesores |
+| `test_mejoras_entrega.py` | Cola ordenada, un turno en curso por asesor y errores uniformes |
+| `test_equipos_reclamos.py` | Equipos, garantía, reclamos, minichat y presencia |
+| `test_asistente_ia.py` | Permisos e intenciones del asistente FilaCero IA |
+| `test_simulacion.py` | Comportamiento seguro de `simulacion.py` |

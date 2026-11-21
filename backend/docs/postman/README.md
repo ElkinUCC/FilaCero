@@ -2,7 +2,7 @@
 
 ## Archivos
 
-- `FilaCero.postman_collection.json`: peticiones en 9 carpetas que cubren las rutas de la API, con aserciones.
+- `FilaCero.postman_collection.json`: 66 peticiones en 9 carpetas con aserciones, que recorren los flujos principales de la API (52 de las 76 rutas). Equipos, reclamos y el asistente se prueban con `pytest` y `simulacion.py`; la lista completa de rutas sale con `flask --app run routes`.
 - `FilaCero.local.postman_environment.json`: entorno local. Las claves van **vacías**: complétalas tú.
 
 ## Preparación

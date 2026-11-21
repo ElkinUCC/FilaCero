@@ -249,3 +249,11 @@ El estado del sprint debe reflejar las funcionalidades realmente implementadas y
 | HU-16 | Como administrador, quiero proteger las operaciones administrativas. | Solo JWT válido con rol ADMIN permite escrituras. |
 
 **Criterio de integridad:** conservar registros históricos relacionados con turnos; preferir desactivación sobre borrado físico.
+
+## Cierre en la entrega final
+
+Los pendientes registrados en este sprint quedaron resueltos así:
+
+- La protección por rol de cada endpoint administrativo está cubierta por `test_usuarios_permisos.py` y `test_contrato_y_errores.py` (401 sin token, 403 con rol insuficiente).
+- Las operaciones se validaron contra MySQL con `simulacion.py --url` (50/50 verificaciones).
+- Resultados y limitaciones documentados en `docs/arquitectura/07-analisis-atributos.md` y `09-tradeoffs-riesgos.md`.

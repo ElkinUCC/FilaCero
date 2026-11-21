@@ -50,3 +50,11 @@ Agente -> Frontend JS -> API Flask -> JWT/Rol -> Servicio de atención
 
 ## Resultado
 El sprint conecta las reservas de los clientes con la atención presencial realizada por los agentes.
+
+## Cierre en la entrega final
+
+Los pendientes registrados en este sprint quedaron resueltos así:
+
+- Colección Postman versionada en `backend/docs/postman/`.
+- Capturas de cola, llamado y atención en `docs/arquitectura/img/` y en el informe `docs/entrega/Informe_Proyecto_Final_FilaCero.html`.
+- Revalidado con la versión final de la base de datos (15 migraciones) y `simulacion.py --url` (50/50).

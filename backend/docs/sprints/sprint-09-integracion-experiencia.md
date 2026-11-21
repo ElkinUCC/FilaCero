@@ -69,3 +69,10 @@ En la revisión con el profesor se identificó la necesidad de reducir el color 
 
 ## Resultado
 El sprint documenta la integración de los roles y el flujo web. Su aceptación final requiere una reserva de extremo a extremo y evidencias visuales de cada rol.
+
+## Cierre en la entrega final
+
+Los pendientes registrados en este sprint quedaron resueltos así:
+
+- Los ajustes visuales pedidos se aplicaron en las iteraciones E-1 y E-1d: nueva paleta del portal, reserva paso a paso y vista compacta para celular (ver `docs/arquitectura/10-evolucion.md`).
+- La reserva de extremo a extremo se comprobó en el navegador y quedó guardada en MySQL; hay capturas de cada rol en el informe HTML.

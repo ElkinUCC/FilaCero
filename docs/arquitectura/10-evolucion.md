@@ -109,7 +109,7 @@ anterior de la interfaz usaba un framework de componentes con un paso de compila
 | SPA (C3) | Sí | `index.html` + `#app`; `src/js/` con `main.js`, `router/`, `pages/` (`XPage` + `mountXPage`), `components/`, `api/http.js`, `auth/`, `utils/` (`polling`, `voz`, `dom`); configuración en `src/js/config.js` |
 | Seguridad | Sí | El escape de HTML pasa a la plantilla `html``…``` de `utils/dom.js` (riesgo R-12); el frontend queda sin dependencias de terceros |
 | Arquitectura computacional y despliegue | Sí (simplifica) | Sin Node.js ni compilación: el proceso 3 es un servidor estático de Python |
-| Pruebas del backend | No | Sin cambios por la migración (164 en verde en la entrega final) |
+| Pruebas del backend | No | Sin cambios por la migración (164 en verde al cerrar esta iteración; 222 tras E-1f) |
 
 **Artefactos actualizados**: ADR-002 (revisado), ADR-009 y ADR-012 (notas), 01, 03 (C2 y C3 de la SPA), 04
 (§4.1, §4.3, §6), 05, 06, 07, 09 (T-12, R-12), 11, `frontend/docs/ARQUITECTURA-SPA-VANILLA.md`.

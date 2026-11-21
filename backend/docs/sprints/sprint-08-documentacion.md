@@ -1,7 +1,7 @@
 # Sprint 08 — Documentación técnica, pruebas de API y calidad transversal
 
 **Proyecto:** FilaCero  
-**Estado:** Documentación estructurada; evidencias externas pendientes de archivo.
+**Estado:** Completado (documentación consolidada en la entrega final; ver tabla de ubicaciones).
 
 ## Objetivo
 Consolidar contratos API, guía de instalación, seguridad, decisiones arquitectónicas, pruebas y evidencias necesarias para mantener y sustentar el proyecto.
@@ -24,18 +24,21 @@ Consolidar contratos API, guía de instalación, seguridad, decisiones arquitect
 - Registros de decisiones arquitectónicas (ADR).
 - Revisión de consistencia entre rutas, DTOs, servicios y documentación.
 
-## Entregables previstos
-- `docs/API.md`
-- `docs/testing/PLAN_PRUEBAS_API.md`
-- `docs/operations/INSTALACION_LOCAL.md`
-- `docs/SECURITY.md`
-- `docs/architecture/ADR-007-ADMINISTRACION-METRICAS.md`
-- `docs/evidence/REGISTRO_PRUEBAS.md`
-- `docs/postman/FilaCero.postman_collection.json`
-- `docs/postman/FilaCero-Local.postman_environment.json`
+## Entregables (ubicación final en el repositorio)
+Durante la entrega final la documentación se consolidó en menos archivos. Lo previsto en este sprint quedó así:
+
+| Previsto | Ubicación final |
+|---|---|
+| Referencia API (`docs/API.md`) | `backend/README.md` (sección Endpoints) y `frontend/docs/CONTRATO-BACKEND-FRONTEND.md`; lista completa con `flask --app run routes` |
+| Plan de pruebas (`docs/testing/PLAN_PRUEBAS_API.md`) | `backend/tests/` (18 archivos) y `backend/README.md` (sección Pruebas) |
+| Instalación local (`docs/operations/INSTALACION_LOCAL.md`) | `README.md` de la raíz y `backend/README.md` |
+| Seguridad (`docs/SECURITY.md`) | `docs/arquitectura/11-seguridad.md` |
+| ADR de administración y métricas | `docs/arquitectura/adr/` (17 ADR) |
+| Registro de pruebas (`docs/evidence/REGISTRO_PRUEBAS.md`) | `docs/arquitectura/07-analisis-atributos.md` y el informe `docs/entrega/Informe_Proyecto_Final_FilaCero.html` |
+| Colección y entorno Postman | `backend/docs/postman/FilaCero.postman_collection.json` y `backend/docs/postman/FilaCero.local.postman_environment.json` |
 
 ## Evidencia disponible
-En el desarrollo se compartió una ejecución de `python -m pytest` con 78 pruebas aprobadas. La colección Postman exportada, las capturas HTTP y el registro de ejecución deben incorporarse al repositorio para que el expediente quede completo.
+Al cierre de este sprint se ejecutó `python -m pytest` con 78 pruebas aprobadas. En la entrega final la suite tiene 222 pruebas aprobadas (1 omitida) y la colección Postman está versionada en `backend/docs/postman/`.
 
 ## Criterios de aceptación
 - Los documentos describen contratos vigentes.

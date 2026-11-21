@@ -61,3 +61,12 @@ Con el backend en `:5000` (datos de `simulacion.py --cargar`) y el frontend serv
 | 6.2 | Abrir el portal | Usa la paleta de alto contraste por defecto (el menú de accesibilidad se retiró en la iteración 2) | |
 | 6.3 | Desplegables con teclado | Flechas, Enter y Escape funcionan | |
 | 6.4 | axe DevTools | 0 violaciones | |
+
+## 7. Celular (DevTools → modo dispositivo, anchos 320, 360, 390 y 412 px)
+
+| # | Acción | Esperado | ✓ |
+|---|---|---|---|
+| 7.1 | Recorrer portal, reserva completa, consulta, sala, consola y panel | Sin desplazamiento horizontal: nada se sale por los lados | |
+| 7.2 | Paso «Cuándo» con una sede de dirección larga | El desplegable se ajusta al ancho y recorta el texto con «…» | |
+| 7.3 | Abrir «Acceso personal» en 360 px | El formulario cabe completo y la X de cerrar se ve | |
+| 7.4 | Abrir modales (Recibir equipo, Nuevo asesor) y el menú del panel | Caben en pantalla; los botones del pie quedan visibles | |

@@ -259,3 +259,12 @@ El estado de completitud debe actualizarse únicamente después de verificar el 
 | HU-12 | Como cliente, quiero consultar y cancelar mis turnos. | Solo accedo a mis reservas y cancelo estados permitidos. |
 
 **Nota:** verificar que la ruta de disponibilidad documentada coincida con el controlador vigente. Durante la depuración se observó `GET /api/v1/franjas/disponibles`.
+
+## Cierre en la entrega final
+
+Los pendientes registrados en este sprint quedaron resueltos así:
+
+- Pruebas automatizadas: 222 aprobadas y 1 omitida (`python -m pytest tests/`).
+- Concurrencia contra MySQL resuelta con candado por sede, `SELECT … FOR UPDATE` y READ COMMITTED (ADR-004): 18 reservas simultáneas a 6 cupos ⇒ 6 aceptadas y 12 rechazadas (`simulacion.py --carga`).
+- Integridad e índices: las 15 migraciones suben y bajan completas y `flask db check` no detecta diferencias con los modelos.
+- README actualizado con los resultados comprobados.

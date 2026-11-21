@@ -51,7 +51,7 @@ FilaCero/
 └── docs/
     ├── arquitectura/       # documento de arquitectura (01–11) y ADR
     ├── diagramas/          # UML: casos de uso, clases, ER, paquetes, componentes, despliegue, secuencias
-    └── entrega/            # Informe_Proyecto_Final_FilaCero.html (informe del proyecto, fases 01–05)
+    └── entrega/            # Informe_Proyecto_Final_FilaCero.html (fases 01–05) y guiones de sustentación (.docx)
 ```
 
 ## Requisitos

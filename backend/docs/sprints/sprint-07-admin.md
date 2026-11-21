@@ -3,7 +3,7 @@
 **Proyecto:** FilaCero  
 **Módulo:** Backend — Flask REST API  
 **Sprint:** 07  
-**Estado:** Implementado y validado por pruebas automatizadas; Postman pendiente de archivo.
+**Estado:** Implementado y validado por pruebas automatizadas; Postman versionado en `backend/docs/postman/` (ver cierre).
 **Sprint anterior:** Sprint 06 — Agentes y atención de turnos
 
 ---
@@ -313,3 +313,12 @@ La validación de la ejecución automatizada está completada para el estado rep
 | HU-32 | Como agente, quiero consultar mi turno actual. | La respuesta se limita al agente autenticado. |
 
 El Sprint 07 amplía la administración y analítica; no sustituye el ciclo operativo documentado en el Sprint 06.
+
+## Cierre en la entrega final
+
+Los pendientes registrados en este sprint quedaron resueltos así:
+
+- Colección Postman exportada y versionada en `backend/docs/postman/` (variables sin secretos reales).
+- Respuestas sin JWT, con rol incorrecto y con parámetros inválidos cubiertas por `test_contrato_y_errores.py`, `test_usuarios_permisos.py` y `simulacion.py`.
+- El manejo de fechas quedó unificado: el código ya no usa `datetime.utcnow()`.
+- README del backend actualizado con todas las rutas (76) y las variables de entorno en `.env.example`.
